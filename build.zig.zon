@@ -1,0 +1,21 @@
+.{
+    .name = "colecovision",
+    .version = "0.0.0",
+
+    .dependencies = .{
+        .mach = .{
+            .url = "https://github.com/hexops/mach/archive/1d01c915368b0c128ad1fce6123e55c6cc6ded9e.tar.gz",
+            .hash = "122090ee3b387a3906b462314c9c576af2a2bc7b9e15ee81d6556690a46127a1a8e5",
+            .lazy = false,
+        },
+    },
+
+    .paths = .{
+        "build.zig",
+        "build.zig.zon",
+        "src",
+        // For example...
+        //"LICENSE",
+        //"README.md",
+    },
+}
