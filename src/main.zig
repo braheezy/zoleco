@@ -205,14 +205,14 @@ pub fn main() !void {
     try player.start();
 
     // Load the VGM file
-    const vgmFilePath = "example.vgm";
+    const vgmFilePath = "random0.vgm";
     const file = try std.fs.cwd().openFile(vgmFilePath, .{});
     defer file.close();
 
     const fileBuffer = try file.readToEndAlloc(gpa.allocator(), 1000000);
     defer gpa.allocator().free(fileBuffer);
 
-    vgmPlayer = Player.init();
+    vgmPlayer = try Player.init();
     if (!vgmPlayer.load(fileBuffer)) {
         std.debug.print("Failed to load VGM file: {s}\n", .{vgmFilePath});
         return;
@@ -239,18 +239,18 @@ fn writeCallback(_: ?*anyopaque, output: []u8) void {
     const frame_size = player.format().frameSize(@intCast(player.channels().len));
     const frames = output.len / frame_size;
 
-    var buf = std.heap.page_allocator.alloc(f32, frames) catch unreachable;
+    var buf = std.heap.page_allocator.alloc(i16, frames) catch unreachable;
     defer std.heap.page_allocator.free(buf);
 
     // Render audio samples from the VGM emulator
     vgmPlayer.render(buf[0..frames]);
 
     // Convert rendered samples to the audio format
-    var src: [16]f32 = undefined;
+    var src: [16]i16 = undefined;
     for (0..frames) |i| {
         for (0..player.channels().len) |ch| src[ch] = buf[i];
         sysaudio.convertTo(
-            f32,
+            i16,
             src[0..player.channels().len],
             player.format(),
             output[i * frame_size ..][0..frame_size],

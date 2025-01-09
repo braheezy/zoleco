@@ -57,10 +57,10 @@ stereo: u32 = 0,
 
 ch_out: [4]i16 = [_]i16{0} ** 4,
 
-pub fn init(clock: u32, sample_rate: ?u32) !SN76489 {
+pub fn init(c: u32, sample_rate: ?u32) !SN76489 {
     // var sng = try al.create(SN76489);
     var sng = SN76489{};
-    sng.clock_freq = clock;
+    sng.clock_freq = c;
     sng.sample_rate = sample_rate orelse 44100;
     sng.set_quality(false);
     return sng;
@@ -81,7 +81,7 @@ fn internal_refresh(self: *SN76489) void {
     if (self.high_quality) {
         self.base_incr = 1 << FRACTIONAL_BITS;
         self.realstep = (1 << 31) / self.sample_rate;
-        self.sngstep = (1 << 31) / self.clock_freq / 16;
+        self.sngstep = (1 << 31) / (self.clock_freq / 16);
         self.sngtime = 0;
     } else {
         self.base_count = @intCast(@as(u64, self.clock_freq) * (1 << FRACTIONAL_BITS) / (16 * self.sample_rate));
@@ -138,30 +138,30 @@ pub fn write(self: *SN76489, data: u32) void {
 
 /// Calculate the next audio sample output.
 pub fn calc(self: *SN76489) i16 {
-    // if (!self.high_quality) {
-    //     self.update_output();
-    //     return self.mix_output();
-    // }
+    if (!self.high_quality) {
+        self.update_output();
+        return self.mix_output();
+    }
 
-    // // High-quality mode: use rate conversion to match sample rate.
-    // // Loop until enough emulated time has passed for the next sample.
-    // while (self.realstep > self.sngtime) {
-    //     self.sngtime += self.sngstep;
-    //     self.update_output();
-    // }
-    // // Adjust time accumulator for the next calculation cycle.
-    // self.sngtime = self.sngtime - self.realstep;
+    // High-quality mode: use rate conversion to match sample rate.
+    // Loop until enough emulated time has passed for the next sample.
+    while (self.realstep > self.sngtime) {
+        self.sngtime += self.sngstep;
+        self.update_output();
+    }
+    // Adjust time accumulator for the next calculation cycle.
+    self.sngtime = self.sngtime - self.realstep;
 
-    // return self.mix_output();
+    return self.mix_output();
 
     // Temporary static square wave generator for testing
-    self.ch_out[0] = 1000;
-    self.ch_out[1] = 1000;
-    self.ch_out[2] = 1000;
-    self.ch_out[3] = if ((self.noise_seed & 1) != 0) 500 else 0;
+    // self.ch_out[0] = 1000;
+    // self.ch_out[1] = 1000;
+    // self.ch_out[2] = 1000;
+    // self.ch_out[3] = if ((self.noise_seed & 1) != 0) 500 else 0;
 
-    self.out = self.ch_out[0] + self.ch_out[1] + self.ch_out[2] + self.ch_out[3];
-    return @intCast(self.out);
+    // self.out = self.ch_out[0] + self.ch_out[1] + self.ch_out[2] + self.ch_out[3];
+    // return @intCast(self.out);
 }
 
 /// Update the audio output state for one time increment.
@@ -233,6 +233,40 @@ inline fn update_output(self: *SN76489) void {
 inline fn mix_output(self: *SN76489) i16 {
     self.out = (self.ch_out[0] + self.ch_out[1] + self.ch_out[2] + self.ch_out[3]);
     return @intCast(self.out);
+}
+
+pub fn clock(self: *SN76489, f: u32) void {
+    self.clock_freq = f;
+    self.internal_refresh();
+}
+
+pub fn render(self: *SN76489, buf: []i16) void {
+    var i: usize = 0;
+
+    while (i < buf.len) : (i += 1) {
+        buf[i] = self.calc();
+    }
+}
+
+pub fn reset(self: *SN76489) void {
+    self.noise_seed = 0x8000;
+    self.base_count = 0;
+
+    for (0..3) |i| {
+        self.freq[i] = 0;
+        self.volume[i] = 0xF; // Mute channels
+        self.count[i] = 0;
+        self.edge[i] = 0;
+        self.mute[i] = 0;
+    }
+
+    self.noise_count = 0;
+    self.noise_freq = 0;
+    self.noise_volume = 0xF; // Mute noise
+    self.noise_mode = 0;
+    self.noise_fref = false;
+
+    for (0..4) |i| self.ch_out[i] = 0;
 }
 
 inline fn parity(x: u32) u32 {

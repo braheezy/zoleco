@@ -1,5 +1,5 @@
 const std = @import("std");
-const SN76489 = @import("emu.zig");
+const SN76489 = @import("SN76489.zig");
 
 const Player = @This();
 
@@ -12,17 +12,11 @@ _loop: usize = 0,
 _enable: bool = false,
 _looping: bool = false,
 
-_trackName: []const u8 = "No file loaded",
-_gameName: []const u8 = "No file loaded",
-_systemName: []const u8 = "No file loaded",
-_originalAuthor: []const u8 = "No file loaded",
-_releaseDate: []const u8 = "No file loaded",
-_whoConverted: []const u8 = "No file loaded",
-
 /// Initialize the Player
-pub fn init() Player {
+pub fn init() !Player {
     var player = Player{};
-    player._chip = SN76489.init();
+    player._chip = try SN76489.init(3579545, 44000);
+    player._chip.set_quality(true);
     player.unload();
     player._looping = false;
 
@@ -42,31 +36,18 @@ fn readInt(self: *Player, off: usize) u32 {
         (@as(u32, self._data[off + 3]) << 24);
 }
 
-/// Read a null-terminated UTF-16 string from the data array
-fn readString(self: *Player, off: usize) []const u8 {
-    var buffer = std.ArrayList(u8).init(std.heap.page_allocator);
-    defer buffer.deinit();
-
-    var index = off;
-    while (true) {
-        const char = self._data[index] + (@as(u16, self._data[index + 1]) << 8);
-        index += 2;
-        if (char == 0) break;
-        buffer.append(@intCast(char & 0xFF)) catch {};
-    }
-
-    return buffer.items;
+/// Start playback
+pub fn play(self: *Player) void {
+    self._chip.reset();
+    self._ptr = 0x40;
+    self._enable = true;
 }
 
-/// Skip a null-terminated UTF-16 string
-fn skipString(self: *Player, off: usize) usize {
-    var index = off;
-    while (true) {
-        const char = self._data[index] + (@as(u16, self._data[index + 1]) << 8);
-        index += 2;
-        if (char == 0) break;
-    }
-    return index;
+/// Stop playback
+pub fn stop(self: *Player) void {
+    self._enable = false;
+    while (self._renderActive) {}
+    self._chip.reset();
 }
 
 /// Load VGM data into the player
@@ -86,7 +67,7 @@ pub fn load(self: *Player, file: []const u8) bool {
     if (self.readInt(0) != 0x206D6756) return false; // "Vgm "
 
     self._loop = self.readInt(0x1C) + 0x1C;
-    self._chip.clock(@floatFromInt(self.readInt(0x0C)));
+    self._chip.clock(self.readInt(0x0C));
     off = self.readInt(0x14);
 
     if (off != 0) {
@@ -97,27 +78,13 @@ pub fn load(self: *Player, file: []const u8) bool {
     return true;
 }
 
-/// Start playback
-pub fn play(self: *Player) void {
-    self._chip.reset();
-    self._ptr = 0x40;
-    self._enable = true;
-}
-
-/// Stop playback
-pub fn stop(self: *Player) void {
-    self._enable = false;
-    while (self._renderActive) {}
-    self._chip.reset();
-}
-
 /// Set looping behavior
 pub fn setLooping(self: *Player, l: bool) void {
     self._looping = l;
 }
 
 /// Render audio samples into a buffer
-pub fn render(self: *Player, buf: []f32) void {
+pub fn render(self: *Player, buf: []i16) void {
     var i: usize = 0;
     var tag: u8 = 0;
     var inc: usize = 0;
