@@ -34,7 +34,7 @@ pub fn build(b: *std.Build) !void {
     // Create non-install compile step for code editors to check
     const exe_check = b.addExecutable(.{
         .name = "check",
-        .root_source_file = b.path("src/main.zig"),
+        .root_source_file = b.path("examples/vgm_player/main.zig"),
         .target = target,
         .optimize = optimize,
     });

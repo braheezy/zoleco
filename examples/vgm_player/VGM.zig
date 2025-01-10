@@ -1,3 +1,5 @@
+// mostly ported from https://github.com/cdodd/vgmparse
+
 const std = @import("std");
 
 pub const VGM = @This();
