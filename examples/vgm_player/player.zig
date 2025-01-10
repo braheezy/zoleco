@@ -1,5 +1,5 @@
 const std = @import("std");
-const SN76489 = @import("SN76489.zig");
+const SN76489 = @import("SN76489");
 
 const Player = @This();
 
