@@ -3,6 +3,7 @@
 /// References:
 ///  - https://map.grauw.nl/resources/sound/texas_instruments_sn76489an.pdf
 ///  - https://www.smspower.org/Development/SN76489
+///  - docs/sn76489an.txt
 const std = @import("std");
 
 const SN76489 = @This();
@@ -153,15 +154,6 @@ pub fn calc(self: *SN76489) i16 {
     self.sngtime = self.sngtime - self.realstep;
 
     return self.mix_output();
-
-    // Temporary static square wave generator for testing
-    // self.ch_out[0] = 1000;
-    // self.ch_out[1] = 1000;
-    // self.ch_out[2] = 1000;
-    // self.ch_out[3] = if ((self.noise_seed & 1) != 0) 500 else 0;
-
-    // self.out = self.ch_out[0] + self.ch_out[1] + self.ch_out[2] + self.ch_out[3];
-    // return @intCast(self.out);
 }
 
 /// Update the audio output state for one time increment.
