@@ -16,9 +16,11 @@ pub fn build(b: *std.Build) !void {
 
     // Define our local modules
     const sn76489_mod = b.addModule("SN76489", .{ .root_source_file = b.path("src/SN76489.zig") });
+    const z80_mod = b.addModule("z80", .{ .root_source_file = b.path("src/cpu/Z80.zig") });
 
     try modules.put("mach", mach_mod);
     try modules.put("SN76489", sn76489_mod);
+    try modules.put("z80", z80_mod);
 
     // Create main executable
     const exe = b.addExecutable(.{
@@ -27,22 +29,18 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
-    // exe.root_module.addImport("mach", mach_mod);
-    // exe.root_module.addImport("SN76489", sn76489_mod);
     b.installArtifact(exe);
 
     // Create non-install compile step for code editors to check
     const exe_check = b.addExecutable(.{
         .name = "check",
-        .root_source_file = b.path("examples/vgm_player/main.zig"),
+        .root_source_file = b.path("examples/z80_disassembler/main.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    addModulesToExe(exe_check, modules, &[_][]const u8{ "mach", "SN76489" });
-    addModulesToExe(exe, modules, &[_][]const u8{ "mach", "SN76489" });
-    // exe_check.root_module.addImport("mach", mach_dep.module("mach"));
-    // exe_check.root_module.addImport("SN76489", sn76489_mod);
+    addModulesToExe(exe_check, modules, &[_][]const u8{ "mach", "SN76489", "z80" });
+    addModulesToExe(exe, modules, &[_][]const u8{ "mach", "SN76489", "z80" });
 
     const check = b.step("check", "Check if it compiles");
     check.dependOn(&exe_check.step);
@@ -101,4 +99,13 @@ fn defineExamples(
 
     addModulesToExe(vgm_player_exe, modules, &[_][]const u8{ "mach", "SN76489" });
     b.installArtifact(vgm_player_exe);
+
+    const z80_disassembler_exe = b.addExecutable(.{
+        .name = "z80_disassembler",
+        .root_source_file = b.path("examples/z80_disassembler/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    addModulesToExe(z80_disassembler_exe, modules, &[_][]const u8{"z80"});
+    b.installArtifact(z80_disassembler_exe);
 }
