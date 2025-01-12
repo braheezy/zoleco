@@ -34,9 +34,19 @@ pub fn main() !void {
             0x00 => std.debug.print("NOP\n", .{}),
             0x3E => {
                 const value = z80.memory[z80.pc + 1];
-                std.debug.print("LD A, {x:>2}\n", .{value});
+                std.debug.print("LD A, {X}\n", .{value});
             },
-            0xF3 => std.debug.print("DI\n", .{}),
+            0xF3 => std.debug.print("DI\t{X}\n", .{opcode}),
+            0xFD => {
+                const next_opcode = z80.memory[z80.pc + 1];
+                switch (next_opcode) {
+                    0xE5 => std.debug.print("PUSH IY\t{X} {X}\n", .{ opcode, next_opcode }),
+                    else => {
+                        std.debug.print("Cannot print: unknown opcode: {x}\n", .{next_opcode});
+                        std.process.exit(1);
+                    },
+                }
+            },
             else => {
                 std.debug.print("Cannot print: unknown opcode: {x}\n", .{opcode});
                 std.process.exit(1);

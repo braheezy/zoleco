@@ -57,11 +57,13 @@ total_cycle_count: usize = 0,
 interrupts_enabled: bool = false,
 interrupt_mode: InterruptMode = .{ .zero = {} },
 
-pub fn init(al: std.mem.Allocator, rom_data: []u8) !Z80 {
-    const memory = try al.alloc(u8, rom_data.len);
+pub fn init(al: std.mem.Allocator, rom_data: []const u8) !Z80 {
+    const memory = try al.alloc(u8, 0x10000);
 
     @memcpy(memory[0..rom_data.len], rom_data);
-    return Z80{ .memory = memory };
+    return Z80{
+        .memory = memory,
+    };
 }
 
 pub fn free(self: *Z80, al: std.mem.Allocator) void {
