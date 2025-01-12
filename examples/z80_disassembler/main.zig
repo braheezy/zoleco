@@ -36,7 +36,21 @@ pub fn main() !void {
                 const value = z80.memory[z80.pc + 1];
                 std.debug.print("LD A, {X}\n", .{value});
             },
+            0xC4 => std.debug.print("CALL NZ\t{X}\n", .{opcode}),
+            0xCC => std.debug.print("CALL Z\t{X}\n", .{opcode}),
+            0xD4 => std.debug.print("CALL NC\t{X}\n", .{opcode}),
+            0xDC => std.debug.print("CALL C\t{X}\n", .{opcode}),
+            0xF4 => std.debug.print("CALL P\t{X}\n", .{opcode}),
+            0xFC => std.debug.print("CALL M\t{X}\n", .{opcode}),
+            0xE4 => std.debug.print("CALL PO\t{X}\n", .{opcode}),
+            0xEC => std.debug.print("CALL PE\t{X}\n", .{opcode}),
+            0xCD => std.debug.print("CALL\t{X}\n", .{opcode}),
+            0xC5 => std.debug.print("PUSH BC\t{X}\n", .{opcode}),
+            0xD5 => std.debug.print("PUSH DE\t{X}\n", .{opcode}),
+            0xD9 => std.debug.print("EXX\t{X}\n", .{opcode}),
+            0xE5 => std.debug.print("PUSH HL\t{X}\n", .{opcode}),
             0xF3 => std.debug.print("DI\t{X}\n", .{opcode}),
+            0xF5 => std.debug.print("PUSH AF\t{X}\n", .{opcode}),
             0xFD => {
                 const next_opcode = z80.memory[z80.pc + 1];
                 switch (next_opcode) {

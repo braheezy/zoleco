@@ -2,7 +2,7 @@ const std = @import("std");
 const OpcodeTable = @import("opcode.zig").OpcodeTable;
 const Z80 = @This();
 
-const Register = struct {
+pub const Register = struct {
     a: u8 = 0,
     b: u8 = 0,
     c: u8 = 0,
@@ -12,7 +12,7 @@ const Register = struct {
     l: u8 = 0,
 };
 
-const ShadowRegister = struct {
+pub const ShadowRegister = struct {
     a: u8 = 0,
     b: u8 = 0,
     c: u8 = 0,
@@ -28,6 +28,32 @@ const Flag = struct {
     half_carry: bool = false,
     carry: bool = false,
     parity_overflow: bool = false,
+
+    pub fn toByte(self: Flag) u8 {
+        var result: u8 = 0;
+
+        // bit 7
+        if (self.sign) {
+            result |= 0x80;
+        }
+        // bit 6
+        if (self.zero) {
+            result |= 0x40;
+        }
+        // bit 4
+        if (self.half_carry) {
+            result |= 0x10;
+        }
+        // bit 2
+        if (self.parity_overflow) {
+            result |= 0x04;
+        }
+        // bit 0
+        if (self.carry) {
+            result |= 0x01;
+        }
+        return result;
+    }
 };
 
 const InterruptMode = union {
@@ -38,7 +64,7 @@ const InterruptMode = union {
 
 register: Register = Register{},
 shadow_register: ShadowRegister = ShadowRegister{},
-flag: Flag = Flag{},
+flags: Flag = Flag{},
 // program counter
 pc: u16 = 0,
 // stack pointer
@@ -83,11 +109,23 @@ pub fn step(self: *Z80) !void {
 
     // Execute the instruction
     if (OpcodeTable[opcode]) |handler| {
-        handler(self);
+        try handler(self);
     } else {
-        std.debug.print("Cannot step: unknown opcode: {x}\n", .{opcode});
+        std.debug.print("Cannot step: unknown opcode: {X}\n", .{opcode});
         std.process.exit(1);
     }
+}
+
+pub fn fetchData(self: *Z80, count: u16) ![]const u8 {
+    // Ensure fetching count bytes doesn't exceed memory bounds
+    if (self.pc + count > self.memory.len) {
+        return error.OutOfBoundsMemory;
+    }
+    // Create a slice of the next `count` bytes from memory
+    const data = self.memory[self.pc .. self.pc + count];
+    // Advance the program counter past the fetched bytes
+    self.pc += count;
+    return data;
 }
 
 pub fn runCycles(self: *Z80, cycle_count: usize) !void {
