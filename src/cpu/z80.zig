@@ -22,7 +22,7 @@ pub const ShadowRegister = struct {
     l: u8 = 0,
 };
 
-const Flag = struct {
+pub const Flag = struct {
     zero: bool = false,
     sign: bool = false,
     half_carry: bool = false,
@@ -56,7 +56,13 @@ const Flag = struct {
     }
 };
 
-const InterruptMode = union {
+const Interrupts = enum {
+    zero,
+    one,
+    two,
+};
+
+pub const InterruptMode = union(Interrupts) {
     zero: void,
     one: void,
     two: void,
@@ -64,7 +70,7 @@ const InterruptMode = union {
 
 register: Register = Register{},
 shadow_register: ShadowRegister = ShadowRegister{},
-flags: Flag = Flag{},
+flag: Flag = Flag{},
 // program counter
 pc: u16 = 0,
 // stack pointer
@@ -83,12 +89,13 @@ total_cycle_count: usize = 0,
 interrupts_enabled: bool = false,
 interrupt_mode: InterruptMode = .{ .zero = {} },
 
-pub fn init(al: std.mem.Allocator, rom_data: []const u8) !Z80 {
+pub fn init(al: std.mem.Allocator, rom_data: []const u8, start_address: u16) !Z80 {
     const memory = try al.alloc(u8, 0x10000);
 
-    @memcpy(memory[0..rom_data.len], rom_data);
+    @memcpy(memory[start_address .. start_address + rom_data.len], rom_data);
     return Z80{
         .memory = memory,
+        .pc = start_address,
     };
 }
 
@@ -148,4 +155,8 @@ pub fn runCycles(self: *Z80, cycle_count: usize) !void {
 
     self.total_cycle_count += cycle_count;
     self.cycle_count = 0;
+}
+
+pub fn toUint16(high: u8, low: u8) u16 {
+    return @as(u16, @intCast(high)) << 8 | @as(u16, @intCast((low)));
 }

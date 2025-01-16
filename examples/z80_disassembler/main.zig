@@ -23,50 +23,10 @@ pub fn main() !void {
     const rom_data = try rom_file.readToEndAlloc(allocator, 0x8000);
     defer allocator.free(rom_data);
 
-    var z80 = try Z80.init(allocator, rom_data);
+    var z80 = try Z80.init(allocator, rom_data, 0x8000);
     defer z80.free(allocator);
 
     while (z80.pc < z80.memory.len) {
-        // log each instruction for disassembly
-        const opcode = z80.memory[z80.pc];
-
-        switch (opcode) {
-            0x00 => std.debug.print("NOP\n", .{}),
-            0x3E => {
-                const value = z80.memory[z80.pc + 1];
-                std.debug.print("LD A, {X}\n", .{value});
-            },
-            0xC4 => std.debug.print("CALL NZ\t{X}\n", .{opcode}),
-            0xCC => std.debug.print("CALL Z\t{X}\n", .{opcode}),
-            0xD4 => std.debug.print("CALL NC\t{X}\n", .{opcode}),
-            0xDC => std.debug.print("CALL C\t{X}\n", .{opcode}),
-            0xF4 => std.debug.print("CALL P\t{X}\n", .{opcode}),
-            0xFC => std.debug.print("CALL M\t{X}\n", .{opcode}),
-            0xE4 => std.debug.print("CALL PO\t{X}\n", .{opcode}),
-            0xEC => std.debug.print("CALL PE\t{X}\n", .{opcode}),
-            0xCD => std.debug.print("CALL\t{X}\n", .{opcode}),
-            0xC5 => std.debug.print("PUSH BC\t{X}\n", .{opcode}),
-            0xD5 => std.debug.print("PUSH DE\t{X}\n", .{opcode}),
-            0xD9 => std.debug.print("EXX\t{X}\n", .{opcode}),
-            0xE5 => std.debug.print("PUSH HL\t{X}\n", .{opcode}),
-            0xF3 => std.debug.print("DI\t{X}\n", .{opcode}),
-            0xF5 => std.debug.print("PUSH AF\t{X}\n", .{opcode}),
-            0xFD => {
-                const next_opcode = z80.memory[z80.pc + 1];
-                switch (next_opcode) {
-                    0xE5 => std.debug.print("PUSH IY\t{X} {X}\n", .{ opcode, next_opcode }),
-                    else => {
-                        std.debug.print("Cannot print: unknown opcode: {x}\n", .{next_opcode});
-                        std.process.exit(1);
-                    },
-                }
-            },
-            else => {
-                std.debug.print("Cannot print: unknown opcode: {x}\n", .{opcode});
-                std.process.exit(1);
-            },
-        }
-
         // Fetch and execute the next instruction
         try z80.step();
     }

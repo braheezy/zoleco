@@ -13,11 +13,13 @@ pub fn pushIy(self: *Z80) !void {
     self.sp = if (self.sp == 0) 0xFFFF else self.sp - 1;
     self.memory[self.sp] = getLowByte(self.iy);
 
+    std.log.debug("[FD E5]\tPUSH Iy", .{});
+
     self.cycle_count += 15;
 }
 
+// Swap BC with BC'
 pub fn exx(self: *Z80) !void {
-    // Swap BC with BC'
     const tempB = self.register.b;
     self.register.b = self.shadow_register.b;
     self.shadow_register.b = tempB;
@@ -44,6 +46,8 @@ pub fn exx(self: *Z80) !void {
     self.register.l = self.shadow_register.l;
     self.shadow_register.l = tempL;
 
+    std.log.debug("[D9]\tEXX", .{});
+
     // Add the T-cycle cost
     self.cycle_count += 4;
 }
@@ -56,22 +60,26 @@ pub fn push(self: *Z80, lower: u8, upper: u8) !void {
 }
 
 pub fn push_DE(self: *Z80) !void {
+    std.log.debug("[D5]\tPUSH\tDE", .{});
     try push(self, self.register.e, self.register.d);
     self.cycle_count += 11;
 }
 
 pub fn push_HL(self: *Z80) !void {
+    std.log.debug("[E5]\tPUSH\tHL", .{});
     try push(self, self.register.l, self.register.h);
     self.cycle_count += 11;
 }
 
 pub fn push_BC(self: *Z80) !void {
+    std.log.debug("[C5]\tPUSH\tBC", .{});
     try push(self, self.register.c, self.register.b);
     self.cycle_count += 11;
 }
 
 pub fn push_AF(self: *Z80) !void {
-    try push(self, self.flags.toByte(), self.register.a);
+    std.log.debug("[F5]\tPUSH\tAF", .{});
+    try push(self, self.flag.toByte(), self.register.a);
     self.cycle_count += 11;
 }
 
