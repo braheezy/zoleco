@@ -113,6 +113,8 @@ pub fn step(self: *Z80) !void {
     const opcode = self.memory[self.pc];
     // Move PC to the next byte
     self.pc += 1;
+    // Increment memory register, but only the lower 7 bits
+    self.r = (self.r & 0x80) | ((self.r + 1) & 0x7F);
 
     // Execute the instruction
     if (OpcodeTable[opcode]) |handler| {

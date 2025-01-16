@@ -46,7 +46,7 @@ pub fn build(b: *std.Build) !void {
     check.dependOn(&exe_check.step);
 
     defineRun(b, exe);
-    defineTests(b, target, optimize);
+    try defineTests(b, target, optimize, modules);
     defineExamples(b, target, optimize, modules);
 }
 
@@ -60,17 +60,28 @@ fn defineRun(b: *std.Build, exe: *std.Build.Step.Compile) void {
     run_step.dependOn(&run_cmd.step);
 }
 
-fn defineTests(b: *std.Build, target: std.Build.ResolvedTarget, optimize: std.builtin.OptimizeMode) void {
-    const exe_unit_tests = b.addTest(.{
-        .root_source_file = b.path("src/main.zig"),
+fn defineTests(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    modules: std.StringHashMap(*std.Build.Module),
+) !void {
+    const test_exe = b.addExecutable(.{
+        .name = "cputest",
+        .root_source_file = b.path("test.zig"),
         .target = target,
-        .optimize = optimize,
+        .optimize = .ReleaseSafe,
     });
 
-    const run_exe_unit_tests = b.addRunArtifact(exe_unit_tests);
+    try addAssetsOption(b, test_exe, target, optimize);
 
-    const test_step = b.step("test", "Run unit tests");
-    test_step.dependOn(&run_exe_unit_tests.step);
+    addModulesToExe(test_exe, modules, &[_][]const u8{"z80"});
+
+    b.installArtifact(test_exe);
+
+    const test_cmd = b.addRunArtifact(test_exe);
+    const test_step = b.step("cputest", "Run cpu tests");
+    test_step.dependOn(&test_cmd.step);
 }
 
 // Helper function for adding modules selectively
@@ -108,4 +119,30 @@ fn defineExamples(
     });
     addModulesToExe(z80_disassembler_exe, modules, &[_][]const u8{"z80"});
     b.installArtifact(z80_disassembler_exe);
+}
+
+fn addAssetsOption(b: *std.Build, exe: *std.Build.Step.Compile, target: anytype, optimize: anytype) !void {
+    var options = b.addOptions();
+
+    var files = std.ArrayList([]const u8).init(b.allocator);
+    defer files.deinit();
+
+    var buf: [std.fs.max_path_bytes]u8 = undefined;
+    const path = try std.fs.cwd().realpath("tests", buf[0..]);
+
+    var dir = try std.fs.openDirAbsolute(path, .{ .iterate = true });
+    var it = dir.iterate();
+    while (try it.next()) |file| {
+        try files.append(b.dupe(file.name));
+    }
+    options.addOption([]const []const u8, "files", files.items);
+    exe.step.dependOn(&options.step);
+
+    const assets = b.addModule("assets", .{
+        .root_source_file = options.getOutput(),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    exe.root_module.addImport("assets", assets);
 }
