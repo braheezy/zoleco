@@ -83,6 +83,7 @@ pub fn main() !void {
         std.debug.print("Failures:\n", .{});
         for (total_failures.items) |msg| {
             std.debug.print("{s}\n", .{msg});
+            allocator.free(msg);
         }
     } else {
         std.debug.print("All tests passed.\n", .{});
@@ -99,7 +100,12 @@ fn runTest(al: std.mem.Allocator, t: TestCase, total_failures: *std.ArrayList([]
     try z80.step();
 
     var failures = std.ArrayList([]const u8).init(al);
-    defer failures.deinit();
+    defer {
+        // for (failures.items) |msg| {
+        //     al.free(msg);
+        // }
+        failures.deinit();
+    }
 
     try validateState(z80, t.final, al, &failures);
     if (failures.items.len != 0) {

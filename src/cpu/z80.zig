@@ -54,6 +54,18 @@ pub const Flag = struct {
         }
         return result;
     }
+
+    pub fn setZ(self: *Flag, value: u16) void {
+        self.zero = value == 0;
+    }
+
+    pub fn setS(self: *Flag, value: u16) void {
+        self.sign = (value & 0x80) != 0;
+    }
+
+    pub fn setP(self: *Flag, value: u16) void {
+        self.parity_overflow = parity(value);
+    }
 };
 
 const Interrupts = enum {
@@ -112,7 +124,7 @@ pub fn step(self: *Z80) !void {
     // Fetch the opcode
     const opcode = self.memory[self.pc];
     // Move PC to the next byte
-    self.pc += 1;
+    self.pc +%= 1;
     // Increment memory register, but only the lower 7 bits
     self.r = (self.r & 0x80) | ((self.r + 1) & 0x7F);
 
@@ -162,3 +174,58 @@ pub fn runCycles(self: *Z80, cycle_count: usize) !void {
 pub fn toUint16(high: u8, low: u8) u16 {
     return @as(u16, @intCast(high)) << 8 | @as(u16, @intCast((low)));
 }
+
+// carrySub returns true if a carry would happen if subtrahend is subtracted from value.
+pub fn carrySub(value: u8, subtrahend: u8) bool {
+    return value < subtrahend;
+}
+
+// carryAdd returns true if a carry would happen if addend is added to value.
+pub fn carryAdd(value: u8, addend: u8) bool {
+    return @as(u16, value) + @as(u16, addend) > 0xFF;
+}
+
+// auxCarrySub returns true if auxilary carry would happen if subtrahend is subtracted from value.
+pub fn auxCarrySub(value: u8, subtrahend: u8) bool {
+    // Check if borrow is needed from higher nibble to lower nibble
+    return (value & 0xF) < (subtrahend & 0xF);
+}
+
+// auxCarryAdd returns true if auxillary carry would happen if addend is added to value.
+pub fn auxCarryAdd(value: u8, addend: u8) bool {
+    // Check if carry is needed from higher nibble to lower nibble
+    return (value & 0xF) + (addend & 0xF) > 0xF;
+}
+
+// parity returns true if the number of bits in x is even.
+pub fn parity(x: u16) bool {
+    var y = x ^ (x >> 1);
+    y = y ^ (y >> 2);
+    y = y ^ (y >> 4);
+    y = y ^ (y >> 8);
+
+    // Rightmost bit of y holds the parity value
+    // if (y&1) is 1 then parity is odd else even
+    return (y & 1) == 0;
+}
+
+pub fn parity_add(data: u8) bool {
+    const sdata: i8 = @bitCast(data);
+    // overflow occurs only when adding 1 to 127.
+    return sdata == 127;
+}
+
+pub fn parity_sub(data: u8) bool {
+    const sdata: i8 = @bitCast(data);
+    // Overflow occurs only when subtracting 1 from -128.
+    return sdata == -128;
+}
+
+// pub inline fn parity(x: u16) bool {
+//     var local_x = x;
+//     local_x ^= local_x >> 8;
+//     local_x ^= local_x >> 4;
+//     local_x ^= local_x >> 2;
+//     local_x ^= local_x >> 1;
+//     return local_x & 1 == 0;
+// }

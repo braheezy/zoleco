@@ -8,7 +8,7 @@
       "type": "lldb",
       "request": "launch",
       "name": "Debug",
-      "program": "${workspaceFolder}/zig-out/bin/z80_disassembler",
+      "program": "${workspaceFolder}/zig-out/bin/cputest",
       "args": ["z80doc.out"],
       "cwd": "${workspaceFolder}",
       "preLaunchTask": "build",
