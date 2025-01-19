@@ -86,6 +86,8 @@ fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
     var file = try cwd.openFile(full_path, .{});
     defer file.close();
 
+    std.debug.print("0x{s} ==> ", .{name[0..2]});
+
     const json_content = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
     defer allocator.free(json_content);
 
@@ -106,31 +108,32 @@ fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
         }
     }
 
-    printResult(name, result.successes, result.total);
+    printResult(result.successes, result.total);
     if (result.successes != result.total) {
         has_failure = true;
-        for (failures.items[0..10]) |msg| {
+        for (failures.items[0..@min(10, failures.items.len)]) |msg| {
             std.debug.print("  {s}\n", .{msg});
         }
     }
 }
 
-fn printResult(name: []const u8, successes: usize, total: usize) void {
+fn printResult(successes: usize, total: usize) void {
     if (successes == total) {
-        std.debug.print("{s} ({d}/{d})...OK\n", .{ name[0..2], successes, total });
+        std.debug.print("({d}/{d})...OK\n", .{ successes, total });
     } else {
-        std.debug.print("{s} ({d}/{d})...FAIL\n", .{ name[0..2], successes, total });
+        std.debug.print("({d}/{d})...FAIL\n", .{ successes, total });
     }
 }
 
 fn runTest(al: std.mem.Allocator, t: TestCase, failures: *std.ArrayList([]const u8)) !bool {
     const memory = try al.alloc(u8, 0x10000);
     defer al.free(memory);
-
     var z80 = Z80{ .memory = memory };
+    z80.zeroMemory();
     loadState(&z80, t.initial);
 
     try z80.step();
+    // std.debug.print("stepped\n", .{});
     try validateState(z80, t.final, al, failures);
     return failures.items.len == 0;
 }

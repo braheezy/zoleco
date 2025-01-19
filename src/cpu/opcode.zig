@@ -23,7 +23,7 @@ const OpError = error{OutOfBoundsMemory};
 pub const OpcodeHandler = *const fn (*Z80) OpError!void;
 pub const OpcodeTable = [256]?OpcodeHandler{
     nop, immi.load_BC, dti.stax_B, rpi.inx_B, rsi.inr_B, rsi.dcr_B, immi.moveImm_B, rai.rlc, li.ex_AF, rpi.dad_B, dti.loadAddr_B, rsi.dcx_B, rsi.inr_C, rsi.dcr_C, immi.moveImm_C, rai.rrc, // 00 - 0F
-    null, immi.load_DE, dti.stax_D, rpi.inx_D, rsi.inr_D, rsi.dcr_D, immi.moveImm_D, null, null, rpi.dad_D, dti.loadAddr_D, rsi.dcx_D, rsi.inr_E, rsi.dcr_E, immi.moveImm_E, null, // 10 - 1F
+    ji.djnz, immi.load_DE, dti.stax_D, rpi.inx_D, rsi.inr_D, rsi.dcr_D, immi.moveImm_D, rai.ral, ji.jr, rpi.dad_D, dti.loadAddr_D, rsi.dcx_D, rsi.inr_E, rsi.dcr_E, immi.moveImm_E, rai.rra, // 10 - 1F
     null, immi.load_HL, null, rpi.inx_H, rsi.inr_H, rsi.dcr_H, immi.moveImm_H, null, null, rpi.dad_H, null, rsi.dcx_H, rsi.inr_L, rsi.dcr_L, immi.moveImm_L, null, // 20 - 2F
     null, immi.load_SP, null, rpi.inx_SP, rsi.inr_M, rsi.dcr_M, immi.moveImm_M, null, null, rpi.dad_SP, null, rsi.dcx_SP, rsi.inr_A, rsi.dcr_A, immi.moveImm_A, null, // 30 - 3F
     null, dti.move_BC, dti.move_BD, dti.move_BE, dti.move_BH, dti.move_BL, dti.move_BM, dti.move_BA, dti.move_CB, null, dti.move_CD, dti.move_CE, dti.move_CH, dti.move_CL, dti.move_CM, dti.move_CA, // 40 - 4F

@@ -120,3 +120,29 @@ pub fn jump_P(self: *Z80) !void {
     }
     self.cycle_count += 10;
 }
+
+// DJNZ addr: Decrement B and jump if not zero.
+pub fn djnz(self: *Z80) !void {
+    // Decrement register B
+    self.register.b -%= 1;
+
+    if (self.register.b != 0) {
+        self.pc +%= Z80.signedByte(self.memory[self.pc]);
+
+        self.cycle_count += 13;
+    } else {
+        self.cycle_count += 8;
+    }
+    self.pc += 1;
+}
+
+// JR d: Jump relative by signed displacement d.
+pub fn jr(self: *Z80) !void {
+    std.log.debug("[18]\tJR e", .{});
+
+    // Add displacement to PC for unconditional jump
+    self.pc +%= Z80.signedByte(self.memory[self.pc]);
+    self.pc += 1;
+
+    self.cycle_count +%= 12;
+}

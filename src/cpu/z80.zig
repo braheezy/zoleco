@@ -95,12 +95,20 @@ interrupt_mode: InterruptMode = .{ .zero = {} },
 
 pub fn init(al: std.mem.Allocator, rom_data: []const u8, start_address: u16) !Z80 {
     const memory = try al.alloc(u8, 0x10000);
-
-    @memcpy(memory[start_address .. start_address + rom_data.len], rom_data);
-    return Z80{
+    const z80 = Z80{
         .memory = memory,
         .pc = start_address,
     };
+    z80.zeroMemory();
+
+    @memcpy(memory[start_address .. start_address + rom_data.len], rom_data);
+    return z80;
+}
+
+pub fn zeroMemory(self: Z80) void {
+    for (self.memory) |*byte| {
+        byte.* = 0;
+    }
 }
 
 pub fn free(self: *Z80, al: std.mem.Allocator) void {
@@ -212,11 +220,6 @@ pub fn parity_sub(data: u8) bool {
     return sdata == -128;
 }
 
-// pub inline fn parity(x: u16) bool {
-//     var local_x = x;
-//     local_x ^= local_x >> 8;
-//     local_x ^= local_x >> 4;
-//     local_x ^= local_x >> 2;
-//     local_x ^= local_x >> 1;
-//     return local_x & 1 == 0;
-// }
+pub inline fn signedByte(value: u8) u16 {
+    return @bitCast(@as(i16, @as(i8, @bitCast(value))));
+}
