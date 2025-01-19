@@ -61,6 +61,7 @@ pub fn inr_H(self: *Z80) !void {
 pub fn inr_L(self: *Z80) !void {
     std.log.debug("[2C]\tINC \tL", .{});
     self.register.l = inc(self, self.register.l);
+    self.cycle_count += 4;
 }
 
 // INR M: Increment memory address pointed to by register pair HL.
@@ -139,4 +140,36 @@ pub fn dcr_M(self: *Z80) !void {
     const memory_address = Z80.toUint16(self.register.h, self.register.l);
     self.memory[memory_address] = dcr(self, self.memory[memory_address]);
     self.cycle_count += 11;
+}
+
+// decrement pair helper
+fn decPair(reg1: u8, reg2: u8) struct { u8, u8 } {
+    var combined = Z80.toUint16(reg1, reg2);
+    combined -= 1;
+
+    return .{ @as(u8, @intCast(combined >> 8)), @as(u8, @intCast(combined & 0xFF)) };
+}
+
+// DCX B: Decrement register pair B.
+pub fn dcx_B(self: *Z80) !void {
+    std.log.debug("[0B]\tDEC \tBC", .{});
+    self.register.b, self.register.c = decPair(self.register.b, self.register.c);
+}
+
+// DCX D: Decrement register pair D.
+pub fn dcx_D(self: *Z80) !void {
+    std.log.debug("[1B]\tDEC \tDE", .{});
+    self.register.d, self.register.e = decPair(self.register.d, self.register.e);
+}
+
+// DCX H: Decrement register pair H.
+pub fn dcx_H(self: *Z80) !void {
+    std.log.debug("[2B]\tDEC \tHL", .{});
+    self.register.h, self.register.l = decPair(self.register.h, self.register.l);
+}
+
+// DCX SP: Decrement stack pointer
+pub fn dcx_SP(self: *Z80) !void {
+    std.log.debug("[3B]\tDEC \tSP", .{});
+    self.sp -= 1;
 }

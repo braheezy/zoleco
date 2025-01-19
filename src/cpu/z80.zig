@@ -57,10 +57,6 @@ pub const Flag = struct {
     pub fn setS(self: *Flag, value: u16) void {
         self.sign = (value & 0x80) != 0;
     }
-
-    pub fn setP(self: *Flag, value: u16) void {
-        self.parity_overflow = parity(value);
-    }
 };
 
 const Interrupts = enum {
@@ -194,15 +190,14 @@ pub fn auxCarryAdd(value: u8, addend: u8) bool {
 }
 
 // parity returns true if the number of bits in x is even.
-pub fn parity(x: u16) bool {
-    var y = x ^ (x >> 1);
-    y = y ^ (y >> 2);
-    y = y ^ (y >> 4);
-    y = y ^ (y >> 8);
-
-    // Rightmost bit of y holds the parity value
-    // if (y&1) is 1 then parity is odd else even
-    return (y & 1) == 0;
+pub fn parity(comptime T: type, x: T) bool {
+    var count: T = 0;
+    var val = x;
+    while (val != 0) {
+        count += val & 1;
+        val >>= 1;
+    }
+    return (count & 1) == 0;
 }
 
 pub fn parity_add(data: u8) bool {

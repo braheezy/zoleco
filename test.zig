@@ -47,6 +47,12 @@ const CycleEntry = union(enum) {
     bus_state: []const u8,
 };
 
+const Result = struct {
+    total: usize,
+    successes: usize,
+};
+
+var has_failure = false;
 pub fn main() !void {
     // Memory allocation setup
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -55,50 +61,69 @@ pub fn main() !void {
         std.process.exit(1);
     };
 
-    var total_failures = std.ArrayList([]const u8).init(allocator);
-    defer total_failures.deinit();
-
-    // Open current working directory
     const cwd = std.fs.cwd();
-    // Open the "tests" directory
     var tests_dir = try cwd.openDir("tests", .{ .iterate = true });
     defer tests_dir.close();
 
     var it = tests_dir.iterate();
     while (try it.next()) |entry| {
-        const name = entry.name;
-        const full_json_file_path = try std.fmt.allocPrint(allocator, "tests/{s}", .{name});
-        defer allocator.free(full_json_file_path);
-        var file = try std.fs.cwd().openFile(full_json_file_path, .{});
-        defer file.close();
-
-        const json_content = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
-        defer allocator.free(json_content);
-
-        var parsed = try std.json.parseFromSlice([]TestCase, allocator, json_content, .{ .ignore_unknown_fields = true });
-        defer parsed.deinit();
-
-        const test_case = parsed.value;
-
-        std.debug.print("Running test: {s}...\n", .{test_case[0].name[0..2]});
-
-        for (test_case) |t| {
-            try runTest(allocator, t, &total_failures);
-        }
+        const file_name = entry.name;
+        try processFile(file_name, allocator);
     }
 
-    if (total_failures.items.len != 0) {
-        std.debug.print("Failures:\n", .{});
-        for (total_failures.items) |msg| {
-            std.debug.print("{s}\n", .{msg});
-            allocator.free(msg);
-        }
+    if (has_failure) {
+        std.debug.print("❌ There was a failure!\n", .{});
     } else {
-        std.debug.print("All tests passed.\n", .{});
+        std.debug.print("✅ All tests passed!\n", .{});
     }
 }
 
-fn runTest(al: std.mem.Allocator, t: TestCase, total_failures: *std.ArrayList([]const u8)) !void {
+fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
+    const cwd = std.fs.cwd();
+    const full_path = try std.fmt.allocPrint(allocator, "tests/{s}", .{name});
+    defer allocator.free(full_path);
+
+    var file = try cwd.openFile(full_path, .{});
+    defer file.close();
+
+    const json_content = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
+    defer allocator.free(json_content);
+
+    var parsed = try std.json.parseFromSlice([]TestCase, allocator, json_content, .{ .ignore_unknown_fields = true });
+    defer parsed.deinit();
+
+    const test_cases = parsed.value;
+    var result = Result{ .successes = 0, .total = test_cases.len };
+    var failures = std.ArrayList([]const u8).init(allocator);
+    defer {
+        for (failures.items) |msg| allocator.free(msg);
+        failures.deinit();
+    }
+
+    for (test_cases) |tc| {
+        if (runTest(allocator, tc, &failures) catch false) {
+            result.successes += 1;
+        }
+    }
+
+    printResult(name, result.successes, result.total);
+    if (result.successes != result.total) {
+        has_failure = true;
+        for (failures.items[0..10]) |msg| {
+            std.debug.print("  {s}\n", .{msg});
+        }
+    }
+}
+
+fn printResult(name: []const u8, successes: usize, total: usize) void {
+    if (successes == total) {
+        std.debug.print("{s} ({d}/{d})...OK\n", .{ name[0..2], successes, total });
+    } else {
+        std.debug.print("{s} ({d}/{d})...FAIL\n", .{ name[0..2], successes, total });
+    }
+}
+
+fn runTest(al: std.mem.Allocator, t: TestCase, failures: *std.ArrayList([]const u8)) !bool {
     const memory = try al.alloc(u8, 0x10000);
     defer al.free(memory);
 
@@ -106,19 +131,8 @@ fn runTest(al: std.mem.Allocator, t: TestCase, total_failures: *std.ArrayList([]
     loadState(&z80, t.initial);
 
     try z80.step();
-
-    var failures = std.ArrayList([]const u8).init(al);
-    defer {
-        // for (failures.items) |msg| {
-        //     al.free(msg);
-        // }
-        failures.deinit();
-    }
-
-    try validateState(z80, t.final, al, &failures);
-    if (failures.items.len != 0) {
-        try total_failures.appendSlice(failures.items);
-    }
+    try validateState(z80, t.final, al, failures);
+    return failures.items.len == 0;
 }
 
 fn loadState(z80: *Z80, state: State) void {

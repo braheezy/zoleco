@@ -4,3 +4,8 @@ ref
 .zig-cache
 zig-out
 *.zip
+
+out
+core
+*.tar.gz
+*.out
