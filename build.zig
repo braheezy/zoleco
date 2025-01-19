@@ -66,6 +66,7 @@ fn defineTests(
     optimize: std.builtin.OptimizeMode,
     modules: std.StringHashMap(*std.Build.Module),
 ) !void {
+    _ = optimize;
     const test_exe = b.addExecutable(.{
         .name = "cputest",
         .root_source_file = b.path("test.zig"),
@@ -73,7 +74,7 @@ fn defineTests(
         .optimize = .ReleaseSafe,
     });
 
-    try addAssetsOption(b, test_exe, target, optimize);
+    // try addAssetsOption(b, test_exe, target, optimize);
 
     addModulesToExe(test_exe, modules, &[_][]const u8{"z80"});
 

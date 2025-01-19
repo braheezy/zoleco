@@ -10,6 +10,7 @@ pub fn inc(self: *Z80, data: u8) u8 {
     self.flag.setS(@as(u16, result));
     self.flag.half_carry = Z80.auxCarryAdd(data, 1);
     self.flag.parity_overflow = Z80.parity_add(data);
+    self.flag.add_subtract = false;
 
     return result;
 }
@@ -18,36 +19,42 @@ pub fn inc(self: *Z80, data: u8) u8 {
 pub fn inr_A(self: *Z80) !void {
     std.log.debug("[3C]\tINC \tA", .{});
     self.register.a = inc(self, self.register.a);
+    self.cycle_count += 4;
 }
 
 // INR B: Increment register B.
 pub fn inr_B(self: *Z80) !void {
     std.log.debug("[04]\tINC \tB", .{});
     self.register.b = inc(self, self.register.b);
+    self.cycle_count += 4;
 }
 
 // INR C: Increment register C.
 pub fn inr_C(self: *Z80) !void {
     std.log.debug("[0C]\tINC \tC", .{});
     self.register.c = inc(self, self.register.c);
+    self.cycle_count += 4;
 }
 
 // INR D: Increment register D.
 pub fn inr_D(self: *Z80) !void {
     std.log.debug("[14]\tINC \tD", .{});
     self.register.d = inc(self, self.register.d);
+    self.cycle_count += 4;
 }
 
 // INR E: Increment register E.
 pub fn inr_E(self: *Z80) !void {
     std.log.debug("[1C]\tINC \tE", .{});
     self.register.e = inc(self, self.register.e);
+    self.cycle_count += 4;
 }
 
 // INR H: Increment register H.
 pub fn inr_H(self: *Z80) !void {
     std.log.debug("[24]\tINC \tH", .{});
     self.register.h = inc(self, self.register.h);
+    self.cycle_count += 4;
 }
 
 // INR L: Increment register L.
@@ -60,6 +67,7 @@ pub fn inr_L(self: *Z80) !void {
 pub fn inr_M(self: *Z80) !void {
     std.log.debug("[34]\tINC \tM", .{});
     self.memory[Z80.toUint16(self.register.h, self.register.l)] = inc(self, self.memory[Z80.toUint16(self.register.h, self.register.l)]);
+    self.cycle_count += 11;
 }
 
 // decrement helper
@@ -71,6 +79,7 @@ pub fn dcr(self: *Z80, data: u8) u8 {
     self.flag.setS(result);
     self.flag.half_carry = Z80.auxCarrySub(data, 1);
     self.flag.parity_overflow = Z80.parity_sub(data);
+    self.flag.add_subtract = true;
 
     return result;
 }
@@ -79,42 +88,49 @@ pub fn dcr(self: *Z80, data: u8) u8 {
 pub fn dcr_A(self: *Z80) !void {
     std.log.debug("[3D]\tDEC \tA", .{});
     self.register.a = dcr(self, self.register.a);
+    self.cycle_count += 4;
 }
 
 // DCR B: Decrement register B.
 pub fn dcr_B(self: *Z80) !void {
     std.log.debug("[05]\tDEC \tB", .{});
     self.register.b = dcr(self, self.register.b);
+    self.cycle_count += 4;
 }
 
 // DCR C: Decrement register C.
 pub fn dcr_C(self: *Z80) !void {
     std.log.debug("[0D]\tDEC \tC", .{});
     self.register.c = dcr(self, self.register.c);
+    self.cycle_count += 4;
 }
 
 // DCR D: Decrement register D.
 pub fn dcr_D(self: *Z80) !void {
     std.log.debug("[15]\tDEC \tD", .{});
     self.register.d = dcr(self, self.register.d);
+    self.cycle_count += 4;
 }
 
 // DCR E: Decrement register E.
 pub fn dcr_E(self: *Z80) !void {
     std.log.debug("[1D]\tDEC \tE", .{});
     self.register.e = dcr(self, self.register.e);
+    self.cycle_count += 4;
 }
 
 // DCR H: Decrement register H.
 pub fn dcr_H(self: *Z80) !void {
     std.log.debug("[25]\tDEC \tH", .{});
     self.register.h = dcr(self, self.register.h);
+    self.cycle_count += 4;
 }
 
 // DCR L: Decrement register L.
 pub fn dcr_L(self: *Z80) !void {
     std.log.debug("[2D]\tDEC \tL", .{});
     self.register.l = dcr(self, self.register.l);
+    self.cycle_count += 4;
 }
 
 // DCR M: Decrement memory location pointed to by register pair HL.
@@ -122,4 +138,5 @@ pub fn dcr_M(self: *Z80) !void {
     std.log.debug("[35]\tDEC \t(HL)", .{});
     const memory_address = Z80.toUint16(self.register.h, self.register.l);
     self.memory[memory_address] = dcr(self, self.memory[memory_address]);
+    self.cycle_count += 11;
 }

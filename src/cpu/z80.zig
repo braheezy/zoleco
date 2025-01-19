@@ -12,22 +12,13 @@ pub const Register = struct {
     l: u8 = 0,
 };
 
-pub const ShadowRegister = struct {
-    a: u8 = 0,
-    b: u8 = 0,
-    c: u8 = 0,
-    d: u8 = 0,
-    e: u8 = 0,
-    h: u8 = 0,
-    l: u8 = 0,
-};
-
 pub const Flag = struct {
     zero: bool = false,
     sign: bool = false,
     half_carry: bool = false,
-    carry: bool = false,
     parity_overflow: bool = false,
+    add_subtract: bool = false,
+    carry: bool = false,
 
     pub fn toByte(self: Flag) u8 {
         var result: u8 = 0;
@@ -47,6 +38,10 @@ pub const Flag = struct {
         // bit 2
         if (self.parity_overflow) {
             result |= 0x04;
+        }
+        // bit 1 for N flag
+        if (self.add_subtract) {
+            result |= 0x02;
         }
         // bit 0
         if (self.carry) {
@@ -81,8 +76,9 @@ pub const InterruptMode = union(Interrupts) {
 };
 
 register: Register = Register{},
-shadow_register: ShadowRegister = ShadowRegister{},
+shadow_register: Register = Register{},
 flag: Flag = Flag{},
+shadow_flag: Flag = Flag{},
 // program counter
 pc: u16 = 0,
 // stack pointer

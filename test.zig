@@ -58,8 +58,16 @@ pub fn main() !void {
     var total_failures = std.ArrayList([]const u8).init(allocator);
     defer total_failures.deinit();
 
-    for (assets.files) |json_file_path| {
-        const full_json_file_path = try std.fmt.allocPrint(allocator, "tests/{s}", .{json_file_path});
+    // Open current working directory
+    const cwd = std.fs.cwd();
+    // Open the "tests" directory
+    var tests_dir = try cwd.openDir("tests", .{ .iterate = true });
+    defer tests_dir.close();
+
+    var it = tests_dir.iterate();
+    while (try it.next()) |entry| {
+        const name = entry.name;
+        const full_json_file_path = try std.fmt.allocPrint(allocator, "tests/{s}", .{name});
         defer allocator.free(full_json_file_path);
         var file = try std.fs.cwd().openFile(full_json_file_path, .{});
         defer file.close();
@@ -140,7 +148,17 @@ fn loadState(z80: *Z80, state: State) void {
     z80.flag.zero = (state.f & 0x40) != 0;
     z80.flag.half_carry = (state.f & 0x10) != 0;
     z80.flag.parity_overflow = (state.f & 0x04) != 0;
+    z80.flag.add_subtract = (state.f & 0x02) != 0;
     z80.flag.carry = (state.f & 0x01) != 0;
+
+    const shadow_flag: u8 = @intCast(state.af_ & 0xFF);
+
+    z80.shadow_flag.sign = (shadow_flag & 0x80) != 0;
+    z80.shadow_flag.zero = (shadow_flag & 0x40) != 0;
+    z80.shadow_flag.half_carry = (shadow_flag & 0x10) != 0;
+    z80.shadow_flag.parity_overflow = (shadow_flag & 0x04) != 0;
+    z80.shadow_flag.add_subtract = (shadow_flag & 0x02) != 0;
+    z80.shadow_flag.carry = (shadow_flag & 0x01) != 0;
 
     z80.interrupts_enabled = state.iff1 != 0;
     z80.interrupt_mode = switch (state.im) {
@@ -171,54 +189,56 @@ fn checkEquals(comptime T: type, allocator: std.mem.Allocator, failures: *std.Ar
     }
 }
 
-fn validateState(z80: Z80, state: State, allocator: std.mem.Allocator, failures: *std.ArrayList([]const u8)) !void {
-    try checkEquals(u16, allocator, failures, "pc", z80.pc, state.pc);
-    try checkEquals(u16, allocator, failures, "sp", z80.sp, state.sp);
-    try checkEquals(u16, allocator, failures, "ix", z80.ix, state.ix);
-    try checkEquals(u16, allocator, failures, "iy", z80.iy, state.iy);
-    try checkEquals(u8, allocator, failures, "r", z80.r, state.r);
+fn validateState(z80: Z80, state: State, al: std.mem.Allocator, failures: *std.ArrayList([]const u8)) !void {
+    try checkEquals(u16, al, failures, "pc", z80.pc, state.pc);
+    try checkEquals(u16, al, failures, "sp", z80.sp, state.sp);
+    try checkEquals(u16, al, failures, "ix", z80.ix, state.ix);
+    try checkEquals(u16, al, failures, "iy", z80.iy, state.iy);
+    try checkEquals(u8, al, failures, "r", z80.r, state.r);
 
-    try checkEquals(u8, allocator, failures, "a", z80.register.a, state.a);
-    try checkEquals(u8, allocator, failures, "b", z80.register.b, state.b);
-    try checkEquals(u8, allocator, failures, "c", z80.register.c, state.c);
-    try checkEquals(u8, allocator, failures, "d", z80.register.d, state.d);
-    try checkEquals(u8, allocator, failures, "e", z80.register.e, state.e);
-    try checkEquals(u8, allocator, failures, "h", z80.register.h, state.h);
-    try checkEquals(u8, allocator, failures, "l", z80.register.l, state.l);
+    try checkEquals(u8, al, failures, "a", z80.register.a, state.a);
+    try checkEquals(u8, al, failures, "b", z80.register.b, state.b);
+    try checkEquals(u8, al, failures, "c", z80.register.c, state.c);
+    try checkEquals(u8, al, failures, "d", z80.register.d, state.d);
+    try checkEquals(u8, al, failures, "e", z80.register.e, state.e);
+    try checkEquals(u8, al, failures, "h", z80.register.h, state.h);
+    try checkEquals(u8, al, failures, "l", z80.register.l, state.l);
 
-    try checkEquals(u8, allocator, failures, "shadow a", z80.shadow_register.a, @as(u8, @intCast((state.af_ >> 8) & 0xFF)));
-    try checkEquals(u8, allocator, failures, "shadow b", z80.shadow_register.b, @as(u8, @intCast((state.bc_ >> 8) & 0xFF)));
-    try checkEquals(u8, allocator, failures, "shadow c", z80.shadow_register.c, @as(u8, @intCast(state.bc_ & 0xFF)));
-    try checkEquals(u8, allocator, failures, "shadow d", z80.shadow_register.d, @as(u8, @intCast((state.de_ >> 8) & 0xFF)));
-    try checkEquals(u8, allocator, failures, "shadow e", z80.shadow_register.e, @as(u8, @intCast(state.de_ & 0xFF)));
-    try checkEquals(u8, allocator, failures, "shadow h", z80.shadow_register.h, @as(u8, @intCast((state.hl_ >> 8) & 0xFF)));
-    try checkEquals(u8, allocator, failures, "shadow l", z80.shadow_register.l, @as(u8, @intCast(state.hl_ & 0xFF)));
+    try checkEquals(u8, al, failures, "shadow a", z80.shadow_register.a, @as(u8, @intCast((state.af_ >> 8) & 0xFF)));
+    try checkEquals(u8, al, failures, "shadow b", z80.shadow_register.b, @as(u8, @intCast((state.bc_ >> 8) & 0xFF)));
+    try checkEquals(u8, al, failures, "shadow c", z80.shadow_register.c, @as(u8, @intCast(state.bc_ & 0xFF)));
+    try checkEquals(u8, al, failures, "shadow d", z80.shadow_register.d, @as(u8, @intCast((state.de_ >> 8) & 0xFF)));
+    try checkEquals(u8, al, failures, "shadow e", z80.shadow_register.e, @as(u8, @intCast(state.de_ & 0xFF)));
+    try checkEquals(u8, al, failures, "shadow h", z80.shadow_register.h, @as(u8, @intCast((state.hl_ >> 8) & 0xFF)));
+    try checkEquals(u8, al, failures, "shadow l", z80.shadow_register.l, @as(u8, @intCast(state.hl_ & 0xFF)));
 
-    const expected_flags = Z80.Flag{
+    const exp_flags = Z80.Flag{
         .sign = (state.f & 0x80) != 0,
         .zero = (state.f & 0x40) != 0,
         .half_carry = (state.f & 0x10) != 0,
         .parity_overflow = (state.f & 0x04) != 0,
+        .add_subtract = (state.f & 0x02) != 0,
         .carry = (state.f & 0x01) != 0,
     };
-    try checkEquals(bool, allocator, failures, "flag.sign", z80.flag.sign, expected_flags.sign);
-    try checkEquals(bool, allocator, failures, "flag.zero", z80.flag.zero, expected_flags.zero);
-    try checkEquals(bool, allocator, failures, "flag.half_carry", z80.flag.half_carry, expected_flags.half_carry);
-    try checkEquals(bool, allocator, failures, "flag.parity_overflow", z80.flag.parity_overflow, expected_flags.parity_overflow);
-    try checkEquals(bool, allocator, failures, "flag.carry", z80.flag.carry, expected_flags.carry);
+    try checkEquals(bool, al, failures, "flag.sign", z80.flag.sign, exp_flags.sign);
+    try checkEquals(bool, al, failures, "flag.zero", z80.flag.zero, exp_flags.zero);
+    try checkEquals(bool, al, failures, "flag.half_carry", z80.flag.half_carry, exp_flags.half_carry);
+    try checkEquals(bool, al, failures, "flag.parity_overflow", z80.flag.parity_overflow, exp_flags.parity_overflow);
+    try checkEquals(bool, al, failures, "flag.carry", z80.flag.carry, exp_flags.carry);
+    try checkEquals(bool, al, failures, "flag.add_subtract", z80.flag.add_subtract, exp_flags.add_subtract);
 
-    try checkEquals(bool, allocator, failures, "interrupts_enabled", z80.interrupts_enabled, (state.iff1 != 0));
+    try checkEquals(bool, al, failures, "interrupts_enabled", z80.interrupts_enabled, (state.iff1 != 0));
     const expected_interrupt_mode: Z80.InterruptMode = switch (state.im) {
         0 => Z80.InterruptMode{ .zero = {} },
         1 => Z80.InterruptMode{ .one = {} },
         2 => Z80.InterruptMode{ .two = {} },
         else => unreachable,
     };
-    try checkEquals(@TypeOf(z80.interrupt_mode), allocator, failures, "interrupt_mode", z80.interrupt_mode, expected_interrupt_mode);
+    try checkEquals(@TypeOf(z80.interrupt_mode), al, failures, "interrupt_mode", z80.interrupt_mode, expected_interrupt_mode);
 
     for (state.ram) |entry| {
         const addr = entry[0];
         const value = entry[1];
-        try checkEquals(u8, allocator, failures, "memory[{d}]", z80.memory[addr], @truncate(value));
+        try checkEquals(u8, al, failures, "memory[{d}]", z80.memory[addr], @truncate(value));
     }
 }

@@ -72,6 +72,7 @@ pub fn load_BC(self: *Z80) !void {
     std.log.debug("[01]\tLD  \tB,${X:<4}", .{Z80.toUint16(data[1], data[0])});
     self.register.c = data[0];
     self.register.b = data[1];
+    self.cycle_count += 10;
 }
 
 // LXI D, D16: Load 16-bit immediate value into register pair D.
@@ -80,6 +81,7 @@ pub fn load_DE(self: *Z80) !void {
     std.log.debug("[11]\tLD  \tDE,${X:<4}", .{Z80.toUint16(data[1], data[0])});
     self.register.e = data[0];
     self.register.d = data[1];
+    self.cycle_count += 10;
 }
 
 // LXI H, D16: Load 16-bit immediate value into register pair H.
@@ -88,6 +90,7 @@ pub fn load_HL(self: *Z80) !void {
     std.log.debug("[21]\tLD  \tHL,${X:<4}", .{Z80.toUint16(data[1], data[0])});
     self.register.l = data[0];
     self.register.h = data[1];
+    self.cycle_count += 10;
 }
 
 // LXI SP, D16: Load 16-bit immediate value into register pair SP.
@@ -96,4 +99,5 @@ pub fn load_SP(self: *Z80) !void {
     const operand = Z80.toUint16(data[1], data[0]);
     std.log.debug("[31]\tLD  \tSP,${X:<4}", .{operand});
     self.sp = operand;
+    self.cycle_count += 10;
 }
