@@ -93,6 +93,8 @@ total_cycle_count: usize = 0,
 interrupts_enabled: bool = false,
 interrupt_mode: InterruptMode = .{ .zero = {} },
 
+scratch: [2]u8 = [_]u8{0} ** 2,
+
 pub fn init(al: std.mem.Allocator, rom_data: []const u8, start_address: u16) !Z80 {
     const memory = try al.alloc(u8, 0x10000);
     const z80 = Z80{
@@ -138,15 +140,25 @@ pub fn step(self: *Z80) !void {
 }
 
 pub fn fetchData(self: *Z80, count: u16) ![]const u8 {
-    // Ensure fetching count bytes doesn't exceed memory bounds
-    if (self.pc + count > self.memory.len) {
-        return error.OutOfBoundsMemory;
+    // Safely compute PC + count in a wider type, then wrap to 16 bits
+    const sum = @as(u32, self.pc) + @as(u32, count);
+    const end_pc = @as(u16, @intCast(sum & 0xFFFF));
+
+    // If sum <= 0xFFFF, no wrapping is needed
+    if (sum <= 0xFFFF) {
+        @memcpy(self.scratch[0..count], self.memory[self.pc .. self.pc + count]);
+    } else {
+        // Handle wrap-around by splitting the copy
+        const first_part_len = 0xFFFF - self.pc + 1;
+        const second_part_len = count - first_part_len;
+
+        @memcpy(self.scratch[0..first_part_len], self.memory[self.pc..]);
+        @memcpy(self.scratch[first_part_len..count], self.memory[0..second_part_len]);
     }
-    // Create a slice of the next `count` bytes from memory
-    const data = self.memory[self.pc .. self.pc + count];
-    // Advance the program counter past the fetched bytes
-    self.pc += count;
-    return data;
+
+    // Update PC with wrap-around
+    self.pc = end_pc;
+    return self.scratch[0..count];
 }
 
 pub fn runCycles(self: *Z80, cycle_count: usize) !void {

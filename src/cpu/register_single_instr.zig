@@ -173,3 +173,41 @@ pub fn dcx_SP(self: *Z80) !void {
     std.log.debug("[3B]\tDEC \tSP", .{});
     self.sp -= 1;
 }
+
+// DAA: Decimal Adjust Accumulator
+// The eight bit hex number in the accumulator is adjusted to form two
+// four bit binary decimal digits.
+pub fn daa(self: *Z80) !void {
+    var adjust: u8 = 0;
+    if (self.flag.half_carry or self.register.a & 0x0f > 0x09) {
+        adjust += 0x06;
+    }
+    if (self.flag.carry or self.register.a > 0x99) {
+        self.flag.carry = true;
+        adjust += 0x60;
+    }
+
+    if (self.flag.add_subtract) {
+        if (self.register.a & 0x0f > 0x05) self.flag.half_carry = false;
+        self.register.a -%= adjust;
+    } else {
+        if (self.register.a & 0x0f > 0x09) {
+            self.flag.half_carry = true;
+        } else {
+            self.flag.half_carry = false;
+        }
+        self.register.a +%= adjust;
+    }
+
+    self.flag.setZ(@as(u16, self.register.a));
+    self.flag.setS(@as(u16, self.register.a));
+    self.flag.parity_overflow = Z80.parity(u8, self.register.a);
+}
+
+// CMA: Complement accumulator.
+pub fn cma(self: *Z80) !void {
+    std.log.debug("[2F]\tCMA", .{});
+    self.register.a = ~self.register.a;
+    self.flag.add_subtract = true;
+    self.flag.half_carry = true;
+}

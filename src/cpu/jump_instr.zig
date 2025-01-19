@@ -136,13 +136,38 @@ pub fn djnz(self: *Z80) !void {
     self.pc += 1;
 }
 
+fn jump_relative(self: *Z80, displacement: u8) void {
+    // Add displacement to PC for unconditional jump
+    self.pc +%= Z80.signedByte(displacement);
+    self.pc += 1;
+
+    self.cycle_count += 12;
+}
 // JR d: Jump relative by signed displacement d.
 pub fn jr(self: *Z80) !void {
     std.log.debug("[18]\tJR e", .{});
 
-    // Add displacement to PC for unconditional jump
-    self.pc +%= Z80.signedByte(self.memory[self.pc]);
-    self.pc += 1;
+    jump_relative(self, self.memory[self.pc]);
+}
 
-    self.cycle_count +%= 12;
+// JRNZ: If the zero flag is unset, the signed value d is added to PC. The jump is measured from the start of the instruction opcode.
+pub fn jr_NZ(self: *Z80) !void {
+    std.log.debug("[20]\tJR NZ, e", .{});
+    if (!self.flag.zero) {
+        jump_relative(self, self.memory[self.pc]);
+    } else {
+        self.pc += 1;
+        self.cycle_count += 7;
+    }
+}
+
+// JRZ: If the zero flag is set, the signed value d is added to PC. The jump is measured from the start of the instruction opcode.
+pub fn jr_Z(self: *Z80) !void {
+    std.log.debug("[28]\tJR Z", .{});
+    if (self.flag.zero) {
+        jump_relative(self, self.memory[self.pc]);
+    } else {
+        self.pc += 1;
+        self.cycle_count += 7;
+    }
 }

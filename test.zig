@@ -133,7 +133,6 @@ fn runTest(al: std.mem.Allocator, t: TestCase, failures: *std.ArrayList([]const 
     loadState(&z80, t.initial);
 
     try z80.step();
-    // std.debug.print("stepped\n", .{});
     try validateState(z80, t.final, al, failures);
     return failures.items.len == 0;
 }
@@ -256,6 +255,8 @@ fn validateState(z80: Z80, state: State, al: std.mem.Allocator, failures: *std.A
     for (state.ram) |entry| {
         const addr = entry[0];
         const value = entry[1];
-        try checkEquals(u8, al, failures, "memory[{d}]", z80.memory[addr], @truncate(value));
+        const str = try std.fmt.allocPrint(al, "memory[{d}]", .{addr});
+        defer al.free(str);
+        try checkEquals(u8, al, failures, str, z80.memory[addr], @truncate(value));
     }
 }
