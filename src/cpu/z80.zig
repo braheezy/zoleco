@@ -92,6 +92,7 @@ total_cycle_count: usize = 0,
 // interrupts
 interrupts_enabled: bool = false,
 interrupt_mode: InterruptMode = .{ .zero = {} },
+halted: bool = false,
 
 scratch: [2]u8 = [_]u8{0} ** 2,
 
@@ -121,6 +122,9 @@ pub fn step(self: *Z80) !void {
     // Ensure we are within memory bounds
     if (self.pc >= self.memory.len) {
         return error.OutOfBoundsPC;
+    }
+    if (self.halted) {
+        return error.Halted;
     }
 
     // Fetch the opcode

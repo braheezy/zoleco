@@ -436,6 +436,13 @@ pub fn move_AB(self: *Z80) !void {
     self.cycle_count += 4;
 }
 
+// MOV A,A: Move value from register A into register A.
+pub fn move_AA(self: *Z80) !void {
+    std.log.debug("[6D]\tLD  \tA,A", .{});
+    self.register.a = self.register.a;
+    self.cycle_count += 4;
+}
+
 // MOV E,A: Move value from accumulator into register E.
 pub fn move_EA(self: *Z80) !void {
     std.log.debug("[5F]\tLD  \tE,A", .{});
