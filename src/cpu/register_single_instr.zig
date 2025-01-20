@@ -154,30 +154,35 @@ fn decPair(reg1: u8, reg2: u8) struct { u8, u8 } {
 pub fn dcx_B(self: *Z80) !void {
     std.log.debug("[0B]\tDEC \tBC", .{});
     self.register.b, self.register.c = decPair(self.register.b, self.register.c);
+    self.cycle_count += 6;
 }
 
 // DCX D: Decrement register pair D.
 pub fn dcx_D(self: *Z80) !void {
     std.log.debug("[1B]\tDEC \tDE", .{});
     self.register.d, self.register.e = decPair(self.register.d, self.register.e);
+    self.cycle_count += 6;
 }
 
 // DCX H: Decrement register pair H.
 pub fn dcx_H(self: *Z80) !void {
     std.log.debug("[2B]\tDEC \tHL", .{});
     self.register.h, self.register.l = decPair(self.register.h, self.register.l);
+    self.cycle_count += 6;
 }
 
 // DCX SP: Decrement stack pointer
 pub fn dcx_SP(self: *Z80) !void {
     std.log.debug("[3B]\tDEC \tSP", .{});
     self.sp -= 1;
+    self.cycle_count += 6;
 }
 
 // DAA: Decimal Adjust Accumulator
 // The eight bit hex number in the accumulator is adjusted to form two
 // four bit binary decimal digits.
 pub fn daa(self: *Z80) !void {
+    std.log.debug("[27]\tDAA", .{});
     var adjust: u8 = 0;
     if (self.flag.half_carry or self.register.a & 0x0f > 0x09) {
         adjust += 0x06;
@@ -202,6 +207,7 @@ pub fn daa(self: *Z80) !void {
     self.flag.setZ(@as(u16, self.register.a));
     self.flag.setS(@as(u16, self.register.a));
     self.flag.parity_overflow = Z80.parity(u8, self.register.a);
+    self.cycle_count += 4;
 }
 
 // CMA: Complement accumulator.
@@ -210,4 +216,23 @@ pub fn cma(self: *Z80) !void {
     self.register.a = ~self.register.a;
     self.flag.add_subtract = true;
     self.flag.half_carry = true;
+    self.cycle_count += 4;
+}
+
+// CCF: Invert carry.
+pub fn ccf(self: *Z80) !void {
+    std.log.debug("[3F]\tCCF", .{});
+    self.flag.half_carry = self.flag.carry;
+    self.flag.add_subtract = false;
+    self.flag.carry = !self.flag.carry;
+    self.cycle_count += 4;
+}
+
+// SCF: Set carry.
+pub fn scf(self: *Z80) !void {
+    std.log.debug("[37]\tSCF", .{});
+    self.flag.half_carry = false;
+    self.flag.add_subtract = false;
+    self.flag.carry = true;
+    self.cycle_count += 4;
 }

@@ -82,8 +82,8 @@ pub fn dad_SP(self: *Z80) !void {
     self.flag.half_carry = (hl & 0xFFF) + (self.sp & 0xFFF) > 0xFFF;
     self.flag.add_subtract = false;
 
-    self.register.h = @as(u8, @intCast(result >> 8));
-    self.register.l = @as(u8, @intCast(result));
+    self.register.h = @as(u8, @truncate(result >> 8));
+    self.register.l = @as(u8, @truncate(result));
 
     self.cycle_count += 11;
 }

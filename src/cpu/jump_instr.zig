@@ -171,3 +171,25 @@ pub fn jr_Z(self: *Z80) !void {
         self.cycle_count += 7;
     }
 }
+
+// JRNC: If the carry flag is unset, the signed value d is added to PC. The jump is measured from the start of the instruction opcode.
+pub fn jr_NC(self: *Z80) !void {
+    std.log.debug("[20]\tJR NC", .{});
+    if (!self.flag.carry) {
+        jump_relative(self, self.memory[self.pc]);
+    } else {
+        self.pc += 1;
+        self.cycle_count += 7;
+    }
+}
+
+// JRC: If the carry flag is set, the signed value d is added to PC. The jump is measured from the start of the instruction opcode.
+pub fn jr_C(self: *Z80) !void {
+    std.log.debug("[38]\tJR C, e", .{});
+    if (self.flag.carry) {
+        jump_relative(self, self.memory[self.pc]);
+    } else {
+        self.pc += 1;
+        self.cycle_count += 7;
+    }
+}
