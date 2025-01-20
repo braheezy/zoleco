@@ -331,10 +331,24 @@ pub fn move_AD(self: *Z80) !void {
     self.cycle_count += 4;
 }
 
+// MOV D,D: Move value from register D into register D.
+pub fn move_DD(self: *Z80) !void {
+    std.log.debug("[52]\tLD  \tD,D", .{});
+    self.register.d = self.register.d;
+    self.cycle_count += 4;
+}
+
 // MOV E,D: Move value from register D into register E.
 pub fn move_ED(self: *Z80) !void {
     std.log.debug("[5A]\tLD  \tE,D", .{});
     self.register.e = self.register.d;
+    self.cycle_count += 4;
+}
+
+// MOV E,E: Move value from register E into register E.
+pub fn move_EE(self: *Z80) !void {
+    std.log.debug("[5B]\tLD  \tE,E", .{});
+    self.register.e = self.register.e;
     self.cycle_count += 4;
 }
 

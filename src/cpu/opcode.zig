@@ -28,7 +28,7 @@ pub const OpcodeTable = [256]?OpcodeHandler{
     ji.jr_NZ, immi.load_HL, dai.store_HL, rpi.inx_H, rsi.inr_H, rsi.dcr_H, immi.moveImm_H, rsi.daa, ji.jr_Z, rpi.dad_H, dai.loadImm_HL, rsi.dcx_H, rsi.inr_L, rsi.dcr_L, immi.moveImm_L, rsi.cma, // 20 - 2F
     ji.jr_NC, immi.load_SP, dai.store_A, rpi.inx_SP, rsi.inr_M, rsi.dcr_M, immi.moveImm_M, rsi.scf, ji.jr_C, rpi.dad_SP, dai.load_A, rsi.dcx_SP, rsi.inr_A, rsi.dcr_A, immi.moveImm_A, rsi.ccf, // 30 - 3F
     dti.move_BB, dti.move_BC, dti.move_BD, dti.move_BE, dti.move_BH, dti.move_BL, dti.move_BM, dti.move_BA, dti.move_CB, dti.move_CC, dti.move_CD, dti.move_CE, dti.move_CH, dti.move_CL, dti.move_CM, dti.move_CA, // 40 - 4F
-    dti.move_DB, dti.move_DC, null, dti.move_DE, dti.move_DH, dti.move_DL, dti.move_DM, dti.move_DA, dti.move_EB, dti.move_EC, dti.move_ED, null, dti.move_EH, dti.move_EL, dti.move_EM, dti.move_EA, // 50 - 5F
+    dti.move_DB, dti.move_DC, dti.move_DD, dti.move_DE, dti.move_DH, dti.move_DL, dti.move_DM, dti.move_DA, dti.move_EB, dti.move_EC, dti.move_ED, dti.move_EE, dti.move_EH, dti.move_EL, dti.move_EM, dti.move_EA, // 50 - 5F
     dti.move_HB, dti.move_HC, dti.move_HD, dti.move_HE, null, dti.move_HL, dti.move_HM, dti.move_HA, dti.move_LB, dti.move_LC, dti.move_LD, dti.move_LE, dti.move_LH, null, dti.move_LM, dti.move_LA, // 60 - 6F
     dti.move_MB, dti.move_MC, dti.move_MD, dti.move_ME, dti.move_MH, dti.move_ML, null, dti.move_MA, dti.move_AB, dti.move_AC, dti.move_AD, dti.move_AE, dti.move_AH, dti.move_AL, dti.move_AM, null, // 70 - 7F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 80 - 8F
