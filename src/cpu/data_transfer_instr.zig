@@ -282,6 +282,13 @@ pub fn move_AL(self: *Z80) !void {
     self.cycle_count += 4;
 }
 
+// MOV B,B: Move value from register B into register B.
+pub fn move_BB(self: *Z80) !void {
+    std.log.debug("[40]\tLD  \tB,B", .{});
+    self.register.b = self.register.b;
+    self.cycle_count += 4;
+}
+
 // MOV B,C: Move value from register C into register B.
 pub fn move_BC(self: *Z80) !void {
     std.log.debug("[41]\tLD  \tB,C", .{});
@@ -300,6 +307,13 @@ pub fn move_BL(self: *Z80) !void {
 pub fn move_BH(self: *Z80) !void {
     std.log.debug("[44]\tLD  \tB,H", .{});
     self.register.b = self.register.h;
+    self.cycle_count += 4;
+}
+
+// MOV C,C: Move value from register C into register C.
+pub fn move_CC(self: *Z80) !void {
+    std.log.debug("[49]\tLD  \tC,C", .{});
+    self.register.c = self.register.c;
     self.cycle_count += 4;
 }
 
