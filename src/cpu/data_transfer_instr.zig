@@ -366,6 +366,13 @@ pub fn move_HD(self: *Z80) !void {
     self.cycle_count += 4;
 }
 
+// MOV H,H: Move value from register H into register H.
+pub fn move_HH(self: *Z80) !void {
+    std.log.debug("[64]\tLD  \tH,H", .{});
+    self.register.h = self.register.h;
+    self.cycle_count += 4;
+}
+
 // MOV L,C: Move value from register C into register L.
 pub fn move_LC(self: *Z80) !void {
     std.log.debug("[69]\tLD  \tL,C", .{});
@@ -377,6 +384,13 @@ pub fn move_LC(self: *Z80) !void {
 pub fn move_LD(self: *Z80) !void {
     std.log.debug("[6A]\tLD  \tL,D", .{});
     self.register.l = self.register.d;
+    self.cycle_count += 4;
+}
+
+// MOV L,L: Move value from register L into register L.
+pub fn move_LL(self: *Z80) !void {
+    std.log.debug("[6D]\tLD  \tL,L", .{});
+    self.register.l = self.register.l;
     self.cycle_count += 4;
 }
 
