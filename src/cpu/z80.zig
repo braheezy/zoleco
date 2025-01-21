@@ -176,6 +176,10 @@ pub fn fetchData(self: *Z80, count: u16) ![]const u8 {
     return self.scratch[0..count];
 }
 
+pub fn getHL(self: *Z80) u16 {
+    return toUint16(self.register.h, self.register.l);
+}
+
 pub fn runCycles(self: *Z80, cycle_count: usize) !void {
     // TODO: Update to measure how long the frame takes and
     //  slow down or speed up accordingly to hardware-specific info

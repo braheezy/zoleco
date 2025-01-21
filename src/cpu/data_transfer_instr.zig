@@ -24,7 +24,7 @@ pub fn loadAddr_D(self: *Z80) !void {
 }
 // MOV M,A: Move value from accumulator into register pair H.
 pub fn move_MA(self: *Z80) !void {
-    const address = Z80.toUint16(self.register.h, self.register.l);
+    const address = self.getHL();
     std.log.debug("[77]\tLD  \t(HL),A ({X:<4})", .{address});
     self.memory[address] = self.register.a;
     self.cycle_count += 7;
@@ -47,7 +47,7 @@ pub fn move_LB(self: *Z80) !void {
 // MOV L,M: Load value from register B into memory address from register pair HL
 pub fn move_LM(self: *Z80) !void {
     std.log.debug("[6E]\tLD  \tL,(HL)", .{});
-    self.register.l = self.memory[Z80.toUint16(self.register.h, self.register.l)];
+    self.register.l = self.memory[self.getHL()];
     self.cycle_count += 7;
 }
 
@@ -187,84 +187,84 @@ pub fn move_HC(self: *Z80) !void {
 // MOV E,M: Move memory location pointed to by register pair HL into register E.
 pub fn move_EM(self: *Z80) !void {
     std.log.debug("[5E]\tLD  \tE,(HL)", .{});
-    self.register.e = self.memory[Z80.toUint16(self.register.h, self.register.l)];
+    self.register.e = self.memory[self.getHL()];
     self.cycle_count += 7;
 }
 
 // MOV B,M: Move memory location pointed to by register pair HL into register B.
 pub fn move_BM(self: *Z80) !void {
     std.log.debug("[46]\tLD  \tB,(HL)", .{});
-    self.register.b = self.memory[Z80.toUint16(self.register.h, self.register.l)];
+    self.register.b = self.memory[self.getHL()];
     self.cycle_count += 7;
 }
 
 // MOV C,M: Move memory location pointed to by register pair HL into register C.
 pub fn move_CM(self: *Z80) !void {
     std.log.debug("[4E]\tLD  \tC,(HL)", .{});
-    self.register.c = self.memory[Z80.toUint16(self.register.h, self.register.l)];
+    self.register.c = self.memory[self.getHL()];
     self.cycle_count += 7;
 }
 
 // MOV D,M: Move memory location pointed to by register pair HL into register D.
 pub fn move_DM(self: *Z80) !void {
     std.log.debug("[56]\tLD  \tD,(HL)", .{});
-    self.register.d = self.memory[Z80.toUint16(self.register.h, self.register.l)];
+    self.register.d = self.memory[self.getHL()];
     self.cycle_count += 7;
 }
 
 // MOV A,M: Move memory location pointed to by register pair HL into register A.
 pub fn move_AM(self: *Z80) !void {
     std.log.debug("[7E]\tLD  \tA,(HL)", .{});
-    self.register.a = self.memory[Z80.toUint16(self.register.h, self.register.l)];
+    self.register.a = self.memory[self.getHL()];
     self.cycle_count += 7;
 }
 
 // MOV H,M: Move memory location pointed to by register pair HL into register H.
 pub fn move_HM(self: *Z80) !void {
     std.log.debug("[66]\tLD  \tH,(HL)", .{});
-    self.register.h = self.memory[Z80.toUint16(self.register.h, self.register.l)];
+    self.register.h = self.memory[self.getHL()];
     self.cycle_count += 7;
 }
 
 // MOV M,B: Move register B into memory location pointed to by register pair HL.
 pub fn move_MB(self: *Z80) !void {
     std.log.debug("[70]\tLD  \t(HL),B", .{});
-    self.memory[Z80.toUint16(self.register.h, self.register.l)] = self.register.b;
+    self.memory[self.getHL()] = self.register.b;
     self.cycle_count += 7;
 }
 
 // MOV M,C: Move register C into memory location pointed to by register pair HL.
 pub fn move_MC(self: *Z80) !void {
     std.log.debug("[71]\tLD  \t(HL),C", .{});
-    self.memory[Z80.toUint16(self.register.h, self.register.l)] = self.register.c;
+    self.memory[self.getHL()] = self.register.c;
     self.cycle_count += 7;
 }
 
 // MOV M,D: Move register D into memory location pointed to by register pair HL.
 pub fn move_MD(self: *Z80) !void {
     std.log.debug("[72]\tLD  \t(HL),D", .{});
-    self.memory[Z80.toUint16(self.register.h, self.register.l)] = self.register.d;
+    self.memory[self.getHL()] = self.register.d;
     self.cycle_count += 7;
 }
 
 // MOV M,E: Move register E into memory location pointed to by register pair HL.
 pub fn move_ME(self: *Z80) !void {
     std.log.debug("[73]\tLD  \t(HL),E", .{});
-    self.memory[Z80.toUint16(self.register.h, self.register.l)] = self.register.e;
+    self.memory[self.getHL()] = self.register.e;
     self.cycle_count += 7;
 }
 
 // MOV M,H: Move register H into memory location pointed to by register pair HL.
 pub fn move_MH(self: *Z80) !void {
     std.log.debug("[74]\tLD  \t(HL),H", .{});
-    self.memory[Z80.toUint16(self.register.h, self.register.l)] = self.register.h;
+    self.memory[self.getHL()] = self.register.h;
     self.cycle_count += 7;
 }
 
 // MOV M,L: Move register L into memory location pointed to by register pair HL.
 pub fn move_ML(self: *Z80) !void {
     std.log.debug("[75]\tLD  \t(HL),L", .{});
-    self.memory[Z80.toUint16(self.register.h, self.register.l)] = self.register.l;
+    self.memory[self.getHL()] = self.register.l;
     self.cycle_count += 7;
 }
 

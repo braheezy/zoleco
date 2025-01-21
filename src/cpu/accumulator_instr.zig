@@ -73,7 +73,7 @@ pub fn add_L(self: *Z80) !void {
 pub fn add_M(self: *Z80) !void {
     std.log.debug("[86]\tADD \tA,(HL)", .{});
 
-    self.register.a = add(self, self.memory[Z80.toUint16(self.register.h, self.register.l)]);
+    self.register.a = add(self, self.memory[self.getHL()]);
 }
 
 // ADD A: ADD accumulator with register A.
@@ -170,7 +170,7 @@ pub fn adc_L(self: *Z80) !void {
 pub fn adc_M(self: *Z80) !void {
     std.log.debug("[8E]\tADC \tM", .{});
 
-    self.register.a = adc(self, self.memory[Z80.toUint16(self.register.h, self.register.l)]);
+    self.register.a = adc(self, self.memory[self.getHL()]);
 }
 
 // ADC A: Add accumulator with register A and carry.
@@ -273,7 +273,7 @@ pub fn sub_L(self: *Z80) !void {
 pub fn sub_M(self: *Z80) !void {
     std.log.debug("[96]\tSUB \tL", .{});
 
-    self.register.a = sub(self, self.memory[Z80.toUint16(self.register.h, self.register.l)]);
+    self.register.a = sub(self, self.memory[self.getHL()]);
 }
 
 // SUB A: Subtract accumulator from accumulator.
@@ -368,7 +368,7 @@ pub fn sbb_L(self: *Z80) !void {
 pub fn sbb_M(self: *Z80) !void {
     std.log.debug("[9E]\tSBB \tM", .{});
 
-    self.register.a = sbb(self, self.memory[Z80.toUint16(self.register.h, self.register.l)]);
+    self.register.a = sbb(self, self.memory[self.getHL()]);
 }
 
 // SBB A: Subtract register A from accumulator with borrow.
@@ -432,7 +432,7 @@ pub fn ana_L(self: *Z80) !void {
 // ANA M: AND memory address pointed to by register pair HL with accumulator.
 pub fn ana_M(self: *Z80) !void {
     std.log.debug("[A6]\tAND \tL", .{});
-    ana(self, self.memory[Z80.toUint16(self.register.h, self.register.l)]);
+    ana(self, self.memory[self.getHL()]);
 }
 
 // ANA A: AND accumulator with accumulator.
@@ -495,7 +495,7 @@ pub fn xra_L(self: *Z80) !void {
 // XRA M: Exclusive-OR memory address pointed to by register pair HL with accumulator.
 pub fn xra_M(self: *Z80) !void {
     std.log.debug("[AE]\tXOR \tM", .{});
-    xra(self, self.memory[Z80.toUint16(self.register.h, self.register.l)]);
+    xra(self, self.memory[self.getHL()]);
 }
 
 // XRA A: Exclusive-OR accumulator with accumulator.
@@ -558,7 +558,7 @@ pub fn ora_L(self: *Z80) !void {
 // ORA M: OR A with memory location pointed to by register pair HL
 pub fn ora_M(self: *Z80) !void {
     std.log.debug("[B6]OR  \t(HL)", .{});
-    const address = Z80.toUint16(self.register.h, self.register.l);
+    const address = self.getHL();
     ora(self, self.memory[address]);
 }
 
@@ -623,7 +623,7 @@ pub fn cmp_L(self: *Z80) !void {
 // CMP M: Compare A with memory address pointed to by register pair HL
 pub fn cmp_M(self: *Z80) !void {
     std.log.debug("[BE]\tCP  \t(HL)", .{});
-    compare(self, self.memory[Z80.toUint16(self.register.h, self.register.l)]);
+    compare(self, self.memory[self.getHL()]);
 }
 
 // CMP A: Compare A with register A

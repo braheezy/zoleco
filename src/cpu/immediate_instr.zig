@@ -61,7 +61,7 @@ pub fn moveImm_L(self: *Z80) !void {
 pub fn moveImm_M(self: *Z80) !void {
     const data = try self.fetchData(1);
     std.log.debug("[36]\tLD  \t(HL),${X:<2}", .{data[0]});
-    const address = Z80.toUint16(self.register.h, self.register.l);
+    const address = self.getHL();
     self.memory[address] = data[0];
     self.cycle_count += 10;
 }

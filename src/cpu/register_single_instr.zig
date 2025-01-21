@@ -67,7 +67,7 @@ pub fn inr_L(self: *Z80) !void {
 // INR M: Increment memory address pointed to by register pair HL.
 pub fn inr_M(self: *Z80) !void {
     std.log.debug("[34]\tINC \tM", .{});
-    self.memory[Z80.toUint16(self.register.h, self.register.l)] = inc(self, self.memory[Z80.toUint16(self.register.h, self.register.l)]);
+    self.memory[self.getHL()] = inc(self, self.memory[self.getHL()]);
     self.cycle_count += 11;
 }
 
@@ -137,7 +137,7 @@ pub fn dcr_L(self: *Z80) !void {
 // DCR M: Decrement memory location pointed to by register pair HL.
 pub fn dcr_M(self: *Z80) !void {
     std.log.debug("[35]\tDEC \t(HL)", .{});
-    const memory_address = Z80.toUint16(self.register.h, self.register.l);
+    const memory_address = self.getHL();
     self.memory[memory_address] = dcr(self, self.memory[memory_address]);
     self.cycle_count += 11;
 }

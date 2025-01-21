@@ -62,7 +62,7 @@ pub fn rlc_L(self: *Z80) !void {
 
 pub fn rlc_M(self: *Z80) !void {
     std.log.debug("[CB 06]\tRLC \tM", .{});
-    const address = Z80.toUint16(self.register.h, self.register.l);
+    const address = self.getHL();
     self.memory[address] = rlc(self, self.memory[address]);
 }
 
@@ -137,7 +137,7 @@ pub fn rrc_L(self: *Z80) !void {
 
 pub fn rrc_M(self: *Z80) !void {
     std.log.debug("[CB 0E]\tRRC \tM", .{});
-    const address = Z80.toUint16(self.register.h, self.register.l);
+    const address = self.getHL();
     self.memory[address] = rrc(self, self.memory[address]);
 }
 
@@ -220,7 +220,7 @@ pub fn rl_L(self: *Z80) !void {
 
 pub fn rl_M(self: *Z80) !void {
     std.log.debug("[CB 16]\tRL\tM", .{});
-    const address = Z80.toUint16(self.register.h, self.register.l);
+    const address = self.getHL();
     self.memory[address] = rl(self, self.memory[address]);
 }
 
@@ -301,7 +301,7 @@ pub fn rr_L(self: *Z80) !void {
 
 pub fn rr_M(self: *Z80) !void {
     std.log.debug("[CB 1E]\tRR\tM", .{});
-    const address = Z80.toUint16(self.register.h, self.register.l);
+    const address = self.getHL();
     self.memory[address] = rr(self, self.memory[address]);
 }
 

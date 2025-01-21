@@ -39,7 +39,7 @@ pub fn inx_SP(self: *Z80) !void {
 
 fn dad(self: *Z80, reg1: u8, reg2: u8) void {
     const reg_pair = @as(u32, Z80.toUint16(reg1, reg2));
-    const hl = @as(u32, Z80.toUint16(self.register.h, self.register.l));
+    const hl = @as(u32, self.getHL());
 
     const result = hl + reg_pair;
 
@@ -74,7 +74,7 @@ pub fn dad_H(self: *Z80) !void {
 // DAD SP: Add stack pointer to register pair H.
 pub fn dad_SP(self: *Z80) !void {
     std.log.debug("[39]\tADD \tHL,SP", .{});
-    const hl = @as(u32, Z80.toUint16(self.register.h, self.register.l));
+    const hl = @as(u32, self.getHL());
 
     const result = hl + @as(u32, self.sp);
 
