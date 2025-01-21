@@ -49,3 +49,49 @@ pub fn bitTest(self: *Z80) !void {
 
     self.cycle_count +%= 8;
 }
+
+pub fn bitSetReset(self: *Z80) !void {
+    const opcode = self.memory[self.pc -% 1];
+
+    const is_set = opcode >= 0xC0;
+    const bit_index = @as(u3, @intCast((opcode >> 3) & 0x07));
+    const reg_index = opcode & 0x07;
+
+    var val: u8 = undefined;
+    const addr: u16 = (@as(u16, self.register.h) << 8) | @as(u16, self.register.l);
+
+    switch (reg_index) {
+        0 => val = self.register.b,
+        1 => val = self.register.c,
+        2 => val = self.register.d,
+        3 => val = self.register.e,
+        4 => val = self.register.h,
+        5 => val = self.register.l,
+        6 => val = self.memory[addr],
+        7 => val = self.register.a,
+        else => unreachable,
+    }
+
+    if (is_set) {
+        val |= (@as(u8, 1) << bit_index);
+    } else {
+        val &= ~(@as(u8, 1) << bit_index);
+    }
+
+    switch (reg_index) {
+        0 => self.register.b = val,
+        1 => self.register.c = val,
+        2 => self.register.d = val,
+        3 => self.register.e = val,
+        4 => self.register.h = val,
+        5 => self.register.l = val,
+        6 => {
+            self.memory[addr] = val;
+            self.cycle_count +%= 7;
+        },
+        7 => self.register.a = val,
+        else => unreachable,
+    }
+
+    self.cycle_count +%= 8;
+}

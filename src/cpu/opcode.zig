@@ -14,6 +14,7 @@ const ai = @import("accumulator_instr.zig");
 const ri = @import("return_instr.zig");
 const si = @import("shift_instr.zig");
 const bitTest = @import("bit_test_instr.zig").bitTest;
+const bitSetReset = @import("bit_test_instr.zig").bitSetReset;
 
 pub fn getHighByte(value: u16) u8 {
     return @intCast(value >> 8);
@@ -73,14 +74,14 @@ const BitOpcodeTable = [256]?OpcodeHandler{
     bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, // 50 - 5F
     bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, // 60 - 6F
     bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, // 70 - 7F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 80 - 8F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 90 - 9F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // A0 - AF
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // B0 - BF
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // C0 - CF
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // D0 - DF
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // E0 - EF
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // F0 - FF
+    bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, // 80 - 8F
+    bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, // 90 - 9F
+    bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, // A0 - AF
+    bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, // B0 - BF
+    bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, // C0 - CF
+    bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, // D0 - DF
+    bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, // E0 - EF
+    bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, // F0 - FF
 };
 
 pub fn lookupBitOpcode(self: *Z80) !void {
