@@ -81,6 +81,13 @@ fn defineTests(
     b.installArtifact(test_exe);
 
     const test_cmd = b.addRunArtifact(test_exe);
+
+    // This allows the user to pass arguments to the application in the build
+    // command itself, like this: `zig build run -- arg1 arg2 etc`
+    if (b.args) |args| {
+        test_cmd.addArgs(args);
+    }
+
     const test_step = b.step("cputest", "Run cpu tests");
     test_step.dependOn(&test_cmd.step);
 }

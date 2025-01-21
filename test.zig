@@ -61,14 +61,28 @@ pub fn main() !void {
         std.process.exit(1);
     };
 
-    const cwd = std.fs.cwd();
-    var tests_dir = try cwd.openDir("tests", .{ .iterate = true });
-    defer tests_dir.close();
+    // args
+    const args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
 
-    var it = tests_dir.iterate();
-    while (try it.next()) |entry| {
-        const file_name = entry.name;
-        try processFile(file_name, allocator);
+    const cwd = std.fs.cwd();
+
+    for (args[1..]) |arg| {
+        std.debug.print("running single file: {s}\n", .{arg});
+        const single_test_file = try std.fmt.allocPrint(allocator, "{s}.json", .{arg});
+        defer allocator.free(single_test_file);
+        try processFile(single_test_file, allocator);
+        std.process.exit(0);
+    } else {
+        // Otherwise, iterate over all files in "tests" directory
+        var tests_dir = try cwd.openDir("tests", .{ .iterate = true });
+        defer tests_dir.close();
+
+        var it = tests_dir.iterate();
+        while (try it.next()) |entry| {
+            const file_name = entry.name;
+            try processFile(file_name, allocator);
+        }
     }
 
     if (has_failure) {

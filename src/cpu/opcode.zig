@@ -10,6 +10,7 @@ const rpi = @import("register_pair_instr.zig");
 const rai = @import("rotate_accumulator_instr.zig");
 const rsi = @import("register_single_instr.zig");
 const dai = @import("direct_address_instr.zig");
+const ai = @import("accumulator_instr.zig");
 
 pub fn getHighByte(value: u16) u8 {
     return @intCast(value >> 8);
@@ -31,10 +32,10 @@ pub const OpcodeTable = [256]?OpcodeHandler{
     dti.move_DB, dti.move_DC, dti.move_DD, dti.move_DE, dti.move_DH, dti.move_DL, dti.move_DM, dti.move_DA, dti.move_EB, dti.move_EC, dti.move_ED, dti.move_EE, dti.move_EH, dti.move_EL, dti.move_EM, dti.move_EA, // 50 - 5F
     dti.move_HB, dti.move_HC, dti.move_HD, dti.move_HE, dti.move_HH, dti.move_HL, dti.move_HM, dti.move_HA, dti.move_LB, dti.move_LC, dti.move_LD, dti.move_LE, dti.move_LH, dti.move_LL, dti.move_LM, dti.move_LA, // 60 - 6F
     dti.move_MB, dti.move_MC, dti.move_MD, dti.move_ME, dti.move_MH, dti.move_ML, halt, dti.move_MA, dti.move_AB, dti.move_AC, dti.move_AD, dti.move_AE, dti.move_AH, dti.move_AL, dti.move_AM, dti.move_AA, // 70 - 7F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 80 - 8F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 90 - 9F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // A0 - AF
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // B0 - BF
+    ai.add_B, ai.add_C, ai.add_D, ai.add_E, ai.add_H, ai.add_L, ai.add_M, ai.add_A, ai.adc_B, ai.adc_C, ai.adc_D, ai.adc_E, ai.adc_H, ai.adc_L, ai.adc_M, ai.adc_A, // 80 - 8F
+    ai.sub_B, ai.sub_C, ai.sub_D, ai.sub_E, ai.sub_H, ai.sub_L, ai.sub_M, ai.sub_A, ai.sbb_B, ai.sbb_C, ai.sbb_D, ai.sbb_E, ai.sbb_H, ai.sbb_L, ai.sbb_M, ai.sbb_A, // 90 - 9F
+    ai.ana_B, ai.ana_C, ai.ana_D, ai.ana_E, ai.ana_H, ai.ana_L, ai.ana_M, ai.ana_A, ai.xra_B, ai.xra_C, ai.xra_D, ai.xra_E, ai.xra_H, ai.xra_L, ai.xra_M, ai.xra_A, // A0 - AF
+    ai.ora_B, ai.ora_C, ai.ora_D, ai.ora_E, ai.ora_H, ai.ora_L, ai.ora_M, ai.ora_A, ai.cmp_B, ai.cmp_C, ai.cmp_D, ai.cmp_E, ai.cmp_H, ai.cmp_L, ai.cmp_M, ai.cmp_A, // B0 - BF
     null, null, ji.jump_NZ, ji.jump, ci.call_NZ, li.push_BC, null, null, null, null, ji.jump_Z, null, ci.call_Z, ci.call, null, null, // C0 - CF
     null, null, ji.jump_NC, null, ci.call_NC, li.push_DE, null, null, null, li.exx, ji.jump_C, null, null, ci.call_C, null, null, // D0 - DF
     null, null, ji.jump_PO, li.ex_M_HL, ci.call_PO, li.push_HL, null, null, null, null, ji.jump_PE, li.ex_DE_HL, ci.call_PE, null, null, null, // E0 - EF
