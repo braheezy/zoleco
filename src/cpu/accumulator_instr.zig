@@ -357,6 +357,8 @@ pub fn ana(self: *Z80, data: u8) void {
     self.flag.setZ(result);
     self.flag.setS(result);
     self.flag.carry = false;
+    self.flag.add_subtract = false;
+    self.flag.half_carry = true;
     self.flag.parity_overflow = Z80.parity(u16, result);
 
     self.register.a = @intCast(result);
@@ -420,6 +422,7 @@ pub fn xra(self: *Z80, data: u8) void {
     self.flag.carry = false;
     self.flag.parity_overflow = Z80.parity(u16, result);
     self.flag.half_carry = false;
+    self.flag.add_subtract = false;
 
     self.register.a = @intCast(result);
 }
@@ -481,6 +484,8 @@ pub fn ora(self: *Z80, reg: u8) void {
     self.flag.setS(result);
     self.flag.carry = false;
     self.flag.parity_overflow = Z80.parity(u16, result);
+    self.flag.add_subtract = false;
+    self.flag.half_carry = false;
 
     self.register.a = @intCast(result);
 }
@@ -536,14 +541,18 @@ pub fn ora_A(self: *Z80) !void {
 
 // compare helper
 pub fn compare(self: *Z80, data: u8) void {
-    const result = @as(u16, self.register.a) - @as(u16, data);
+    const result = @as(u16, self.register.a) -% @as(u16, data);
 
     // Handle condition bits
     self.flag.setZ(result);
     self.flag.setS(result);
-    self.flag.parity_overflow = Z80.parity(u16, result);
     self.flag.carry = Z80.carrySub(self.register.a, data);
     self.flag.half_carry = Z80.auxCarrySub(self.register.a, data);
+    self.flag.add_subtract = true;
+
+    const diff = (@as(i16, self.register.a) - @as(i16, data)) & 0xFF;
+    const res: u8 = @intCast(diff);
+    self.flag.parity_overflow = ((self.register.a ^ data) & (self.register.a ^ res) & 0x80) != 0;
 }
 
 // CMP B: Compare A with register B
