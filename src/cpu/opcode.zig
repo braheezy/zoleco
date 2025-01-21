@@ -7,7 +7,7 @@ const ji = @import("jump_instr.zig");
 const immi = @import("immediate_instr.zig");
 const dti = @import("data_transfer_instr.zig");
 const rpi = @import("register_pair_instr.zig");
-const rai = @import("rotate_accumulator_instr.zig");
+const rai = @import("rotate_instr.zig");
 const rsi = @import("register_single_instr.zig");
 const dai = @import("direct_address_instr.zig");
 const ai = @import("accumulator_instr.zig");
@@ -25,7 +25,7 @@ const OpError = error{OutOfBoundsMemory};
 
 pub const OpcodeHandler = *const fn (*Z80) OpError!void;
 pub const OpcodeTable = [256]?OpcodeHandler{
-    nop, immi.load_BC, dti.stax_B, rpi.inx_B, rsi.inr_B, rsi.dcr_B, immi.moveImm_B, rai.rlc, li.ex_AF, rpi.dad_B, dti.loadAddr_B, rsi.dcx_B, rsi.inr_C, rsi.dcr_C, immi.moveImm_C, rai.rrc, // 00 - 0F
+    nop, immi.load_BC, dti.stax_B, rpi.inx_B, rsi.inr_B, rsi.dcr_B, immi.moveImm_B, rai.rlca, li.ex_AF, rpi.dad_B, dti.loadAddr_B, rsi.dcx_B, rsi.inr_C, rsi.dcr_C, immi.moveImm_C, rai.rrca, // 00 - 0F
     ji.djnz, immi.load_DE, dti.stax_D, rpi.inx_D, rsi.inr_D, rsi.dcr_D, immi.moveImm_D, rai.ral, ji.jr, rpi.dad_D, dti.loadAddr_D, rsi.dcx_D, rsi.inr_E, rsi.dcr_E, immi.moveImm_E, rai.rra, // 10 - 1F
     ji.jr_NZ, immi.load_HL, dai.store_HL, rpi.inx_H, rsi.inr_H, rsi.dcr_H, immi.moveImm_H, rsi.daa, ji.jr_Z, rpi.dad_H, dai.loadImm_HL, rsi.dcx_H, rsi.inr_L, rsi.dcr_L, immi.moveImm_L, rsi.cma, // 20 - 2F
     ji.jr_NC, immi.load_SP, dai.store_A, rpi.inx_SP, rsi.inr_M, rsi.dcr_M, immi.moveImm_M, rsi.scf, ji.jr_C, rpi.dad_SP, dai.load_A, rsi.dcx_SP, rsi.inr_A, rsi.dcr_A, immi.moveImm_A, rsi.ccf, // 30 - 3F
@@ -37,7 +37,7 @@ pub const OpcodeTable = [256]?OpcodeHandler{
     ai.sub_B, ai.sub_C, ai.sub_D, ai.sub_E, ai.sub_H, ai.sub_L, ai.sub_M, ai.sub_A, ai.sbb_B, ai.sbb_C, ai.sbb_D, ai.sbb_E, ai.sbb_H, ai.sbb_L, ai.sbb_M, ai.sbb_A, // 90 - 9F
     ai.ana_B, ai.ana_C, ai.ana_D, ai.ana_E, ai.ana_H, ai.ana_L, ai.ana_M, ai.ana_A, ai.xra_B, ai.xra_C, ai.xra_D, ai.xra_E, ai.xra_H, ai.xra_L, ai.xra_M, ai.xra_A, // A0 - AF
     ai.ora_B, ai.ora_C, ai.ora_D, ai.ora_E, ai.ora_H, ai.ora_L, ai.ora_M, ai.ora_A, ai.cmp_B, ai.cmp_C, ai.cmp_D, ai.cmp_E, ai.cmp_H, ai.cmp_L, ai.cmp_M, ai.cmp_A, // B0 - BF
-    ri.ret_NZ, rpi.pop_BC, ji.jump_NZ, ji.jump, ci.call_NZ, rpi.push_BC, ai.add_N, rst0, ri.ret_Z, ri.ret, ji.jump_Z, null, ci.call_Z, ci.call, ai.adc_N, rst8, // C0 - CF
+    ri.ret_NZ, rpi.pop_BC, ji.jump_NZ, ji.jump, ci.call_NZ, rpi.push_BC, ai.add_N, rst0, ri.ret_Z, ri.ret, ji.jump_Z, lookupBitOpcode, ci.call_Z, ci.call, ai.adc_N, rst8, // C0 - CF
     ri.ret_NC, rpi.pop_DE, ji.jump_NC, null, ci.call_NC, rpi.push_DE, null, null, ri.ret_C, li.exx, ji.jump_C, null, null, ci.call_C, null, null, // D0 - DF
     ri.ret_PO, rpi.pop_HL, ji.jump_PO, li.ex_M_HL, ci.call_PO, rpi.push_HL, null, null, ri.ret_PE, null, ji.jump_PE, li.ex_DE_HL, ci.call_PE, null, null, null, // E0 - EF
     ri.ret_P, rpi.pop_AF, ji.jump_P, di, ci.call_P, rpi.push_AF, null, null, ri.ret_M, null, ji.jump_M, null, ci.call_M, indexAddressY, null, null, // F0 - FF
@@ -61,6 +61,40 @@ pub const IndexYOpcodeTable = [256]?OpcodeHandler{
     null, null, null, null, null, li.pushIy, null, null, null, null, null, null, null, null, null, null, // E0 - EF
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // F0 - FF
 };
+
+const BitOpcodeTable = [256]?OpcodeHandler{
+    rai.rlc_B, rai.rlc_C, rai.rlc_D, rai.rlc_E, rai.rlc_H, rai.rlc_L, rai.rlc_M, rai.rlc_A, rai.rrc_B, rai.rrc_C, rai.rrc_D, rai.rrc_E, rai.rrc_H, rai.rrc_L, rai.rrc_M, rai.rrc_A, // 00 - 0F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 10 - 1F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 20 - 2F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 30 - 3F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 40 - 4F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 50 - 5F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 60 - 6F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 70 - 7F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 80 - 8F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 90 - 9F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // A0 - AF
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // B0 - BF
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // C0 - CF
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // D0 - DF
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // E0 - EF
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // F0 - FF
+};
+
+pub fn lookupBitOpcode(self: *Z80) !void {
+    const next_opcode = self.memory[self.pc];
+
+    self.pc +%= 1;
+    // Increment memory register, but only the lower 7 bits
+    self.r = (self.r & 0x80) | ((self.r + 1) & 0x7F);
+
+    if (BitOpcodeTable[next_opcode]) |handler| {
+        try handler(self);
+    } else {
+        std.debug.print("unknown bit opcode: {x}\n", .{next_opcode});
+        std.process.exit(1);
+    }
+}
 
 fn nop(self: *Z80) !void {
     std.log.debug("[00]\tNOP", .{});

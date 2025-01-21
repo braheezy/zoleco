@@ -100,7 +100,14 @@ fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
     var file = try cwd.openFile(full_path, .{});
     defer file.close();
 
-    std.debug.print("0x{s} ==> ", .{name[0..2]});
+    const opcode = name[0..2];
+
+    if (std.mem.eql(u8, opcode, "cb")) {
+        const next_opcode = name[3..5];
+        std.debug.print("0x{s} {s} ==> ", .{ opcode, next_opcode });
+    } else {
+        std.debug.print("0x{s}    ==> ", .{opcode});
+    }
 
     const json_content = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
     defer allocator.free(json_content);
