@@ -26,7 +26,7 @@ const OpError = error{OutOfBoundsMemory};
 pub const OpcodeHandler = *const fn (*Z80) OpError!void;
 pub const OpcodeTable = [256]?OpcodeHandler{
     nop, immi.load_BC, dti.stax_B, rpi.inx_B, rsi.inr_B, rsi.dcr_B, immi.moveImm_B, rai.rlca, li.ex_AF, rpi.dad_B, dti.loadAddr_B, rsi.dcx_B, rsi.inr_C, rsi.dcr_C, immi.moveImm_C, rai.rrca, // 00 - 0F
-    ji.djnz, immi.load_DE, dti.stax_D, rpi.inx_D, rsi.inr_D, rsi.dcr_D, immi.moveImm_D, rai.ral, ji.jr, rpi.dad_D, dti.loadAddr_D, rsi.dcx_D, rsi.inr_E, rsi.dcr_E, immi.moveImm_E, rai.rra, // 10 - 1F
+    ji.djnz, immi.load_DE, dti.stax_D, rpi.inx_D, rsi.inr_D, rsi.dcr_D, immi.moveImm_D, rai.rla, ji.jr, rpi.dad_D, dti.loadAddr_D, rsi.dcx_D, rsi.inr_E, rsi.dcr_E, immi.moveImm_E, rai.rra, // 10 - 1F
     ji.jr_NZ, immi.load_HL, dai.store_HL, rpi.inx_H, rsi.inr_H, rsi.dcr_H, immi.moveImm_H, rsi.daa, ji.jr_Z, rpi.dad_H, dai.loadImm_HL, rsi.dcx_H, rsi.inr_L, rsi.dcr_L, immi.moveImm_L, rsi.cma, // 20 - 2F
     ji.jr_NC, immi.load_SP, dai.store_A, rpi.inx_SP, rsi.inr_M, rsi.dcr_M, immi.moveImm_M, rsi.scf, ji.jr_C, rpi.dad_SP, dai.load_A, rsi.dcx_SP, rsi.inr_A, rsi.dcr_A, immi.moveImm_A, rsi.ccf, // 30 - 3F
     dti.move_BB, dti.move_BC, dti.move_BD, dti.move_BE, dti.move_BH, dti.move_BL, dti.move_BM, dti.move_BA, dti.move_CB, dti.move_CC, dti.move_CD, dti.move_CE, dti.move_CH, dti.move_CL, dti.move_CM, dti.move_CA, // 40 - 4F
@@ -64,7 +64,7 @@ pub const IndexYOpcodeTable = [256]?OpcodeHandler{
 
 const BitOpcodeTable = [256]?OpcodeHandler{
     rai.rlc_B, rai.rlc_C, rai.rlc_D, rai.rlc_E, rai.rlc_H, rai.rlc_L, rai.rlc_M, rai.rlc_A, rai.rrc_B, rai.rrc_C, rai.rrc_D, rai.rrc_E, rai.rrc_H, rai.rrc_L, rai.rrc_M, rai.rrc_A, // 00 - 0F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 10 - 1F
+    rai.rl_B, rai.rl_C, rai.rl_D, rai.rl_E, rai.rl_H, rai.rl_L, rai.rl_M, rai.rl_A, rai.rr_B, rai.rr_C, rai.rr_D, rai.rr_E, rai.rr_H, rai.rr_L, rai.rr_M, rai.rr_A, // 10 - 1F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 20 - 2F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 30 - 3F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 40 - 4F

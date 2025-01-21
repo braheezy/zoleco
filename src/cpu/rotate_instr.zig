@@ -150,8 +150,8 @@ pub fn rrc_A(self: *Z80) !void {
 // The contents of the accumulator are rotated one bit position to the left.
 // The high-order bit of the accumulator replaces the Carry bit, while the
 // Carry bit replaces the high-order bit of the accumulator.
-pub fn ral(self: *Z80) !void {
-    std.log.debug("[17]\tRAL \tA", .{});
+pub fn rla(self: *Z80) !void {
+    std.log.debug("[17]\tRLA", .{});
     const carry: u8 = if (self.flag.carry)
         1
     else
@@ -167,12 +167,74 @@ pub fn ral(self: *Z80) !void {
     self.cycle_count += 4;
 }
 
+pub fn rl(self: *Z80, data: u8) u8 {
+    const carry: u8 = if (self.flag.carry)
+        1
+    else
+        0;
+
+    // Isolate most significant bit to check for Carry
+    self.flag.carry = (data & 0x80) == 0x80;
+    // Rotate accumulator left through carry
+    const result = (data << 1) | carry;
+
+    self.flag.half_carry = false;
+    self.flag.add_subtract = false;
+    self.cycle_count += 8;
+    self.flag.setZ(result);
+    self.flag.setS(result);
+    self.flag.parity_overflow = Z80.parity(u8, result);
+
+    return result;
+}
+
+pub fn rl_B(self: *Z80) !void {
+    std.log.debug("[CB 10]\tRL\tB", .{});
+    self.register.b = rl(self, self.register.b);
+}
+
+pub fn rl_C(self: *Z80) !void {
+    std.log.debug("[CB 11]\tRL\tC", .{});
+    self.register.c = rl(self, self.register.c);
+}
+
+pub fn rl_D(self: *Z80) !void {
+    std.log.debug("[CB 12]\tRL\tD", .{});
+    self.register.d = rl(self, self.register.d);
+}
+
+pub fn rl_E(self: *Z80) !void {
+    std.log.debug("[CB 13]\tRL\tE", .{});
+    self.register.e = rl(self, self.register.e);
+}
+
+pub fn rl_H(self: *Z80) !void {
+    std.log.debug("[CB 14]\tRL\tH", .{});
+    self.register.h = rl(self, self.register.h);
+}
+
+pub fn rl_L(self: *Z80) !void {
+    std.log.debug("[CB 15]\tRL\tL", .{});
+    self.register.l = rl(self, self.register.l);
+}
+
+pub fn rl_M(self: *Z80) !void {
+    std.log.debug("[CB 16]\tRL\tM", .{});
+    const address = Z80.toUint16(self.register.h, self.register.l);
+    self.memory[address] = rl(self, self.memory[address]);
+}
+
+pub fn rl_A(self: *Z80) !void {
+    std.log.debug("[CB 17]\tRL\tA", .{});
+    self.register.a = rl(self, self.register.a);
+}
+
 // RAR: Rotate accumulator right through carry.
 // The contents of the accumulator are rotated one bit position to the right.
 // The low order bit of the accumulator replaces the carry bit, while the carry bit replaces
 // the high order bit of the accumulator.
 pub fn rra(self: *Z80) !void {
-    std.log.debug("[1F]\tRAR \tA", .{});
+    std.log.debug("[1F]\tRRA", .{});
     const carry_rotate: u8 = if (self.flag.carry)
         1
     else
@@ -185,4 +247,65 @@ pub fn rra(self: *Z80) !void {
     // Rotate accumulator right through carry
     self.register.a = (self.register.a >> 1) | (carry_rotate << (8 - 1));
     self.cycle_count += 4;
+}
+
+fn rr(self: *Z80, data: u8) u8 {
+    const carry_rotate: u8 = if (self.flag.carry)
+        1
+    else
+        0;
+
+    // Isolate least significant bit to check for Carry
+    self.flag.carry = data & 0x01 != 0;
+    self.flag.half_carry = false;
+    self.flag.add_subtract = false;
+    // Rotate accumulator right through carry
+    const result = (data >> 1) | (carry_rotate << (8 - 1));
+    self.cycle_count += 8;
+    self.flag.setZ(result);
+    self.flag.setS(result);
+    self.flag.parity_overflow = Z80.parity(u8, result);
+
+    return result;
+}
+
+pub fn rr_B(self: *Z80) !void {
+    std.log.debug("[CB 18]\tRR\tB", .{});
+    self.register.b = rr(self, self.register.b);
+}
+
+pub fn rr_C(self: *Z80) !void {
+    std.log.debug("[CB 19]\tRR\tC", .{});
+    self.register.c = rr(self, self.register.c);
+}
+
+pub fn rr_D(self: *Z80) !void {
+    std.log.debug("[CB 1A]\tRR\tD", .{});
+    self.register.d = rr(self, self.register.d);
+}
+
+pub fn rr_E(self: *Z80) !void {
+    std.log.debug("[CB 1B]\tRR\tE", .{});
+    self.register.e = rr(self, self.register.e);
+}
+
+pub fn rr_H(self: *Z80) !void {
+    std.log.debug("[CB 1C]\tRR\tH", .{});
+    self.register.h = rr(self, self.register.h);
+}
+
+pub fn rr_L(self: *Z80) !void {
+    std.log.debug("[CB 1D]\tRR\tL", .{});
+    self.register.l = rr(self, self.register.l);
+}
+
+pub fn rr_M(self: *Z80) !void {
+    std.log.debug("[CB 1E]\tRR\tM", .{});
+    const address = Z80.toUint16(self.register.h, self.register.l);
+    self.memory[address] = rr(self, self.memory[address]);
+}
+
+pub fn rr_A(self: *Z80) !void {
+    std.log.debug("[CB 1F]\tRR\tA", .{});
+    self.register.a = rr(self, self.register.a);
 }
