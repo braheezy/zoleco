@@ -87,3 +87,70 @@ pub fn dad_SP(self: *Z80) !void {
 
     self.cycle_count += 11;
 }
+
+pub fn push(self: *Z80, lower: u8, upper: u8) void {
+    // Store value in stack, note: stack grows downwards
+    self.memory[self.sp - 1] = upper;
+    self.memory[self.sp - 2] = lower;
+    self.sp -= 2;
+    self.cycle_count += 11;
+}
+
+// PUSH D: Push register pair D onto stack.
+pub fn push_DE(self: *Z80) !void {
+    std.log.debug("[D5]\tPUSH\tDE", .{});
+    push(self, self.register.e, self.register.d);
+}
+
+// PUSH H: Push register pair H onto stack.
+pub fn push_HL(self: *Z80) !void {
+    std.log.debug("[E5]\tPUSH\tHL", .{});
+    push(self, self.register.l, self.register.h);
+}
+
+// PUSH B: Push register pair B onto stack.
+pub fn push_BC(self: *Z80) !void {
+    std.log.debug("[C5]\tPUSH\tBC", .{});
+    push(self, self.register.c, self.register.b);
+}
+
+// PUSH AF: Push accumulator and flags onto stack.
+pub fn push_AF(self: *Z80) !void {
+    std.log.debug("[F5]\tPUSH\tAF", .{});
+    push(self, self.flag.toByte(), self.register.a);
+}
+
+// pop returns two bytes from the stack.
+pub fn pop(self: *Z80) struct { u8, u8 } {
+    const lower = self.memory[self.sp];
+    const upper = self.memory[self.sp + 1];
+    self.sp += 2;
+    self.cycle_count += 10;
+
+    return .{ lower, upper };
+}
+
+// POP H: Pop register pair H from stack.
+pub fn pop_HL(self: *Z80) !void {
+    std.log.debug("[E1]\tPOP \tHL", .{});
+    self.register.l, self.register.h = pop(self);
+}
+
+// POP B: Pop register pair B from stack.
+pub fn pop_BC(self: *Z80) !void {
+    std.log.debug("[C1]\tPOP \tBC", .{});
+    self.register.c, self.register.b = pop(self);
+}
+
+// POP D: Pop register pair D from stack.
+pub fn pop_DE(self: *Z80) !void {
+    std.log.debug("[D1]\tPOP \tDE", .{});
+    self.register.e, self.register.d = pop(self);
+}
+
+// POP AF: Pop accumulator and flags from stack.
+pub fn pop_AF(self: *Z80) !void {
+    std.log.debug("[F1]\tPOP \tAF", .{});
+    const fl, self.register.a = pop(self);
+    self.flag = Z80.Flag.fromByte(fl);
+}

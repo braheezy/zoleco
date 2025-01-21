@@ -20,6 +20,17 @@ pub const Flag = struct {
     add_subtract: bool = false,
     carry: bool = false,
 
+    pub fn fromByte(b: u8) Flag {
+        return Flag{
+            .sign = b & (1 << 7) != 0,
+            .zero = b & (1 << 6) != 0,
+            .half_carry = b & (1 << 4) != 0,
+            .parity_overflow = b & (1 << 2) != 0,
+            .add_subtract = b & (1 << 1) != 0,
+            .carry = b & 1 != 0,
+        };
+    }
+
     pub fn toByte(self: Flag) u8 {
         var result: u8 = 0;
 

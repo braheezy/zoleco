@@ -1,10 +1,10 @@
 const std = @import("std");
 const Z80 = @import("Z80.zig");
-const li = @import("load_instr.zig");
+const rpi = @import("register_pair_instr.zig");
 
 fn _call(self: *Z80, jumpAddress: u16) void {
-    const returnAddress = self.pc + 2;
-    try li.push(self, @as(u8, @intCast(returnAddress & 0xFF)), @as(u8, @intCast(returnAddress >> 8)));
+    const returnAddress = self.pc;
+    rpi.push(self, @as(u8, @intCast(returnAddress & 0xFF)), @as(u8, @intCast(returnAddress >> 8)));
     self.pc = jumpAddress;
     self.cycle_count += 17;
 }
@@ -24,7 +24,6 @@ pub fn call_NZ(self: *Z80) !void {
         _call(self, jump_address);
     } else {
         std.log.debug("[C4]\tCALL\tNZ,${X:<4} (not taken)", .{self.pc + 2});
-        self.pc += 2;
         self.cycle_count += 10;
     }
 }
@@ -37,7 +36,6 @@ pub fn call_Z(self: *Z80) !void {
         _call(self, jump_address);
     } else {
         std.log.debug("[CC]\tCALL\tZ,${X:<4} (not taken)", .{self.pc + 2});
-        self.pc += 2;
         self.cycle_count += 10;
     }
 }

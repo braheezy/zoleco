@@ -83,6 +83,14 @@ pub fn add_A(self: *Z80) !void {
     self.register.a = add(self, self.register.a);
 }
 
+// ADD N: ADD accumulator with immediate value.
+pub fn add_N(self: *Z80) !void {
+    std.log.debug("[C6]\tADD \tA,N", .{});
+    const data = try self.fetchData(1);
+
+    self.register.a = add(self, data[0]);
+}
+
 fn parity_add(a: u8, b: u8, carry: u8) bool {
     const result: u8 = a +% b +% carry;
 
@@ -170,6 +178,27 @@ pub fn adc_A(self: *Z80) !void {
     std.log.debug("[8F]\tADC \tA", .{});
 
     self.register.a = adc(self, self.register.a);
+}
+
+// ADC A: Add accumulator with immediate value and carry.
+pub fn adc_N(self: *Z80) !void {
+    std.log.debug("[CE]\tADC \tN", .{});
+    const data = try self.fetchData(1);
+    const n = data[0];
+
+    const carry_in: u8 = if (self.flag.carry) 1 else 0;
+    const sum: u16 = @as(u16, self.register.a) + @as(u16, n) + @as(u16, carry_in);
+    const result: u8 = @intCast(sum & 0xFF);
+
+    self.flag.carry = (sum > 0xFF);
+    self.flag.half_carry = ((self.register.a & 0xF) + (n & 0xF) + carry_in) > 0xF;
+    self.flag.parity_overflow = (((self.register.a ^ result) & (n ^ result)) & 0x80) != 0;
+    self.flag.setS(@intCast(result));
+    self.flag.setZ(@intCast(result));
+    self.flag.add_subtract = false;
+
+    self.register.a = result;
+    self.cycle_count += 7;
 }
 
 fn detectOverflowSub(a: u8, b: u8, result: u8) bool {

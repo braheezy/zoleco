@@ -104,37 +104,6 @@ pub fn exx(self: *Z80) !void {
     self.cycle_count += 4;
 }
 
-pub fn push(self: *Z80, lower: u8, upper: u8) !void {
-    // Store value in stack; stack grows downward
-    self.memory[self.sp - 1] = upper;
-    self.memory[self.sp - 2] = lower;
-    self.sp -= 2;
-}
-
-pub fn push_DE(self: *Z80) !void {
-    std.log.debug("[D5]\tPUSH\tDE", .{});
-    try push(self, self.register.e, self.register.d);
-    self.cycle_count += 11;
-}
-
-pub fn push_HL(self: *Z80) !void {
-    std.log.debug("[E5]\tPUSH\tHL", .{});
-    try push(self, self.register.l, self.register.h);
-    self.cycle_count += 11;
-}
-
-pub fn push_BC(self: *Z80) !void {
-    std.log.debug("[C5]\tPUSH\tBC", .{});
-    try push(self, self.register.c, self.register.b);
-    self.cycle_count += 11;
-}
-
-pub fn push_AF(self: *Z80) !void {
-    std.log.debug("[F5]\tPUSH\tAF", .{});
-    try push(self, self.flag.toByte(), self.register.a);
-    self.cycle_count += 11;
-}
-
 test "pushIy" {
     const allocator = std.testing.allocator;
 
