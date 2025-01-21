@@ -13,6 +13,7 @@ const dai = @import("direct_address_instr.zig");
 const ai = @import("accumulator_instr.zig");
 const ri = @import("return_instr.zig");
 const si = @import("shift_instr.zig");
+const bitTest = @import("bit_test_instr.zig").bitTest;
 
 pub fn getHighByte(value: u16) u8 {
     return @intCast(value >> 8);
@@ -68,10 +69,10 @@ const BitOpcodeTable = [256]?OpcodeHandler{
     rai.rl_B, rai.rl_C, rai.rl_D, rai.rl_E, rai.rl_H, rai.rl_L, rai.rl_M, rai.rl_A, rai.rr_B, rai.rr_C, rai.rr_D, rai.rr_E, rai.rr_H, rai.rr_L, rai.rr_M, rai.rr_A, // 10 - 1F
     si.sla_B, si.sla_C, si.sla_D, si.sla_E, si.sla_H, si.sla_L, si.sla_M, si.sla_A, si.sra_B, si.sra_C, si.sra_D, si.sra_E, si.sra_H, si.sra_L, si.sra_M, si.sra_A, // 20 - 2F
     si.sll_B, si.sll_C, si.sll_D, si.sll_E, si.sll_H, si.sll_L, si.sll_M, si.sll_A, si.srl_B, si.srl_C, si.srl_D, si.srl_E, si.srl_H, si.srl_L, si.srl_M, si.srl_A, // 30 - 3F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 40 - 4F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 50 - 5F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 60 - 6F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 70 - 7F
+    bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, // 40 - 4F
+    bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, // 50 - 5F
+    bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, // 60 - 6F
+    bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, bitTest, // 70 - 7F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 80 - 8F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 90 - 9F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // A0 - AF
