@@ -107,6 +107,9 @@ fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
     if (std.mem.eql(u8, opcode, "cb")) {
         const next_opcode = name[3..5];
         std.debug.print("0x{s} {s} ==> ", .{ opcode, next_opcode });
+    } else if (std.mem.eql(u8, opcode, "dd")) {
+        const next_opcode = name[3..5];
+        std.debug.print("0x{s} {s} ==> ", .{ opcode, next_opcode });
     } else {
         std.debug.print("0x{s}    ==> ", .{opcode});
     }

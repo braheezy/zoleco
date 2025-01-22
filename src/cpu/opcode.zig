@@ -12,6 +12,7 @@ const rsi = @import("register_single_instr.zig");
 const dai = @import("direct_address_instr.zig");
 const ai = @import("accumulator_instr.zig");
 const ri = @import("return_instr.zig");
+const ix = @import("ix_instr.zig");
 const si = @import("shift_instr.zig");
 const bitTest = @import("bit_test_instr.zig").bitTest;
 const bitSetReset = @import("bit_test_instr.zig").bitSetReset;
@@ -66,7 +67,7 @@ pub const IndexYOpcodeTable = [256]?OpcodeHandler{
 };
 
 pub const IndexXOpcodeTable = [256]?OpcodeHandler{
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 00 - 0F
+    nop, immi.load_BC, dti.stax_B, rpi.inx_B, rsi.inr_B, rsi.dcr_B, immi.moveImm_B, rai.rlca, li.ex_AF, ix.add_BC, dti.loadAddr_B, rsi.dcx_B, rsi.inr_C, rsi.dcr_C, immi.moveImm_C, rai.rrca, // 00 - 0F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 10 - 1F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 20 - 2F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 30 - 3F
@@ -120,24 +121,32 @@ pub fn lookupBitOpcode(self: *Z80) !void {
 
 pub fn lookupIyOpcode(self: *Z80) !void {
     const next_opcode = self.memory[self.pc];
+
     self.pc +%= 1;
+    // Increment memory register, but only the lower 7 bits
+    self.r = (self.r & 0x80) | ((self.r + 1) & 0x7F);
 
     if (IndexYOpcodeTable[next_opcode]) |handler| {
         try handler(self);
     } else {
-        std.debug.print("unknown IY opcode: {x}\n", .{next_opcode});
+        std.debug.print("unknown bit opcode: {x}\n", .{next_opcode});
         std.process.exit(1);
     }
 }
 
 pub fn lookupIxOpcode(self: *Z80) !void {
     const next_opcode = self.memory[self.pc];
+
     self.pc +%= 1;
+    // Increment memory register, but only the lower 7 bits
+    self.r = (self.r & 0x80) | ((self.r + 1) & 0x7F);
 
     if (IndexXOpcodeTable[next_opcode]) |handler| {
+        self.cycle_count += 4;
+
         try handler(self);
     } else {
-        std.debug.print("unknown IX opcode: {x}\n", .{next_opcode});
+        std.debug.print("unknown bit opcode: {x}\n", .{next_opcode});
         std.process.exit(1);
     }
 }
