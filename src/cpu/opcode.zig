@@ -68,7 +68,7 @@ pub const IndexYOpcodeTable = [256]?OpcodeHandler{
 
 pub const IndexXOpcodeTable = [256]?OpcodeHandler{
     nop, immi.load_BC, dti.stax_B, rpi.inx_B, rsi.inr_B, rsi.dcr_B, immi.moveImm_B, rai.rlca, li.ex_AF, ix.add_BC, dti.loadAddr_B, rsi.dcx_B, rsi.inr_C, rsi.dcr_C, immi.moveImm_C, rai.rrca, // 00 - 0F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 10 - 1F
+    ji.djnz, immi.load_DE, dti.stax_D, rpi.inx_D, rsi.inr_D, rsi.dcr_D, immi.moveImm_D, rai.rla, ji.jr, ix.add_DE, dti.loadAddr_D, rsi.dcx_D, rsi.inr_E, rsi.dcr_E, immi.moveImm_E, rai.rra, // 10 - 1F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 20 - 2F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 30 - 3F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 40 - 4F

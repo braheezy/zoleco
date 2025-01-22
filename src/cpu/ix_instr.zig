@@ -26,3 +26,8 @@ pub fn add_BC(self: *Z80) !void {
     std.log.debug("[DD 09]\tINC IX BC", .{});
     addix(self, self.register.b, self.register.c);
 }
+
+pub fn add_DE(self: *Z80) !void {
+    std.log.debug("[DD 19]\tINC IX DE", .{});
+    addix(self, self.register.d, self.register.e);
+}
