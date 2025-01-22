@@ -41,9 +41,9 @@ pub const OpcodeTable = [256]?OpcodeHandler{
     ai.ana_B, ai.ana_C, ai.ana_D, ai.ana_E, ai.ana_H, ai.ana_L, ai.ana_M, ai.ana_A, ai.xra_B, ai.xra_C, ai.xra_D, ai.xra_E, ai.xra_H, ai.xra_L, ai.xra_M, ai.xra_A, // A0 - AF
     ai.ora_B, ai.ora_C, ai.ora_D, ai.ora_E, ai.ora_H, ai.ora_L, ai.ora_M, ai.ora_A, ai.cmp_B, ai.cmp_C, ai.cmp_D, ai.cmp_E, ai.cmp_H, ai.cmp_L, ai.cmp_M, ai.cmp_A, // B0 - BF
     ri.ret_NZ, rpi.pop_BC, ji.jump_NZ, ji.jump, ci.call_NZ, rpi.push_BC, ai.add_N, rst0, ri.ret_Z, ri.ret, ji.jump_Z, lookupBitOpcode, ci.call_Z, ci.call, ai.adc_N, rst8, // C0 - CF
-    ri.ret_NC, rpi.pop_DE, ji.jump_NC, null, ci.call_NC, rpi.push_DE, null, null, ri.ret_C, li.exx, ji.jump_C, null, null, ci.call_C, null, null, // D0 - DF
+    ri.ret_NC, rpi.pop_DE, ji.jump_NC, out, ci.call_NC, rpi.push_DE, ai.sub_N, rst16, ri.ret_C, li.exx, ji.jump_C, in, ci.call_C, lookupIxOpcode, ai.sbb_N, rst24, // D0 - DF
     ri.ret_PO, rpi.pop_HL, ji.jump_PO, li.ex_M_HL, ci.call_PO, rpi.push_HL, null, null, ri.ret_PE, null, ji.jump_PE, li.ex_DE_HL, ci.call_PE, null, null, null, // E0 - EF
-    ri.ret_P, rpi.pop_AF, ji.jump_P, di, ci.call_P, rpi.push_AF, null, null, ri.ret_M, null, ji.jump_M, null, ci.call_M, indexAddressY, null, null, // F0 - FF
+    ri.ret_P, rpi.pop_AF, ji.jump_P, di, ci.call_P, rpi.push_AF, null, null, ri.ret_M, null, ji.jump_M, null, ci.call_M, lookupIyOpcode, null, null, // F0 - FF
 };
 
 pub const IndexYOpcodeTable = [256]?OpcodeHandler{
@@ -62,6 +62,25 @@ pub const IndexYOpcodeTable = [256]?OpcodeHandler{
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // C0 - CF
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // D0 - DF
     null, null, null, null, null, li.pushIy, null, null, null, null, null, null, null, null, null, null, // E0 - EF
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // F0 - FF
+};
+
+pub const IndexXOpcodeTable = [256]?OpcodeHandler{
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 00 - 0F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 10 - 1F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 20 - 2F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 30 - 3F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 40 - 4F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 50 - 5F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 60 - 6F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 70 - 7F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 80 - 8F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 90 - 9F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // A0 - AF
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // B0 - BF
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // C0 - CF
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // D0 - DF
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // E0 - EF
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // F0 - FF
 };
 
@@ -99,6 +118,30 @@ pub fn lookupBitOpcode(self: *Z80) !void {
     }
 }
 
+pub fn lookupIyOpcode(self: *Z80) !void {
+    const next_opcode = self.memory[self.pc];
+    self.pc +%= 1;
+
+    if (IndexYOpcodeTable[next_opcode]) |handler| {
+        try handler(self);
+    } else {
+        std.debug.print("unknown IY opcode: {x}\n", .{next_opcode});
+        std.process.exit(1);
+    }
+}
+
+pub fn lookupIxOpcode(self: *Z80) !void {
+    const next_opcode = self.memory[self.pc];
+    self.pc +%= 1;
+
+    if (IndexXOpcodeTable[next_opcode]) |handler| {
+        try handler(self);
+    } else {
+        std.debug.print("unknown IX opcode: {x}\n", .{next_opcode});
+        std.process.exit(1);
+    }
+}
+
 fn nop(self: *Z80) !void {
     std.log.debug("[00]\tNOP", .{});
     self.cycle_count += 4;
@@ -114,6 +157,26 @@ fn halt(self: *Z80) !void {
     std.log.debug("[76]\tHALT", .{});
     self.halted = true;
     self.cycle_count += 4;
+}
+
+fn rst24(self: *Z80) !void {
+    std.log.debug("[DF]\tRST 24", .{});
+    const return_addr = self.pc;
+    self.sp -= 2;
+    self.memory[self.sp + 1] = @intCast(return_addr >> 8);
+    self.memory[self.sp] = @intCast(return_addr & 0xFF);
+    self.pc = 24;
+    self.cycle_count += 11;
+}
+
+fn rst16(self: *Z80) !void {
+    std.log.debug("[D7]\tRST 16", .{});
+    const return_addr = self.pc;
+    self.sp -= 2;
+    self.memory[self.sp + 1] = @intCast(return_addr >> 8);
+    self.memory[self.sp] = @intCast(return_addr & 0xFF);
+    self.pc = 16;
+    self.cycle_count += 11;
 }
 
 fn rst8(self: *Z80) !void {
@@ -136,14 +199,21 @@ fn rst0(self: *Z80) !void {
     self.cycle_count += 11;
 }
 
-pub fn indexAddressY(self: *Z80) !void {
-    const next_opcode = self.memory[self.pc];
-    self.pc += 1;
+// Combine A (high bits) with immediate port_lo (low bits),
+// then take only as many bits as needed, e.g. 8-bit port.
+fn out(self: *Z80) !void {
+    const data = try self.fetchData(1);
+    const port = (@as(u16, self.register.a) << 8) | @as(u16, data[0]);
+    const actual_port: u8 = @intCast(port & 0xFF);
 
-    if (IndexYOpcodeTable[next_opcode]) |handler| {
-        try handler(self);
-    } else {
-        std.debug.print("unknown IY opcode: {x}\n", .{next_opcode});
-        std.process.exit(1);
-    }
+    try self.hardware.out(actual_port, self.register.a);
+}
+
+fn in(self: *Z80) !void {
+    const data = try self.fetchData(1);
+    const port = Z80.toUint16(self.register.a, data[0]);
+    const actual_port: u8 = @intCast(port & 0xFF);
+
+    const value = try self.hardware.in(actual_port);
+    self.register.a = value;
 }

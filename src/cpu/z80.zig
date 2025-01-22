@@ -1,5 +1,6 @@
 const std = @import("std");
 const OpcodeTable = @import("opcode.zig").OpcodeTable;
+const Hardware = @import("hardware.zig");
 const Z80 = @This();
 
 pub const Register = struct {
@@ -104,7 +105,7 @@ total_cycle_count: usize = 0,
 interrupts_enabled: bool = false,
 interrupt_mode: InterruptMode = .{ .zero = {} },
 halted: bool = false,
-
+hardware: Hardware = Hardware{},
 scratch: [2]u8 = [_]u8{0} ** 2,
 
 pub fn init(al: std.mem.Allocator, rom_data: []const u8, start_address: u16) !Z80 {

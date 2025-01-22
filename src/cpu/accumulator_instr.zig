@@ -283,6 +283,16 @@ pub fn sub_A(self: *Z80) !void {
     self.register.a = sub(self, self.register.a);
 }
 
+// SUB N: Subtract immediate value from accumulator.
+pub fn sub_N(self: *Z80) !void {
+    std.log.debug("[D6]\tSUB \tN", .{});
+
+    const data = try self.fetchData(1);
+    const n = data[0];
+
+    self.register.a = sub(self, n);
+}
+
 fn sbc_overflow(a: u8, s: u8, cy: bool) bool {
     const carry: u8 = if (cy) 1 else 0;
     const diff = (@as(i16, a) - @as(i16, s) - @as(i16, carry)) & 0xFF;
@@ -296,7 +306,6 @@ fn sbc_overflow(a: u8, s: u8, cy: bool) bool {
 /// SBB A, data => A ← A - data - CY
 pub fn sbb(self: *Z80, data: u8) u8 {
     const carry_in: u8 = if (self.flag.carry) 1 else 0;
-    // const subtrahend = data +% carry_in;
 
     // Store original A, data, and carry_in for overflow computation
     const origA = self.register.a;
@@ -378,6 +387,14 @@ pub fn sbb_A(self: *Z80) !void {
     self.register.a = sbb(self, self.register.a);
 }
 
+// SBB N: Subtract immediate value from accumulator with borrow.
+pub fn sbb_N(self: *Z80) !void {
+    const data = try self.fetchData(1);
+    const n = data[0];
+
+    self.register.a = sbb(self, n);
+    self.cycle_count += 3;
+}
 // ana performs AND with data and accumulator, storing in accumulator.
 pub fn ana(self: *Z80, data: u8) void {
     const result = @as(u16, self.register.a) & @as(u16, data);

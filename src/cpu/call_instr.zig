@@ -48,7 +48,6 @@ pub fn call_C(self: *Z80) !void {
         _call(self, jump_address);
     } else {
         std.log.debug("[DC]\tCALL\tC,${X:<4} (not taken)", .{self.pc + 2});
-        self.pc += 2;
         self.cycle_count += 10;
     }
 }
@@ -61,7 +60,6 @@ pub fn call_NC(self: *Z80) !void {
         _call(self, jump_address);
     } else {
         std.log.debug("[D4]\tCALL\tNC,${X:<4} (not taken)", .{self.pc + 2});
-        self.pc += 2;
         self.cycle_count += 10;
     }
 }

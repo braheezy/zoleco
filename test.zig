@@ -10,6 +10,8 @@ const TestCase = struct {
     initial: State,
     final: State,
     cycles: std.json.Value,
+    ports: ?std.json.Value = null,
+    in_test_data: ?u8 = null,
 };
 
 const State = struct {
@@ -123,8 +125,15 @@ fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
         failures.deinit();
     }
 
-    for (test_cases) |tc| {
-        if (runTest(allocator, tc, &failures) catch false) {
+    for (test_cases) |*tc| {
+        if (tc.ports) |ports| {
+            const arr = ports.array.items[0].array;
+            const data: u8 = @intCast(arr.items[1].integer);
+            // port
+            _ = arr.items[2];
+            tc.*.in_test_data = data;
+        }
+        if (runTest(allocator, tc.*, &failures) catch false) {
             result.successes += 1;
         }
     }
@@ -151,6 +160,7 @@ fn runTest(al: std.mem.Allocator, t: TestCase, failures: *std.ArrayList([]const 
     defer al.free(memory);
     var z80 = Z80{ .memory = memory };
     z80.zeroMemory();
+    z80.hardware.in_test_data = t.in_test_data orelse 0;
     loadState(&z80, t.initial);
 
     try z80.step();
