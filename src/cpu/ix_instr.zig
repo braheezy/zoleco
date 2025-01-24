@@ -151,3 +151,86 @@ pub fn dcr_Low(self: *Z80) !void {
 
     self.cycle_count +%= 8;
 }
+
+pub fn inc_IXD(self: *Z80) !void {
+    std.log.debug("[DD 34 d]\tINC (IX+d)", .{});
+
+    const displacement = self.getDisplacement();
+    const address = self.getDisplacedAddress(displacement);
+
+    const value: u8 = self.memory[address];
+
+    // Step 4: Increment the value with wrapping
+    const old_value: u8 = value;
+    const new_value: u8 = value +% 1;
+
+    self.memory[address] = new_value;
+
+    // Step 6: Update Flags
+    self.flag.setZ(new_value); // Zero Flag
+    self.flag.setS(new_value); // Sign Flag
+    self.flag.half_carry = Z80.auxCarryAdd(old_value, 1); // Half-Carry Flag
+    self.flag.parity_overflow = old_value == 0x7F and new_value == 0x80; // Parity/Overflow Flag
+    self.flag.add_subtract = false; // Add/Subtract Flag Reset
+
+    self.cycle_count += 23;
+}
+
+pub fn dec_IXD(self: *Z80) !void {
+    std.log.debug("[DD 35 d]\tDEC (IX+d)", .{});
+
+    const displacement = self.getDisplacement();
+    const address = self.getDisplacedAddress(displacement);
+
+    const value: u8 = self.memory[address];
+
+    // Step 4: Increment the value with wrapping
+    const new_value: u8 = value -% 1;
+
+    self.memory[address] = new_value;
+
+    // Step 6: Update Flags
+    self.flag.setZ(new_value); // Zero Flag
+    self.flag.setS(new_value); // Sign Flag
+    self.flag.half_carry = Z80.auxCarrySub(value, 1); // Half-Carry Flag
+    self.flag.parity_overflow = value == 0x80 and new_value == 0x7F; // Parity/Overflow Flag
+    self.flag.add_subtract = true; // Add/Subtract Flag Reset
+
+    self.cycle_count += 23;
+}
+
+pub fn store_WithDisp(self: *Z80) !void {
+    std.log.debug("[DD 36]\tLD  \t(IX+d),IX", .{});
+
+    const displacement = self.getDisplacement();
+    const address = self.getDisplacedAddress(displacement);
+    const data = try self.fetchData(1);
+    const n: u8 = data[0];
+
+    self.memory[address] = n;
+
+    self.cycle_count += 19;
+}
+
+pub fn add_SP(self: *Z80) !void {
+    std.log.debug("[DD 39]\tADD IX,SP", .{});
+
+    const ix_val: u16 = self.ix;
+    const sp_val: u16 = self.sp;
+
+    const sum: u32 = @as(u32, ix_val) + @as(u32, sp_val);
+    const result: u16 = @intCast(sum & 0xFFFF);
+
+    self.ix = result;
+
+    // Set carry if the 16-bit addition overflowed
+    self.flag.carry = (sum > 0xFFFF);
+
+    // Half-carry if carry from bit 11
+    self.flag.half_carry = ((ix_val & 0x0FFF) + (sp_val & 0x0FFF)) > 0x0FFF;
+
+    // N is reset
+    self.flag.add_subtract = false;
+
+    self.cycle_count += 15;
+}

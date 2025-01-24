@@ -255,3 +255,15 @@ pub fn parity_sub(data: u8) bool {
 pub inline fn signedByte(value: u8) u16 {
     return @bitCast(@as(i16, @as(i8, @bitCast(value))));
 }
+
+pub inline fn getDisplacement(self: *Z80) i8 {
+    const data = try self.fetchData(1);
+    return @bitCast(data[0]);
+}
+
+pub inline fn getDisplacedAddress(self: *Z80, displacement: i8) u16 {
+    const ix_i32: i32 = @intCast(self.ix);
+    const displacement_i32: i32 = @intCast(displacement);
+    const address_i32: i32 = ix_i32 + displacement_i32;
+    return @intCast(address_i32 & 0xFFFF);
+}
