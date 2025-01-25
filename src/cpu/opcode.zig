@@ -71,8 +71,8 @@ pub const IndexXOpcodeTable = [256]?OpcodeHandler{
     ji.djnz, immi.load_DE, dti.stax_D, rpi.inx_D, rsi.inr_D, rsi.dcr_D, immi.moveImm_D, rai.rla, ji.jr, ix.add_DE, dti.loadAddr_D, rsi.dcx_D, rsi.inr_E, rsi.dcr_E, immi.moveImm_E, rai.rra, // 10 - 1F
     ji.jr_NZ, ix.load_NN, ix.store, ix.inc, ix.inc_High, ix.dcr_High, ix.load_NIXH, rsi.daa, ji.jr_Z, ix.add_IX, ix.load_NNMem, ix.dec, ix.inc_Low, ix.dcr_Low, ix.load_NIXL, rsi.cma, // 20 - 2F
     ji.jr_NC, immi.load_SP, dai.store_A, rpi.inx_SP, ix.inc_IXD, ix.dec_IXD, ix.store_WithDisp, rsi.scf, ji.jr_C, ix.add_SP, dai.load_A, rsi.dcx_SP, rsi.inr_A, rsi.dcr_A, immi.moveImm_A, rsi.ccf, // 30 - 3F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 40 - 4F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 50 - 5F
+    dti.move_BB, dti.move_BC, dti.move_BD, dti.move_BE, ix.load_BHigh, ix.load_BLow, ix.load_BDisp, dti.move_BA, dti.move_CB, dti.move_CC, dti.move_CD, dti.move_CE, ix.load_CHigh, ix.load_CLow, ix.load_CDisp, dti.move_CA, // 40 - 4F
+    dti.move_DB, dti.move_DC, dti.move_DD, dti.move_DE, ix.load_DHigh, ix.load_DLow, ix.load_DDisp, dti.move_DA, dti.move_EB, dti.move_EC, dti.move_ED, dti.move_EE, ix.load_EHigh, ix.load_ELow, ix.load_EDisp, dti.move_EA, // 50 - 5F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 60 - 6F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 70 - 7F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 80 - 8F

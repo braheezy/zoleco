@@ -234,3 +234,90 @@ pub fn add_SP(self: *Z80) !void {
 
     self.cycle_count += 15;
 }
+
+pub fn load_BHigh(self: *Z80) !void {
+    std.log.debug("[DD 44]\tLD  \tB,IXH", .{});
+
+    self.register.b = getHighByte(self.ix);
+    self.cycle_count += 8;
+}
+
+pub fn load_BLow(self: *Z80) !void {
+    std.log.debug("[DD 45]\tLD  \tB,IXL", .{});
+
+    self.register.b = getLowByte(self.ix);
+    self.cycle_count += 8;
+}
+
+pub fn load_DHigh(self: *Z80) !void {
+    std.log.debug("[DD 54]\tLD  \tD,IXH", .{});
+
+    self.register.d = getHighByte(self.ix);
+    self.cycle_count += 8;
+}
+
+pub fn load_DLow(self: *Z80) !void {
+    std.log.debug("[DD 55]\tLD  \tD,IXL", .{});
+
+    self.register.d = getLowByte(self.ix);
+    self.cycle_count += 8;
+}
+
+pub fn load_CHigh(self: *Z80) !void {
+    std.log.debug("[DD 4C]\tLD  \tC,IXH", .{});
+
+    self.register.c = getHighByte(self.ix);
+    self.cycle_count += 8;
+}
+
+pub fn load_CLow(self: *Z80) !void {
+    std.log.debug("[DD 4D]\tLD  \tC,IXL", .{});
+
+    self.register.c = getLowByte(self.ix);
+    self.cycle_count += 8;
+}
+
+pub fn load_EHigh(self: *Z80) !void {
+    std.log.debug("[DD 5C]\tLD  \tE,IXH", .{});
+
+    self.register.e = getHighByte(self.ix);
+    self.cycle_count += 8;
+}
+
+pub fn load_ELow(self: *Z80) !void {
+    std.log.debug("[DD 5D]\tLD  \tE,IXL", .{});
+
+    self.register.e = getLowByte(self.ix);
+    self.cycle_count += 8;
+}
+
+fn load_Disp(self: *Z80) u8 {
+    self.cycle_count += 19;
+
+    const displacement = self.getDisplacement();
+    return self.memory[self.getDisplacedAddress(displacement)];
+}
+
+pub fn load_BDisp(self: *Z80) !void {
+    std.log.debug("[DD 46 d]\tLD  \tB,(IX+d)", .{});
+
+    self.register.b = load_Disp(self);
+}
+
+pub fn load_CDisp(self: *Z80) !void {
+    std.log.debug("[DD 4E d]\tLD  \tC,(IX+d)", .{});
+
+    self.register.c = load_Disp(self);
+}
+
+pub fn load_DDisp(self: *Z80) !void {
+    std.log.debug("[DD 5E d]\tLD  \tD,(IX+d)", .{});
+
+    self.register.d = load_Disp(self);
+}
+
+pub fn load_EDisp(self: *Z80) !void {
+    std.log.debug("[DD 5E d]\tLD  \tE,(IX+d)", .{});
+
+    self.register.e = load_Disp(self);
+}
