@@ -33,6 +33,10 @@ pub fn init(al: std.mem.Allocator) !Player {
     return player;
 }
 
+pub fn deinit(self: *Player) void {
+    self._commands.deinit();
+}
+
 /// Unload data and reset state
 pub fn unload(self: *Player) void {
     self.stop();
