@@ -77,7 +77,7 @@ pub const IndexXOpcodeTable = [256]?OpcodeHandler{
     ix.store_BWithDisp, ix.store_CWithDisp, ix.store_DWithDisp, ix.store_EWithDisp, ix.store_HWithDisp, ix.store_LWithDisp, halt, ix.store_AWithDisp, dti.move_AB, dti.move_AC, dti.move_AD, dti.move_AE, ix.load_AHigh, ix.load_ALow, ix.loadDispA, dti.move_AA, // 70 - 7F
     ai.add_B, ai.add_C, ai.add_D, ai.add_E, ix.add_IXH_A, ix.add_IXL_A, ix.add_IXD_A, ai.add_A, ai.adc_B, ai.adc_C, ai.adc_D, ai.adc_E, ix.adc_IXH_A, ix.adc_IXL_A, ix.adc_IXD_A, ai.adc_A, // 80 - 8F
     ai.sub_B, ai.sub_C, ai.sub_D, ai.sub_E, ix.sub_IXH_A, ix.sub_IXL_A, ix.sub_IXD_A, ai.sub_A, ai.sbb_B, ai.sbb_C, ai.sbb_D, ai.sbb_E, ix.sbb_IXH_A, ix.sbb_IXL_A, ix.sbb_IXD_A, ai.sbb_A, // 90 - 9F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // A0 - AF
+    ai.ana_B, ai.ana_C, ai.ana_D, ai.ana_E, null, null, null, null, null, null, null, null, null, null, null, null, // A0 - AF
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // B0 - BF
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // C0 - CF
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // D0 - DF

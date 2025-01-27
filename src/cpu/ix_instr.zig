@@ -7,6 +7,8 @@ const add = @import("accumulator_instr.zig").add;
 const adc = @import("accumulator_instr.zig").adc;
 const sub = @import("accumulator_instr.zig").sub;
 const sbb = @import("accumulator_instr.zig").sbb;
+const ana = @import("accumulator_instr.zig").ana;
+
 const getHighByte = @import("opcode.zig").getHighByte;
 const getLowByte = @import("opcode.zig").getLowByte;
 
@@ -653,4 +655,14 @@ pub fn sbb_IXD_A(self: *Z80) !void {
     self.register.a = sbb(self, value);
 
     self.cycle_count +%= 15;
+}
+
+// Bitwise AND on A with IXH.
+pub fn ana_IXH(self: *Z80) !void {
+    std.log.debug("[DD A4]\tANA A,IXH", .{});
+
+    const ixh: u8 = getHighByte(self.ix);
+    self.register.a = ana(self, ixh);
+
+    self.cycle_count +%= 4;
 }
