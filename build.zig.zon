@@ -3,10 +3,13 @@
     .version = "0.0.0",
 
     .dependencies = .{
-        .mach = .{
-            .url = "https://github.com/hexops/mach/archive/1d01c915368b0c128ad1fce6123e55c6cc6ded9e.tar.gz",
-            .hash = "122090ee3b387a3906b462314c9c576af2a2bc7b9e15ee81d6556690a46127a1a8e5",
-            .lazy = false,
+        .@"raylib-zig" = .{
+            .url = "git+https://github.com/Not-Nik/raylib-zig?ref=devel#1ef4995f82686fda7c2eff1c76f26d1200d74760",
+            .hash = "12206cf18aea41dc1e61b697c36ef627752e84fe9a9362b800240fce7dea3665094d",
+        },
+        .zaudio = .{
+            .url = "https://github.com/zig-gamedev/zaudio/archive/496da32757767b31f389554e1e5c668796755fe2.tar.gz",
+            .hash = "12203f6ab72861cd7e36ebd1590f9cc7fd036366e2ff96122002a395f628e813d999",
         },
     },
 

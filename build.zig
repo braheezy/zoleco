@@ -8,19 +8,25 @@ pub fn build(b: *std.Build) !void {
     defer modules.deinit();
 
     // Add sysaudio to play raw audio on the host
-    const mach_mod = b.dependency("mach", .{
+    const raylib_dep = b.dependency("raylib-zig", .{
         .target = target,
         .optimize = optimize,
-        .sysaudio = true,
-    }).module("mach");
+    });
+
+    const raylib = raylib_dep.module("raylib"); // main raylib module
+    const raygui = raylib_dep.module("raygui"); // raygui module
+    const raylib_artifact = raylib_dep.artifact("raylib"); // raylib C library
 
     // Define our local modules
     const sn76489_mod = b.addModule("SN76489", .{ .root_source_file = b.path("src/SN76489.zig") });
     const z80_mod = b.addModule("z80", .{ .root_source_file = b.path("src/cpu/Z80.zig") });
+    const tms9918_mod = b.addModule("tms9918", .{ .root_source_file = b.path("src/TMS9918.zig") });
 
-    try modules.put("mach", mach_mod);
     try modules.put("SN76489", sn76489_mod);
     try modules.put("z80", z80_mod);
+    try modules.put("tms9918", tms9918_mod);
+    try modules.put("raylib", raylib);
+    try modules.put("raygui", raygui);
 
     // Create main executable
     const exe = b.addExecutable(.{
@@ -29,25 +35,27 @@ pub fn build(b: *std.Build) !void {
         .target = target,
         .optimize = optimize,
     });
+    exe.linkLibrary(raylib_artifact);
     b.installArtifact(exe);
 
     // Create non-install compile step for code editors to check
     const exe_check = b.addExecutable(.{
         .name = "check",
-        .root_source_file = b.path("test.zig"),
+        .root_source_file = b.path("examples/tms9918_viewer/main.zig"),
         .target = target,
         .optimize = optimize,
     });
+    exe_check.linkLibrary(raylib_artifact);
 
-    addModulesToExe(exe_check, modules, &[_][]const u8{ "mach", "SN76489", "z80" });
-    addModulesToExe(exe, modules, &[_][]const u8{ "mach", "SN76489", "z80" });
+    addModulesToExe(exe_check, modules, &[_][]const u8{"tms9918"});
+    addModulesToExe(exe, modules, &[_][]const u8{ "SN76489", "z80", "tms9918" });
 
     const check = b.step("check", "Check if it compiles");
     check.dependOn(&exe_check.step);
 
     defineRun(b, exe);
-    try defineTests(b, target, optimize, modules);
-    defineExamples(b, target, optimize, modules);
+    // try defineCpuTest(b, target, optimize, modules);
+    defineExamples(b, target, optimize, modules, raylib_artifact);
 }
 
 fn defineRun(b: *std.Build, exe: *std.Build.Step.Compile) void {
@@ -60,7 +68,7 @@ fn defineRun(b: *std.Build, exe: *std.Build.Step.Compile) void {
     run_step.dependOn(&run_cmd.step);
 }
 
-fn defineTests(
+fn defineCpuTest(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
@@ -73,8 +81,6 @@ fn defineTests(
         .target = target,
         .optimize = .ReleaseSafe,
     });
-
-    // try addAssetsOption(b, test_exe, target, optimize);
 
     addModulesToExe(test_exe, modules, &[_][]const u8{"z80"});
 
@@ -108,6 +114,7 @@ fn defineExamples(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     modules: std.StringHashMap(*std.Build.Module),
+    raylib_artifact: *std.Build.Step.Compile,
 ) void {
     const vgm_player_exe = b.addExecutable(.{
         .name = "vgm_player",
@@ -116,7 +123,8 @@ fn defineExamples(
         .optimize = optimize,
     });
 
-    addModulesToExe(vgm_player_exe, modules, &[_][]const u8{ "mach", "SN76489" });
+    addModulesToExe(vgm_player_exe, modules, &[_][]const u8{ "SN76489", "raylib" });
+    vgm_player_exe.linkLibrary(raylib_artifact);
     b.installArtifact(vgm_player_exe);
 
     const z80_disassembler_exe = b.addExecutable(.{
@@ -127,30 +135,22 @@ fn defineExamples(
     });
     addModulesToExe(z80_disassembler_exe, modules, &[_][]const u8{"z80"});
     b.installArtifact(z80_disassembler_exe);
-}
 
-fn addAssetsOption(b: *std.Build, exe: *std.Build.Step.Compile, target: anytype, optimize: anytype) !void {
-    var options = b.addOptions();
-
-    var files = std.ArrayList([]const u8).init(b.allocator);
-    defer files.deinit();
-
-    var buf: [std.fs.max_path_bytes]u8 = undefined;
-    const path = try std.fs.cwd().realpath("tests", buf[0..]);
-
-    var dir = try std.fs.openDirAbsolute(path, .{ .iterate = true });
-    var it = dir.iterate();
-    while (try it.next()) |file| {
-        try files.append(b.dupe(file.name));
-    }
-    options.addOption([]const []const u8, "files", files.items);
-    exe.step.dependOn(&options.step);
-
-    const assets = b.addModule("assets", .{
-        .root_source_file = options.getOutput(),
+    const tms9918_viewer_exe = b.addExecutable(.{
+        .name = "tms9918_viewer",
+        .root_source_file = b.path("examples/tms9918_viewer/main.zig"),
         .target = target,
         .optimize = optimize,
     });
+    tms9918_viewer_exe.linkLibrary(raylib_artifact);
+    addModulesToExe(tms9918_viewer_exe, modules, &[_][]const u8{ "tms9918", "raylib" });
+    b.installArtifact(tms9918_viewer_exe);
 
-    exe.root_module.addImport("assets", assets);
+    const run_cmd = b.addRunArtifact(tms9918_viewer_exe);
+    run_cmd.step.dependOn(b.getInstallStep());
+    if (b.args) |args| {
+        run_cmd.addArgs(args);
+    }
+    const run_step = b.step("example", "build an example");
+    run_step.dependOn(&run_cmd.step);
 }
