@@ -6,8 +6,8 @@ const _dcr = @import("register_single_instr.zig").dcr;
 const getHighByte = @import("opcode.zig").getHighByte;
 const getLowByte = @import("opcode.zig").getLowByte;
 
-fn setHighByte(x: u8, n: u16) u16 {
-    return (@as(u16, x) << 8) | getLowByte(n);
+fn setHighByte(high_byte: u8, target: u16) u16 {
+    return (@as(u16, high_byte) << 8) | getLowByte(target);
 }
 
 fn setLowByte(x: u8, n: u16) u16 {
@@ -199,17 +199,68 @@ pub fn dec_IXD(self: *Z80) !void {
     self.cycle_count += 23;
 }
 
-pub fn store_WithDisp(self: *Z80) !void {
-    std.log.debug("[DD 36]\tLD  \t(IX+d),IX", .{});
-
+pub fn store_WithDisp(self: *Z80, n: u8) void {
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
-    const data = try self.fetchData(1);
-    const n: u8 = data[0];
 
     self.memory[address] = n;
 
     self.cycle_count += 19;
+}
+
+pub fn store_NWithDisp(self: *Z80) !void {
+    std.log.debug("[DD 36]\tLD  \t(IX+d),n", .{});
+
+    const displacement = self.getDisplacement();
+    const address = self.getDisplacedAddress(displacement);
+
+    const data = try self.fetchData(1);
+    const n: u8 = data[0];
+
+    self.memory[address] = n;
+    self.cycle_count += 19;
+}
+
+pub fn store_BWithDisp(self: *Z80) !void {
+    std.log.debug("[DD 70 d]\tLD  \t(IX+d),B", .{});
+
+    store_WithDisp(self, self.register.b);
+}
+
+pub fn store_CWithDisp(self: *Z80) !void {
+    std.log.debug("[DD 71 d]\tLD  \t(IX+d),C", .{});
+
+    store_WithDisp(self, self.register.c);
+}
+
+pub fn store_DWithDisp(self: *Z80) !void {
+    std.log.debug("[DD 72 d]\tLD  \t(IX+d),D", .{});
+
+    store_WithDisp(self, self.register.d);
+}
+
+pub fn store_EWithDisp(self: *Z80) !void {
+    std.log.debug("[DD 73 d]\tLD  \t(IX+d),E", .{});
+
+    store_WithDisp(self, self.register.e);
+}
+
+pub fn store_HWithDisp(self: *Z80) !void {
+    std.log.debug("[DD 74 d]\tLD  \t(IX+d),H", .{});
+
+    store_WithDisp(self, self.register.h);
+}
+
+pub fn store_LWithDisp(self: *Z80) !void {
+    std.log.debug("[DD 75 d]\tLD  \t(IX+d),L", .{});
+
+    store_WithDisp(self, self.register.l);
+}
+
+pub fn store_AWithDisp(self: *Z80) !void {
+    std.log.debug("[DD 77 d]\tLD  \t(IX+d),A", .{});
+
+    store_WithDisp(self, self.register.a);
 }
 
 pub fn add_SP(self: *Z80) !void {
@@ -291,6 +342,20 @@ pub fn load_ELow(self: *Z80) !void {
     self.cycle_count += 8;
 }
 
+pub fn load_AHigh(self: *Z80) !void {
+    std.log.debug("[DD 4C]\tLD  \tA,IXH", .{});
+
+    self.register.a = getHighByte(self.ix);
+    self.cycle_count += 8;
+}
+
+pub fn load_ALow(self: *Z80) !void {
+    std.log.debug("[DD 4D]\tLD  \tA,IXL", .{});
+
+    self.register.a = getLowByte(self.ix);
+    self.cycle_count += 8;
+}
+
 fn load_Disp(self: *Z80) u8 {
     self.cycle_count += 19;
 
@@ -320,4 +385,141 @@ pub fn load_EDisp(self: *Z80) !void {
     std.log.debug("[DD 5E d]\tLD  \tE,(IX+d)", .{});
 
     self.register.e = load_Disp(self);
+}
+
+pub fn load_IXHB(self: *Z80) !void {
+    std.log.debug("[DD 60]\tLD  \tIXH,B", .{});
+
+    self.ix = setHighByte(self.register.b, self.ix);
+    self.cycle_count +%= 8;
+}
+
+pub fn load_IXHC(self: *Z80) !void {
+    std.log.debug("[DD 61]\tLD  \tIXH,C", .{});
+
+    self.ix = setHighByte(self.register.c, self.ix);
+    self.cycle_count +%= 8;
+}
+
+pub fn load_IXHD(self: *Z80) !void {
+    std.log.debug("[DD 62]\tLD  \tIXH,D", .{});
+
+    self.ix = setHighByte(self.register.d, self.ix);
+    self.cycle_count +%= 8;
+}
+
+pub fn load_IXHE(self: *Z80) !void {
+    std.log.debug("[DD 63]\tLD  \tIXH,E", .{});
+
+    self.ix = setHighByte(self.register.e, self.ix);
+    self.cycle_count +%= 8;
+}
+
+pub fn load_IXH(self: *Z80) !void {
+    std.log.debug("[DD 64]\tLD  \tIXH", .{});
+
+    // set IXH to IXH
+    // we do nothing except consume cycles
+
+    self.cycle_count +%= 8;
+}
+
+pub fn load_IXHL(self: *Z80) !void {
+    std.log.debug("[DD 65]\tLD  \tIXH,L", .{});
+
+    self.ix = setHighByte(getLowByte(self.ix), self.ix);
+    self.cycle_count +%= 8;
+}
+
+// Loads the value pointed to by IX plus d into H.
+pub fn load_IXHDsp(self: *Z80) !void {
+    std.log.debug("[DD 66 d]\tLD  \tIXH,(IX+d)", .{});
+
+    const displacement = self.getDisplacement();
+    const address = self.getDisplacedAddress(displacement);
+
+    self.register.h = self.memory[address];
+    self.cycle_count += 19;
+}
+
+// The contents of A are loaded into IXH.
+pub fn load_IXHA(self: *Z80) !void {
+    std.log.debug("[DD 67]\tLD  \tIXH,A", .{});
+
+    self.ix = setHighByte(self.register.a, self.ix);
+    self.cycle_count +%= 8;
+}
+
+pub fn load_IXLB(self: *Z80) !void {
+    std.log.debug("[DD 68]\tLD  \tIXL,B", .{});
+
+    self.ix = setLowByte(self.register.b, self.ix);
+    self.cycle_count +%= 8;
+}
+
+pub fn load_IXLC(self: *Z80) !void {
+    std.log.debug("[DD 69]\tLD  \tIXL,C", .{});
+
+    self.ix = setLowByte(self.register.c, self.ix);
+    self.cycle_count +%= 8;
+}
+
+pub fn load_IXLD(self: *Z80) !void {
+    std.log.debug("[DD 6A]\tLD  \tIXL,D", .{});
+
+    self.ix = setLowByte(self.register.d, self.ix);
+    self.cycle_count +%= 8;
+}
+
+pub fn load_IXLE(self: *Z80) !void {
+    std.log.debug("[DD 6B]\tLD  \tIXL,E", .{});
+
+    self.ix = setLowByte(self.register.e, self.ix);
+    self.cycle_count +%= 8;
+}
+
+// The contents of IXH are loaded into IXL.
+pub fn swap_IXBytes(self: *Z80) !void {
+    std.log.debug("[DD 6C]\tLD  \tIXL", .{});
+
+    self.ix = setLowByte(getHighByte(self.ix), self.ix);
+    self.cycle_count +%= 8;
+}
+
+pub fn load_IXL(self: *Z80) !void {
+    std.log.debug("[DD 6D]\tLD  \tIXL", .{});
+
+    // set IXL to IXL
+    // we do nothing except consume cycles
+
+    self.cycle_count +%= 8;
+}
+
+// Loads the value pointed to by IX plus d into L.
+pub fn loadDispL(self: *Z80) !void {
+    std.log.debug("[DD 6E d]\tLD  \tIX,L,(IX+d)", .{});
+
+    const displacement = self.getDisplacement();
+    const address = self.getDisplacedAddress(displacement);
+
+    self.register.l = self.memory[address];
+    self.cycle_count += 19;
+}
+
+// Loads the value pointed to by IX plus d into A.
+pub fn loadDispA(self: *Z80) !void {
+    std.log.debug("[DD 6E d]\tLD  \tIX,A,(IX+d)", .{});
+
+    const displacement = self.getDisplacement();
+    const address = self.getDisplacedAddress(displacement);
+
+    self.register.a = self.memory[address];
+    self.cycle_count += 19;
+}
+
+pub fn load_IXLA(self: *Z80) !void {
+    std.log.debug("[DD 6F]\tLD  \tIXL,A", .{});
+
+    self.ix = setLowByte(self.register.a, self.ix);
+    self.cycle_count +%= 8;
 }

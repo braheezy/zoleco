@@ -70,11 +70,11 @@ pub const IndexXOpcodeTable = [256]?OpcodeHandler{
     nop, immi.load_BC, dti.stax_B, rpi.inx_B, rsi.inr_B, rsi.dcr_B, immi.moveImm_B, rai.rlca, li.ex_AF, ix.add_BC, dti.loadAddr_B, rsi.dcx_B, rsi.inr_C, rsi.dcr_C, immi.moveImm_C, rai.rrca, // 00 - 0F
     ji.djnz, immi.load_DE, dti.stax_D, rpi.inx_D, rsi.inr_D, rsi.dcr_D, immi.moveImm_D, rai.rla, ji.jr, ix.add_DE, dti.loadAddr_D, rsi.dcx_D, rsi.inr_E, rsi.dcr_E, immi.moveImm_E, rai.rra, // 10 - 1F
     ji.jr_NZ, ix.load_NN, ix.store, ix.inc, ix.inc_High, ix.dcr_High, ix.load_NIXH, rsi.daa, ji.jr_Z, ix.add_IX, ix.load_NNMem, ix.dec, ix.inc_Low, ix.dcr_Low, ix.load_NIXL, rsi.cma, // 20 - 2F
-    ji.jr_NC, immi.load_SP, dai.store_A, rpi.inx_SP, ix.inc_IXD, ix.dec_IXD, ix.store_WithDisp, rsi.scf, ji.jr_C, ix.add_SP, dai.load_A, rsi.dcx_SP, rsi.inr_A, rsi.dcr_A, immi.moveImm_A, rsi.ccf, // 30 - 3F
+    ji.jr_NC, immi.load_SP, dai.store_A, rpi.inx_SP, ix.inc_IXD, ix.dec_IXD, ix.store_NWithDisp, rsi.scf, ji.jr_C, ix.add_SP, dai.load_A, rsi.dcx_SP, rsi.inr_A, rsi.dcr_A, immi.moveImm_A, rsi.ccf, // 30 - 3F
     dti.move_BB, dti.move_BC, dti.move_BD, dti.move_BE, ix.load_BHigh, ix.load_BLow, ix.load_BDisp, dti.move_BA, dti.move_CB, dti.move_CC, dti.move_CD, dti.move_CE, ix.load_CHigh, ix.load_CLow, ix.load_CDisp, dti.move_CA, // 40 - 4F
     dti.move_DB, dti.move_DC, dti.move_DD, dti.move_DE, ix.load_DHigh, ix.load_DLow, ix.load_DDisp, dti.move_DA, dti.move_EB, dti.move_EC, dti.move_ED, dti.move_EE, ix.load_EHigh, ix.load_ELow, ix.load_EDisp, dti.move_EA, // 50 - 5F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 60 - 6F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 70 - 7F
+    ix.load_IXHB, ix.load_IXHC, ix.load_IXHD, ix.load_IXHE, ix.load_IXH, ix.load_IXHL, ix.load_IXHDsp, ix.load_IXHA, ix.load_IXLB, ix.load_IXLC, ix.load_IXLD, ix.load_IXLE, ix.swap_IXBytes, ix.load_IXL, ix.loadDispL, ix.load_IXLA, // 60 - 6F
+    ix.store_BWithDisp, ix.store_CWithDisp, ix.store_DWithDisp, ix.store_EWithDisp, ix.store_HWithDisp, ix.store_LWithDisp, halt, ix.store_AWithDisp, dti.move_AB, dti.move_AC, dti.move_AD, dti.move_AE, ix.load_AHigh, ix.load_ALow, ix.loadDispA, dti.move_AA, // 70 - 7F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 80 - 8F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 90 - 9F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // A0 - AF
