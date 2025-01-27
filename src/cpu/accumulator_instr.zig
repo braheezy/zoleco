@@ -11,7 +11,7 @@ fn detectOverflow(a: u8, b: u8, result: u8) bool {
 }
 
 // add helper
-fn add(self: *Z80, data: u8) u8 {
+pub fn add(self: *Z80, data: u8) u8 {
     const result = self.register.a +% data;
 
     // Handle condition bits

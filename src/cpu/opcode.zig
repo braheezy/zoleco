@@ -75,7 +75,7 @@ pub const IndexXOpcodeTable = [256]?OpcodeHandler{
     dti.move_DB, dti.move_DC, dti.move_DD, dti.move_DE, ix.load_DHigh, ix.load_DLow, ix.load_DDisp, dti.move_DA, dti.move_EB, dti.move_EC, dti.move_ED, dti.move_EE, ix.load_EHigh, ix.load_ELow, ix.load_EDisp, dti.move_EA, // 50 - 5F
     ix.load_IXHB, ix.load_IXHC, ix.load_IXHD, ix.load_IXHE, ix.load_IXH, ix.load_IXHL, ix.load_IXHDsp, ix.load_IXHA, ix.load_IXLB, ix.load_IXLC, ix.load_IXLD, ix.load_IXLE, ix.swap_IXBytes, ix.load_IXL, ix.loadDispL, ix.load_IXLA, // 60 - 6F
     ix.store_BWithDisp, ix.store_CWithDisp, ix.store_DWithDisp, ix.store_EWithDisp, ix.store_HWithDisp, ix.store_LWithDisp, halt, ix.store_AWithDisp, dti.move_AB, dti.move_AC, dti.move_AD, dti.move_AE, ix.load_AHigh, ix.load_ALow, ix.loadDispA, dti.move_AA, // 70 - 7F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 80 - 8F
+    ai.add_B, ai.add_C, ai.add_D, ai.add_E, ix.add_IXH_A, ix.add_IXL_A, ix.add_IXD_A, ai.add_A, ai.adc_B, ai.adc_C, ai.adc_D, ai.adc_E, ix.adc_IXH_A, ix.adc_IXL_A, ix.adc_IXD_A, ai.adc_A, // 80 - 8F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 90 - 9F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // A0 - AF
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // B0 - BF

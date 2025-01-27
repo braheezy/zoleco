@@ -3,6 +3,8 @@ const Z80 = @import("Z80.zig");
 
 const _inc = @import("register_single_instr.zig").inc;
 const _dcr = @import("register_single_instr.zig").dcr;
+const add = @import("accumulator_instr.zig").add;
+const adc = @import("accumulator_instr.zig").adc;
 const getHighByte = @import("opcode.zig").getHighByte;
 const getLowByte = @import("opcode.zig").getLowByte;
 
@@ -522,4 +524,68 @@ pub fn load_IXLA(self: *Z80) !void {
 
     self.ix = setLowByte(self.register.a, self.ix);
     self.cycle_count +%= 8;
+}
+
+// Adds IXH to A.
+pub fn add_IXH_A(self: *Z80) !void {
+    std.log.debug("[DD 84]\tADD A,IXH", .{});
+
+    const ixh: u8 = getHighByte(self.ix);
+    self.register.a = add(self, ixh);
+
+    self.cycle_count +%= 4;
+}
+
+// Adds IXL to A.
+pub fn add_IXL_A(self: *Z80) !void {
+    std.log.debug("[DD 85]\tADD A,IXL", .{});
+
+    const ixl: u8 = getLowByte(self.ix);
+    self.register.a = add(self, ixl);
+
+    self.cycle_count +%= 4;
+}
+
+// Adds the value pointed to by IX plus d to A.
+pub fn add_IXD_A(self: *Z80) !void {
+    std.log.debug("[DD 86 d]\tADD A,(IX+d)", .{});
+
+    const displacement = self.getDisplacement();
+    const address = self.getDisplacedAddress(displacement);
+
+    const value: u8 = self.memory[address];
+    self.register.a = add(self, value);
+
+    self.cycle_count += 15;
+}
+
+// Adds IXH and the carry flag to A.
+pub fn adc_IXH_A(self: *Z80) !void {
+    std.log.debug("[DD 8C]\tADC A,IXH", .{});
+
+    const ixh: u8 = getHighByte(self.ix);
+    self.register.a = adc(self, ixh);
+
+    self.cycle_count +%= 4;
+}
+
+pub fn adc_IXL_A(self: *Z80) !void {
+    std.log.debug("[DD 8D]\tADC A,IXL", .{});
+
+    const ixl: u8 = getLowByte(self.ix);
+    self.register.a = adc(self, ixl);
+
+    self.cycle_count +%= 4;
+}
+// Adds the value pointed to by IX plus d and the carry flag to A.
+pub fn adc_IXD_A(self: *Z80) !void {
+    std.log.debug("[DD 8E d]\tADC A,(IX+d)", .{});
+
+    const displacement = self.getDisplacement();
+    const address = self.getDisplacedAddress(displacement);
+
+    const value: u8 = self.memory[address];
+    self.register.a = adc(self, value);
+
+    self.cycle_count += 15;
 }
