@@ -12,7 +12,7 @@ pub fn _ret(self: *Z80) void {
 // RET: Return from subroutine.
 pub fn ret(self: *Z80) !void {
     _ret(self);
-    std.log.debug("[C9]\tRET \t($%04X)", .{self.pc});
+    std.log.debug("[C9]\tRET \t(${X:4<})", .{self.pc});
     self.cycle_count += 10;
 }
 
@@ -20,7 +20,7 @@ pub fn ret(self: *Z80) !void {
 pub fn ret_Z(self: *Z80) !void {
     if (self.flag.zero) {
         _ret(self);
-        std.log.debug("[C8]\tRET \tZ($%04X)", .{self.pc});
+        std.log.debug("[C8]\tRET \tZ(${X:4<})", .{self.pc});
     } else {
         std.log.debug("[C8]\tRET \tZ (not taken)", .{});
         self.cycle_count += 5;
@@ -31,7 +31,7 @@ pub fn ret_Z(self: *Z80) !void {
 pub fn ret_NZ(self: *Z80) !void {
     if (!self.flag.zero) {
         _ret(self);
-        std.log.debug("[C0]\tRET \tNZ($%04X)", .{self.pc});
+        std.log.debug("[C0]\tRET \tNZ(${X:4<})", .{self.pc});
     } else {
         std.log.debug("[C0]\tRET \tNZ (not taken)", .{});
         self.cycle_count += 5;
@@ -42,7 +42,7 @@ pub fn ret_NZ(self: *Z80) !void {
 pub fn ret_C(self: *Z80) !void {
     if (self.flag.carry) {
         _ret(self);
-        std.log.debug("[D8]\tRET \tC($%04X)", .{self.pc});
+        std.log.debug("[D8]\tRET \tC(${X:4<})", .{self.pc});
     } else {
         std.log.debug("[D8]\tRET \tC (not taken)", .{});
         self.cycle_count += 5;
@@ -53,7 +53,7 @@ pub fn ret_C(self: *Z80) !void {
 pub fn ret_NC(self: *Z80) !void {
     if (!self.flag.carry) {
         _ret(self);
-        std.log.debug("[D0]\tRET \tNC($%04X)", .{self.pc});
+        std.log.debug("[D0]\tRET \tNC(${X:4<})", .{self.pc});
     } else {
         std.log.debug("[D0]\tRET \tNC (not taken)", .{});
         self.cycle_count += 5;
@@ -64,7 +64,7 @@ pub fn ret_NC(self: *Z80) !void {
 pub fn ret_PE(self: *Z80) !void {
     if (self.flag.parity_overflow) {
         _ret(self);
-        std.log.debug("[E8]\tRET \tPE($%04X)", .{self.pc});
+        std.log.debug("[E8]\tRET \tPE(${X:4<})", .{self.pc});
     } else {
         std.log.debug("[E8]\tRET \tPE (not taken)", .{});
         self.cycle_count += 5;
@@ -75,7 +75,7 @@ pub fn ret_PE(self: *Z80) !void {
 pub fn ret_PO(self: *Z80) !void {
     if (!self.flag.parity_overflow) {
         _ret(self);
-        std.log.debug("[E0]\tRET \tPO($%04X)", .{self.pc});
+        std.log.debug("[E0]\tRET \tPO(${X:4<})", .{self.pc});
     } else {
         std.log.debug("[E0]\tRET \tPO (not taken)", .{});
         self.cycle_count += 5;
@@ -86,7 +86,7 @@ pub fn ret_PO(self: *Z80) !void {
 pub fn ret_P(self: *Z80) !void {
     if (!self.flag.sign) {
         _ret(self);
-        std.log.debug("[F0]\tRET \tP($%04X)", .{self.pc});
+        std.log.debug("[F0]\tRET \tP(${X:4<})", .{self.pc});
     } else {
         std.log.debug("[F0]\tRET \tP (not taken)", .{});
         self.cycle_count += 5;
@@ -97,7 +97,7 @@ pub fn ret_P(self: *Z80) !void {
 pub fn ret_M(self: *Z80) !void {
     if (self.flag.sign) {
         _ret(self);
-        std.log.debug("[F8]\tRET \tM($%04X)", .{self.pc});
+        std.log.debug("[F8]\tRET \tM(${X:4<})", .{self.pc});
     } else {
         std.log.debug("[F8]\tRET \tM (not taken)", .{});
         self.cycle_count += 5;
