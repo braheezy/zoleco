@@ -5,6 +5,8 @@ const _inc = @import("register_single_instr.zig").inc;
 const _dcr = @import("register_single_instr.zig").dcr;
 const add = @import("accumulator_instr.zig").add;
 const adc = @import("accumulator_instr.zig").adc;
+const sub = @import("accumulator_instr.zig").sub;
+const sbb = @import("accumulator_instr.zig").sbb;
 const getHighByte = @import("opcode.zig").getHighByte;
 const getLowByte = @import("opcode.zig").getLowByte;
 
@@ -588,4 +590,67 @@ pub fn adc_IXD_A(self: *Z80) !void {
     self.register.a = adc(self, value);
 
     self.cycle_count += 15;
+}
+// Subtracts IXH from A.
+pub fn sub_IXH_A(self: *Z80) !void {
+    std.log.debug("[DD 94]\tSUB A,IXH", .{});
+
+    const ixh: u8 = getHighByte(self.ix);
+    self.register.a = sub(self, ixh);
+
+    self.cycle_count +%= 4;
+}
+
+// Subtracts IXL from A.
+pub fn sub_IXL_A(self: *Z80) !void {
+    std.log.debug("[DD 94]\tSUB A,IXL", .{});
+
+    const ixl: u8 = getLowByte(self.ix);
+    self.register.a = sub(self, ixl);
+
+    self.cycle_count +%= 4;
+}
+// Subtracts the value pointed to by IX plus d from A.
+pub fn sub_IXD_A(self: *Z80) !void {
+    std.log.debug("[DD 96 d]\tSUB A,(IX+d)", .{});
+
+    const displacement = self.getDisplacement();
+    const address = self.getDisplacedAddress(displacement);
+
+    const value: u8 = self.memory[address];
+    self.register.a = sub(self, value);
+
+    self.cycle_count += 15;
+}
+
+// Subtracts IXH and the carry flag from A.
+pub fn sbb_IXH_A(self: *Z80) !void {
+    std.log.debug("[DD 9C]\tSBB A,IXH", .{});
+
+    const ixh: u8 = getHighByte(self.ix);
+    self.register.a = sbb(self, ixh);
+
+    self.cycle_count +%= 4;
+}
+
+pub fn sbb_IXL_A(self: *Z80) !void {
+    std.log.debug("[DD 9C]\tSBB A,IXL", .{});
+
+    const ixl: u8 = getLowByte(self.ix);
+    self.register.a = sbb(self, ixl);
+
+    self.cycle_count +%= 4;
+}
+
+// Subtracts the value pointed to by IX plus d and the carry flag from A.
+pub fn sbb_IXD_A(self: *Z80) !void {
+    std.log.debug("[DD 9E d]\tSBB A,(IX+d)", .{});
+
+    const displacement = self.getDisplacement();
+    const address = self.getDisplacedAddress(displacement);
+
+    const value: u8 = self.memory[address];
+    self.register.a = sbb(self, value);
+
+    self.cycle_count +%= 15;
 }
