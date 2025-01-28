@@ -36,10 +36,18 @@ pub fn bitTest(self: *Z80) !void {
         4 => self.register.h,
         5 => self.register.l,
         6 => blk: {
-            // BIT n, (HL)
             self.cycle_count +%= 4;
-            const addr = (@as(u16, self.register.h) << 8) | @as(u16, self.register.l);
-            break :blk self.memory[addr];
+            // If curr_index_reg is null, use (HL). Otherwise, use (IX+d)/(IY+d).
+            if (self.curr_index_reg == null) {
+                const addr = (@as(u16, self.register.h) << 8) | @as(u16, self.register.l);
+                break :blk self.memory[addr];
+            } else {
+                // Fetch displacement
+                const disp = self.getDisplacement();
+                self.cycle_count += 8;
+                const addr = self.getDisplacedAddress(disp);
+                break :blk self.memory[addr];
+            }
         },
         7 => self.register.a,
         else => unreachable,

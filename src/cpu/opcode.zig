@@ -47,25 +47,6 @@ pub const OpcodeTable = [256]?OpcodeHandler{
     ri.ret_P, rpi.pop_AF, ji.jump_P, di, ci.call_P, rpi.push_AF, null, null, ri.ret_M, null, ji.jump_M, null, ci.call_M, null, null, null, // F0 - FF
 };
 
-pub const IndexYOpcodeTable = [256]?OpcodeHandler{
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 00 - 0F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 10 - 1F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 20 - 2F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 30 - 3F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 40 - 4F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 50 - 5F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 60 - 6F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 70 - 7F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 80 - 8F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 90 - 9F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // A0 - AF
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // B0 - BF
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // C0 - CF
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // D0 - DF
-    null, null, null, null, null, li.pushIy, null, null, null, null, null, null, null, null, null, null, // E0 - EF
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // F0 - FF
-};
-
 pub const IndexOpcodeTable = [256]?OpcodeHandler{
     nop, immi.load_BC, dti.stax_B, rpi.inx_B, rsi.inr_B, rsi.dcr_B, immi.moveImm_B, rai.rlca, li.ex_AF, ix.add_BC, dti.loadAddr_B, rsi.dcx_B, rsi.inr_C, rsi.dcr_C, immi.moveImm_C, rai.rrca, // 00 - 0F
     ji.djnz, immi.load_DE, dti.stax_D, rpi.inx_D, rsi.inr_D, rsi.dcr_D, immi.moveImm_D, rai.rla, ji.jr, ix.add_DE, dti.loadAddr_D, rsi.dcx_D, rsi.inr_E, rsi.dcr_E, immi.moveImm_E, rai.rra, // 10 - 1F
@@ -79,7 +60,7 @@ pub const IndexOpcodeTable = [256]?OpcodeHandler{
     ai.sub_B, ai.sub_C, ai.sub_D, ai.sub_E, ix.sub_IXH_A, ix.sub_IXL_A, ix.sub_IXD_A, ai.sub_A, ai.sbb_B, ai.sbb_C, ai.sbb_D, ai.sbb_E, ix.sbb_IXH_A, ix.sbb_IXL_A, ix.sbb_IXD_A, ai.sbb_A, // 90 - 9F
     ai.ana_B, ai.ana_C, ai.ana_D, ai.ana_E, ix.ana_IDXH, ix.ana_IDXL, ix.ana_IDXDisp, ai.ana_A, ai.xra_B, ai.xra_C, ai.xra_D, ai.xra_E, ix.xor_IDXH, ix.xor_IDXL, ix.xor_IDXDisp, ai.xra_A, // A0 - AF
     ai.ora_B, ai.ora_C, ai.ora_D, ai.ora_E, ix.ora_IDXH, ix.ora_IDXL, ix.ora_IDXDisp, ai.ora_A, ai.cmp_B, ai.cmp_C, ai.cmp_D, ai.cmp_E, ix.cmp_IDXH, ix.cmp_IDXL, ix.cmp_IDXDisp, ai.cmp_A, // B0 - BF
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // C0 - CF
+    ri.ret_NZ, rpi.pop_BC, ji.jump_NZ, ji.jump, ci.call_NZ, rpi.push_BC, ai.add_N, rst0, ri.ret_Z, ri.ret, ji.jump_Z, lookupBitOpcode, ci.call_Z, ci.call, ai.adc_N, rst8, // C0 - CF
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // D0 - DF
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // E0 - EF
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // F0 - FF

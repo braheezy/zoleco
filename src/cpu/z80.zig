@@ -94,7 +94,7 @@ sp: u16 = 0,
 // index registers
 ix: u16 = 0,
 iy: u16 = 0,
-curr_index_reg: *u16 = undefined,
+curr_index_reg: ?*u16 = null,
 // memory refresh register
 r: u8 = 0,
 // cpu memory
@@ -116,7 +116,6 @@ pub fn init(al: std.mem.Allocator, rom_data: []const u8, start_address: u16) !Z8
         .pc = start_address,
     };
     z80.zeroMemory();
-    z80.curr_index_reg = &z80.ix;
 
     @memcpy(memory[start_address .. start_address + rom_data.len], rom_data);
     return z80;
@@ -264,8 +263,8 @@ pub inline fn getDisplacement(self: *Z80) i8 {
 }
 
 pub inline fn getDisplacedAddress(self: *Z80, displacement: i8) u16 {
-    const ix_i32: i32 = @intCast(self.ix);
+    const idx_i32: i32 = @intCast(self.curr_index_reg.?.*);
     const displacement_i32: i32 = @intCast(displacement);
-    const address_i32: i32 = ix_i32 + displacement_i32;
+    const address_i32: i32 = idx_i32 + displacement_i32;
     return @intCast(address_i32 & 0xFFFF);
 }

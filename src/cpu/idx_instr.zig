@@ -24,13 +24,13 @@ fn setLowByte(x: u8, n: u16) u16 {
 }
 
 pub fn add_IdxReg(self: *Z80, high: u8, low: u8) void {
-    const idx_reg_val: u16 = self.curr_index_reg.*;
+    const idx_reg_val: u16 = self.curr_index_reg.?.*;
     const bc_val: u16 = (@as(u16, high) << 8) | @as(u16, low);
 
     const sum: u32 = @as(u32, idx_reg_val) + @as(u32, bc_val);
     const result: u16 = @intCast(sum & 0xFFFF);
 
-    self.curr_index_reg.* = result; // Store the new IX
+    self.curr_index_reg.?.* = result; // Store the new IX
 
     // Set carry if the 16-bit addition overflowed
     self.flag.carry = (sum > 0xFFFF);
@@ -53,21 +53,21 @@ pub fn add_DE(self: *Z80) !void {
 }
 
 pub fn add_IX(self: *Z80) !void {
-    add_IdxReg(self, getHighByte(self.curr_index_reg.*), getLowByte(self.curr_index_reg.*));
+    add_IdxReg(self, getHighByte(self.curr_index_reg.?.*), getLowByte(self.curr_index_reg.?.*));
 }
 
 // LD IX, nn: Load 16-bit immediate into IX
 pub fn load_NN(self: *Z80) !void {
     const data = try self.fetchData(2);
     const address = Z80.toUint16(data[1], data[0]);
-    self.curr_index_reg.* = address;
+    self.curr_index_reg.?.* = address;
     self.cycle_count += 14;
 }
 
 pub fn load_NNMem(self: *Z80) !void {
     const data = try self.fetchData(2);
     const address = Z80.toUint16(data[1], data[0]);
-    self.curr_index_reg.* = self.memory[address] | (@as(u16, self.memory[address + 1]) << 8);
+    self.curr_index_reg.?.* = self.memory[address] | (@as(u16, self.memory[address + 1]) << 8);
     self.cycle_count += 20;
 }
 
@@ -76,67 +76,67 @@ pub fn store(self: *Z80) !void {
     const data = try self.fetchData(2);
     const address = Z80.toUint16(data[1], data[0]);
 
-    self.memory[address] = getLowByte(self.curr_index_reg.*);
-    self.memory[address + 1] = getHighByte(self.curr_index_reg.*);
+    self.memory[address] = getLowByte(self.curr_index_reg.?.*);
+    self.memory[address + 1] = getHighByte(self.curr_index_reg.?.*);
     self.cycle_count += 20;
 }
 
 pub fn load_NIXH(self: *Z80) !void {
     const data = try self.fetchData(1);
-    self.curr_index_reg.* = setHighByte(data[0], self.curr_index_reg.*);
+    self.curr_index_reg.?.* = setHighByte(data[0], self.curr_index_reg.?.*);
     self.cycle_count += 11;
 }
 
 pub fn load_NIXL(self: *Z80) !void {
     const data = try self.fetchData(1);
-    self.curr_index_reg.* = setLowByte(data[0], self.curr_index_reg.*);
+    self.curr_index_reg.?.* = setLowByte(data[0], self.curr_index_reg.?.*);
     self.cycle_count += 11;
 }
 
 pub fn inc(self: *Z80) !void {
-    self.curr_index_reg.* = self.curr_index_reg.* +% 1;
+    self.curr_index_reg.?.* = self.curr_index_reg.?.* +% 1;
 
     self.cycle_count += 10;
 }
 
 pub fn dec(self: *Z80) !void {
-    self.curr_index_reg.* = self.curr_index_reg.* -% 1;
+    self.curr_index_reg.?.* = self.curr_index_reg.?.* -% 1;
 
     self.cycle_count += 10;
 }
 
 pub fn inc_High(self: *Z80) !void {
-    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
+    const reg_high: u8 = getHighByte(self.curr_index_reg.?.*);
 
     const result = _inc(self, reg_high);
-    self.curr_index_reg.* = setHighByte(result, self.curr_index_reg.*);
+    self.curr_index_reg.?.* = setHighByte(result, self.curr_index_reg.?.*);
 
     self.cycle_count +%= 8;
 }
 
 pub fn dcr_High(self: *Z80) !void {
-    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
+    const reg_high: u8 = getHighByte(self.curr_index_reg.?.*);
 
     const result = _dcr(self, reg_high);
-    self.curr_index_reg.* = setHighByte(result, self.curr_index_reg.*);
+    self.curr_index_reg.?.* = setHighByte(result, self.curr_index_reg.?.*);
 
     self.cycle_count +%= 8;
 }
 
 pub fn inc_Low(self: *Z80) !void {
-    const reg_low: u8 = getLowByte(self.curr_index_reg.*);
+    const reg_low: u8 = getLowByte(self.curr_index_reg.?.*);
 
     const result = _inc(self, reg_low);
-    self.curr_index_reg.* = setLowByte(result, self.curr_index_reg.*);
+    self.curr_index_reg.?.* = setLowByte(result, self.curr_index_reg.?.*);
 
     self.cycle_count +%= 8;
 }
 
 pub fn dcr_Low(self: *Z80) !void {
-    const reg_high: u8 = getLowByte(self.curr_index_reg.*);
+    const reg_high: u8 = getLowByte(self.curr_index_reg.?.*);
 
     const result = _dcr(self, reg_high);
-    self.curr_index_reg.* = setLowByte(result, self.curr_index_reg.*);
+    self.curr_index_reg.?.* = setLowByte(result, self.curr_index_reg.?.*);
 
     self.cycle_count +%= 8;
 }
@@ -233,13 +233,13 @@ pub fn store_AWithDisp(self: *Z80) !void {
 }
 
 pub fn add_SP(self: *Z80) !void {
-    const idx_reg_val: u16 = self.curr_index_reg.*;
+    const idx_reg_val: u16 = self.curr_index_reg.?.*;
     const sp_val: u16 = self.sp;
 
     const sum: u32 = @as(u32, idx_reg_val) + @as(u32, sp_val);
     const result: u16 = @intCast(sum & 0xFFFF);
 
-    self.curr_index_reg.* = result;
+    self.curr_index_reg.?.* = result;
 
     // Set carry if the 16-bit addition overflowed
     self.flag.carry = (sum > 0xFFFF);
@@ -254,52 +254,52 @@ pub fn add_SP(self: *Z80) !void {
 }
 
 pub fn load_BHigh(self: *Z80) !void {
-    self.register.b = getHighByte(self.curr_index_reg.*);
+    self.register.b = getHighByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
 }
 
 pub fn load_BLow(self: *Z80) !void {
-    self.register.b = getLowByte(self.curr_index_reg.*);
+    self.register.b = getLowByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
 }
 
 pub fn load_DHigh(self: *Z80) !void {
-    self.register.d = getHighByte(self.curr_index_reg.*);
+    self.register.d = getHighByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
 }
 
 pub fn load_DLow(self: *Z80) !void {
-    self.register.d = getLowByte(self.curr_index_reg.*);
+    self.register.d = getLowByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
 }
 
 pub fn load_CHigh(self: *Z80) !void {
-    self.register.c = getHighByte(self.curr_index_reg.*);
+    self.register.c = getHighByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
 }
 
 pub fn load_CLow(self: *Z80) !void {
-    self.register.c = getLowByte(self.curr_index_reg.*);
+    self.register.c = getLowByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
 }
 
 pub fn load_EHigh(self: *Z80) !void {
-    self.register.e = getHighByte(self.curr_index_reg.*);
+    self.register.e = getHighByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
 }
 
 pub fn load_ELow(self: *Z80) !void {
-    self.register.e = getLowByte(self.curr_index_reg.*);
+    self.register.e = getLowByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
 }
 
 pub fn load_AHigh(self: *Z80) !void {
-    self.register.a = getHighByte(self.curr_index_reg.*);
+    self.register.a = getHighByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
 }
 
 pub fn load_ALow(self: *Z80) !void {
-    self.register.a = getLowByte(self.curr_index_reg.*);
+    self.register.a = getLowByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
 }
 
@@ -327,22 +327,22 @@ pub fn load_EDisp(self: *Z80) !void {
 }
 
 pub fn load_IXHB(self: *Z80) !void {
-    self.curr_index_reg.* = setHighByte(self.register.b, self.curr_index_reg.*);
+    self.curr_index_reg.?.* = setHighByte(self.register.b, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
 }
 
 pub fn load_IXHC(self: *Z80) !void {
-    self.curr_index_reg.* = setHighByte(self.register.c, self.curr_index_reg.*);
+    self.curr_index_reg.?.* = setHighByte(self.register.c, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
 }
 
 pub fn load_IXHD(self: *Z80) !void {
-    self.curr_index_reg.* = setHighByte(self.register.d, self.curr_index_reg.*);
+    self.curr_index_reg.?.* = setHighByte(self.register.d, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
 }
 
 pub fn load_IXHE(self: *Z80) !void {
-    self.curr_index_reg.* = setHighByte(self.register.e, self.curr_index_reg.*);
+    self.curr_index_reg.?.* = setHighByte(self.register.e, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
 }
 
@@ -355,7 +355,7 @@ pub fn load_IXH(self: *Z80) !void {
 }
 
 pub fn load_IXHL(self: *Z80) !void {
-    self.curr_index_reg.* = setHighByte(getLowByte(self.curr_index_reg.*), self.curr_index_reg.*);
+    self.curr_index_reg.?.* = setHighByte(getLowByte(self.curr_index_reg.?.*), self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
 }
 
@@ -370,33 +370,33 @@ pub fn load_IXHDsp(self: *Z80) !void {
 
 // The contents of A are loaded into IXH.
 pub fn load_IXHA(self: *Z80) !void {
-    self.curr_index_reg.* = setHighByte(self.register.a, self.curr_index_reg.*);
+    self.curr_index_reg.?.* = setHighByte(self.register.a, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
 }
 
 pub fn load_IXLB(self: *Z80) !void {
-    self.curr_index_reg.* = setLowByte(self.register.b, self.curr_index_reg.*);
+    self.curr_index_reg.?.* = setLowByte(self.register.b, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
 }
 
 pub fn load_IXLC(self: *Z80) !void {
-    self.curr_index_reg.* = setLowByte(self.register.c, self.curr_index_reg.*);
+    self.curr_index_reg.?.* = setLowByte(self.register.c, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
 }
 
 pub fn load_IXLD(self: *Z80) !void {
-    self.curr_index_reg.* = setLowByte(self.register.d, self.curr_index_reg.*);
+    self.curr_index_reg.?.* = setLowByte(self.register.d, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
 }
 
 pub fn load_IXLE(self: *Z80) !void {
-    self.curr_index_reg.* = setLowByte(self.register.e, self.curr_index_reg.*);
+    self.curr_index_reg.?.* = setLowByte(self.register.e, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
 }
 
 // The contents of IXH are loaded into IXL.
 pub fn swap_IXBytes(self: *Z80) !void {
-    self.curr_index_reg.* = setLowByte(getHighByte(self.curr_index_reg.*), self.curr_index_reg.*);
+    self.curr_index_reg.?.* = setLowByte(getHighByte(self.curr_index_reg.?.*), self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
 }
 
@@ -427,13 +427,13 @@ pub fn loadDispA(self: *Z80) !void {
 }
 
 pub fn load_IXLA(self: *Z80) !void {
-    self.curr_index_reg.* = setLowByte(self.register.a, self.curr_index_reg.*);
+    self.curr_index_reg.?.* = setLowByte(self.register.a, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
 }
 
 // Adds IXH to A.
 pub fn add_IXH_A(self: *Z80) !void {
-    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
+    const reg_high: u8 = getHighByte(self.curr_index_reg.?.*);
     self.register.a = add(self, reg_high);
 
     self.cycle_count +%= 4;
@@ -441,7 +441,7 @@ pub fn add_IXH_A(self: *Z80) !void {
 
 // Adds IXL to A.
 pub fn add_IXL_A(self: *Z80) !void {
-    const reg_low: u8 = getLowByte(self.curr_index_reg.*);
+    const reg_low: u8 = getLowByte(self.curr_index_reg.?.*);
     self.register.a = add(self, reg_low);
 
     self.cycle_count +%= 4;
@@ -460,14 +460,14 @@ pub fn add_IXD_A(self: *Z80) !void {
 
 // Adds IXH and the carry flag to A.
 pub fn adc_IXH_A(self: *Z80) !void {
-    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
+    const reg_high: u8 = getHighByte(self.curr_index_reg.?.*);
     self.register.a = adc(self, reg_high);
 
     self.cycle_count +%= 4;
 }
 
 pub fn adc_IXL_A(self: *Z80) !void {
-    const reg_low: u8 = getLowByte(self.curr_index_reg.*);
+    const reg_low: u8 = getLowByte(self.curr_index_reg.?.*);
     self.register.a = adc(self, reg_low);
 
     self.cycle_count +%= 4;
@@ -484,7 +484,7 @@ pub fn adc_IXD_A(self: *Z80) !void {
 }
 // Subtracts IXH from A.
 pub fn sub_IXH_A(self: *Z80) !void {
-    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
+    const reg_high: u8 = getHighByte(self.curr_index_reg.?.*);
     self.register.a = sub(self, reg_high);
 
     self.cycle_count +%= 4;
@@ -492,7 +492,7 @@ pub fn sub_IXH_A(self: *Z80) !void {
 
 // Subtracts IXL from A.
 pub fn sub_IXL_A(self: *Z80) !void {
-    const reg_low: u8 = getLowByte(self.curr_index_reg.*);
+    const reg_low: u8 = getLowByte(self.curr_index_reg.?.*);
     self.register.a = sub(self, reg_low);
 
     self.cycle_count +%= 4;
@@ -510,14 +510,14 @@ pub fn sub_IXD_A(self: *Z80) !void {
 
 // Subtracts IXH and the carry flag from A.
 pub fn sbb_IXH_A(self: *Z80) !void {
-    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
+    const reg_high: u8 = getHighByte(self.curr_index_reg.?.*);
     self.register.a = sbb(self, reg_high);
 
     self.cycle_count +%= 4;
 }
 
 pub fn sbb_IXL_A(self: *Z80) !void {
-    const reg_low: u8 = getLowByte(self.curr_index_reg.*);
+    const reg_low: u8 = getLowByte(self.curr_index_reg.?.*);
     self.register.a = sbb(self, reg_low);
 
     self.cycle_count +%= 4;
@@ -535,7 +535,7 @@ pub fn sbb_IXD_A(self: *Z80) !void {
 }
 
 pub fn ana_IDXH(self: *Z80) !void {
-    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
+    const reg_high: u8 = getHighByte(self.curr_index_reg.?.*);
     ana(self, reg_high);
 
     self.cycle_count +%= 4;
@@ -543,7 +543,7 @@ pub fn ana_IDXH(self: *Z80) !void {
 
 // Bitwise AND on A with IDXL.
 pub fn ana_IDXL(self: *Z80) !void {
-    const reg_low: u8 = getLowByte(self.curr_index_reg.*);
+    const reg_low: u8 = getLowByte(self.curr_index_reg.?.*);
     ana(self, reg_low);
 
     self.cycle_count +%= 4;
@@ -562,13 +562,13 @@ pub fn ana_IDXDisp(self: *Z80) !void {
 
 // Bitwise XOR on A with high byte of index register.
 pub fn xor_IDXH(self: *Z80) !void {
-    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
+    const reg_high: u8 = getHighByte(self.curr_index_reg.?.*);
     xra(self, reg_high);
 
     self.cycle_count +%= 4;
 }
 pub fn xor_IDXL(self: *Z80) !void {
-    const reg_low: u8 = getLowByte(self.curr_index_reg.*);
+    const reg_low: u8 = getLowByte(self.curr_index_reg.?.*);
     xra(self, reg_low);
 
     self.cycle_count +%= 4;
@@ -586,13 +586,13 @@ pub fn xor_IDXDisp(self: *Z80) !void {
 }
 
 pub fn ora_IDXH(self: *Z80) !void {
-    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
+    const reg_high: u8 = getHighByte(self.curr_index_reg.?.*);
     ora(self, reg_high);
 
     self.cycle_count +%= 4;
 }
 pub fn ora_IDXL(self: *Z80) !void {
-    const reg_low: u8 = getLowByte(self.curr_index_reg.*);
+    const reg_low: u8 = getLowByte(self.curr_index_reg.?.*);
     ora(self, reg_low);
 
     self.cycle_count +%= 4;
@@ -609,13 +609,13 @@ pub fn ora_IDXDisp(self: *Z80) !void {
 }
 
 pub fn cmp_IDXH(self: *Z80) !void {
-    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
+    const reg_high: u8 = getHighByte(self.curr_index_reg.?.*);
     compare(self, reg_high);
 
     self.cycle_count +%= 4;
 }
 pub fn cmp_IDXL(self: *Z80) !void {
-    const reg_low: u8 = getLowByte(self.curr_index_reg.*);
+    const reg_low: u8 = getLowByte(self.curr_index_reg.?.*);
     compare(self, reg_low);
 
     self.cycle_count +%= 4;
