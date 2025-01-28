@@ -6,8 +6,6 @@ const Z80 = @import("Z80.zig");
 // position to the left, with the high-order bit being transferred to the
 // low-order bit position of the accumulator
 pub fn rlca(self: *Z80) !void {
-    std.log.debug("[07]\tRLCA", .{});
-
     self.flag.carry = (self.register.a & 0x80) == 0x80;
     self.flag.half_carry = false;
     self.flag.add_subtract = false;
@@ -31,43 +29,35 @@ pub fn rlc(self: *Z80, data: u8) u8 {
 }
 
 pub fn rlc_B(self: *Z80) !void {
-    std.log.debug("[CB 00]\tRLC \tB", .{});
     self.register.b = rlc(self, self.register.b);
 }
 
 pub fn rlc_C(self: *Z80) !void {
-    std.log.debug("[CB 01]\tRLC \tC", .{});
     self.register.c = rlc(self, self.register.c);
 }
 
 pub fn rlc_D(self: *Z80) !void {
-    std.log.debug("[CB 02]\tRLC \tD", .{});
     self.register.d = rlc(self, self.register.d);
 }
 
 pub fn rlc_E(self: *Z80) !void {
-    std.log.debug("[CB 03]\tRLC \tE", .{});
     self.register.e = rlc(self, self.register.e);
 }
 
 pub fn rlc_H(self: *Z80) !void {
-    std.log.debug("[CB 04]\tRLC \tH", .{});
     self.register.h = rlc(self, self.register.h);
 }
 
 pub fn rlc_L(self: *Z80) !void {
-    std.log.debug("[CB 05]\tRLC \tL", .{});
     self.register.l = rlc(self, self.register.l);
 }
 
 pub fn rlc_M(self: *Z80) !void {
-    std.log.debug("[CB 06]\tRLC \tM", .{});
     const address = self.getHL();
     self.memory[address] = rlc(self, self.memory[address]);
 }
 
 pub fn rlc_A(self: *Z80) !void {
-    std.log.debug("[CB 07]\tRLC \tA", .{});
     self.register.a = rlc(self, self.register.a);
 }
 
@@ -78,8 +68,6 @@ pub fn rlc_A(self: *Z80) !void {
 // being transferred to the high-order bit position of the
 // accumulator.
 pub fn rrca(self: *Z80) !void {
-    std.log.debug("[0F]\tRRC \tA", .{});
-
     self.flag.carry = self.register.a & 0x01 == 1;
 
     self.register.a = std.math.rotr(u8, self.register.a, 1);
@@ -106,43 +94,35 @@ fn rrc(self: *Z80, data: u8) u8 {
 }
 
 pub fn rrc_B(self: *Z80) !void {
-    std.log.debug("[CB 08]\tRRC \tB", .{});
     self.register.b = rrc(self, self.register.b);
 }
 
 pub fn rrc_C(self: *Z80) !void {
-    std.log.debug("[CB 09]\tRRC \tC", .{});
     self.register.c = rrc(self, self.register.c);
 }
 
 pub fn rrc_D(self: *Z80) !void {
-    std.log.debug("[CB 0A]\tRRC \tD", .{});
     self.register.d = rrc(self, self.register.d);
 }
 
 pub fn rrc_E(self: *Z80) !void {
-    std.log.debug("[CB 0B]\tRRC \tE", .{});
     self.register.e = rrc(self, self.register.e);
 }
 
 pub fn rrc_H(self: *Z80) !void {
-    std.log.debug("[CB 0C]\tRRC \tH", .{});
     self.register.h = rrc(self, self.register.h);
 }
 
 pub fn rrc_L(self: *Z80) !void {
-    std.log.debug("[CB 0D]\tRRC \tL", .{});
     self.register.l = rrc(self, self.register.l);
 }
 
 pub fn rrc_M(self: *Z80) !void {
-    std.log.debug("[CB 0E]\tRRC \tM", .{});
     const address = self.getHL();
     self.memory[address] = rrc(self, self.memory[address]);
 }
 
 pub fn rrc_A(self: *Z80) !void {
-    std.log.debug("[CB 0F]\tRRC \tA", .{});
     self.register.a = rrc(self, self.register.a);
 }
 
@@ -151,7 +131,6 @@ pub fn rrc_A(self: *Z80) !void {
 // The high-order bit of the accumulator replaces the Carry bit, while the
 // Carry bit replaces the high-order bit of the accumulator.
 pub fn rla(self: *Z80) !void {
-    std.log.debug("[17]\tRLA", .{});
     const carry: u8 = if (self.flag.carry)
         1
     else
@@ -189,43 +168,35 @@ pub fn rl(self: *Z80, data: u8) u8 {
 }
 
 pub fn rl_B(self: *Z80) !void {
-    std.log.debug("[CB 10]\tRL\tB", .{});
     self.register.b = rl(self, self.register.b);
 }
 
 pub fn rl_C(self: *Z80) !void {
-    std.log.debug("[CB 11]\tRL\tC", .{});
     self.register.c = rl(self, self.register.c);
 }
 
 pub fn rl_D(self: *Z80) !void {
-    std.log.debug("[CB 12]\tRL\tD", .{});
     self.register.d = rl(self, self.register.d);
 }
 
 pub fn rl_E(self: *Z80) !void {
-    std.log.debug("[CB 13]\tRL\tE", .{});
     self.register.e = rl(self, self.register.e);
 }
 
 pub fn rl_H(self: *Z80) !void {
-    std.log.debug("[CB 14]\tRL\tH", .{});
     self.register.h = rl(self, self.register.h);
 }
 
 pub fn rl_L(self: *Z80) !void {
-    std.log.debug("[CB 15]\tRL\tL", .{});
     self.register.l = rl(self, self.register.l);
 }
 
 pub fn rl_M(self: *Z80) !void {
-    std.log.debug("[CB 16]\tRL\tM", .{});
     const address = self.getHL();
     self.memory[address] = rl(self, self.memory[address]);
 }
 
 pub fn rl_A(self: *Z80) !void {
-    std.log.debug("[CB 17]\tRL\tA", .{});
     self.register.a = rl(self, self.register.a);
 }
 
@@ -234,7 +205,6 @@ pub fn rl_A(self: *Z80) !void {
 // The low order bit of the accumulator replaces the carry bit, while the carry bit replaces
 // the high order bit of the accumulator.
 pub fn rra(self: *Z80) !void {
-    std.log.debug("[1F]\tRRA", .{});
     const carry_rotate: u8 = if (self.flag.carry)
         1
     else
@@ -270,42 +240,34 @@ fn rr(self: *Z80, data: u8) u8 {
 }
 
 pub fn rr_B(self: *Z80) !void {
-    std.log.debug("[CB 18]\tRR\tB", .{});
     self.register.b = rr(self, self.register.b);
 }
 
 pub fn rr_C(self: *Z80) !void {
-    std.log.debug("[CB 19]\tRR\tC", .{});
     self.register.c = rr(self, self.register.c);
 }
 
 pub fn rr_D(self: *Z80) !void {
-    std.log.debug("[CB 1A]\tRR\tD", .{});
     self.register.d = rr(self, self.register.d);
 }
 
 pub fn rr_E(self: *Z80) !void {
-    std.log.debug("[CB 1B]\tRR\tE", .{});
     self.register.e = rr(self, self.register.e);
 }
 
 pub fn rr_H(self: *Z80) !void {
-    std.log.debug("[CB 1C]\tRR\tH", .{});
     self.register.h = rr(self, self.register.h);
 }
 
 pub fn rr_L(self: *Z80) !void {
-    std.log.debug("[CB 1D]\tRR\tL", .{});
     self.register.l = rr(self, self.register.l);
 }
 
 pub fn rr_M(self: *Z80) !void {
-    std.log.debug("[CB 1E]\tRR\tM", .{});
     const address = self.getHL();
     self.memory[address] = rr(self, self.memory[address]);
 }
 
 pub fn rr_A(self: *Z80) !void {
-    std.log.debug("[CB 1F]\tRR\tA", .{});
     self.register.a = rr(self, self.register.a);
 }

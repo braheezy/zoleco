@@ -11,28 +11,24 @@ pub fn inx(reg1: u8, reg2: u8) struct { u8, u8 } {
 
 // INX B: Increment register pair B.
 pub fn inx_B(self: *Z80) !void {
-    std.log.debug("[03]\tINC \tBC", .{});
     self.register.b, self.register.c = inx(self.register.b, self.register.c);
     self.cycle_count += 6;
 }
 
 // INX D: Increment register pair D.
 pub fn inx_D(self: *Z80) !void {
-    std.log.debug("[13]\tINC \tDE", .{});
     self.register.d, self.register.e = inx(self.register.d, self.register.e);
     self.cycle_count += 6;
 }
 
 // INX H: Increment register pair H.
 pub fn inx_H(self: *Z80) !void {
-    std.log.debug("[23]\tINC \tHL", .{});
     self.register.h, self.register.l = inx(self.register.h, self.register.l);
     self.cycle_count += 6;
 }
 
 // INX SP: Increment stack pointer.
 pub fn inx_SP(self: *Z80) !void {
-    std.log.debug("[33]\tINC \tSP", .{});
     self.sp += 1;
     self.cycle_count += 6;
 }
@@ -55,25 +51,21 @@ fn dad(self: *Z80, reg1: u8, reg2: u8) void {
 
 // DAD B: Add register pair B to register pair H.
 pub fn dad_B(self: *Z80) !void {
-    std.log.debug("[09]\tADD \tHL,BC", .{});
     dad(self, self.register.b, self.register.c);
 }
 
 // DAD D: Add register pair D to register pair H.
 pub fn dad_D(self: *Z80) !void {
-    std.log.debug("[19]\tADD \tHL,DE", .{});
     dad(self, self.register.d, self.register.e);
 }
 
 // DAD H: Add register pair H to register pair H.
 pub fn dad_H(self: *Z80) !void {
-    std.log.debug("[29]\tADD \tHL,HL", .{});
     dad(self, self.register.h, self.register.l);
 }
 
 // DAD SP: Add stack pointer to register pair H.
 pub fn dad_SP(self: *Z80) !void {
-    std.log.debug("[39]\tADD \tHL,SP", .{});
     const hl = @as(u32, self.getHL());
 
     const result = hl + @as(u32, self.sp);
@@ -98,25 +90,21 @@ pub fn push(self: *Z80, lower: u8, upper: u8) void {
 
 // PUSH D: Push register pair D onto stack.
 pub fn push_DE(self: *Z80) !void {
-    std.log.debug("[D5]\tPUSH\tDE", .{});
     push(self, self.register.e, self.register.d);
 }
 
 // PUSH H: Push register pair H onto stack.
 pub fn push_HL(self: *Z80) !void {
-    std.log.debug("[E5]\tPUSH\tHL", .{});
     push(self, self.register.l, self.register.h);
 }
 
 // PUSH B: Push register pair B onto stack.
 pub fn push_BC(self: *Z80) !void {
-    std.log.debug("[C5]\tPUSH\tBC", .{});
     push(self, self.register.c, self.register.b);
 }
 
 // PUSH AF: Push accumulator and flags onto stack.
 pub fn push_AF(self: *Z80) !void {
-    std.log.debug("[F5]\tPUSH\tAF", .{});
     push(self, self.flag.toByte(), self.register.a);
 }
 
@@ -132,25 +120,21 @@ pub fn pop(self: *Z80) struct { u8, u8 } {
 
 // POP H: Pop register pair H from stack.
 pub fn pop_HL(self: *Z80) !void {
-    std.log.debug("[E1]\tPOP \tHL", .{});
     self.register.l, self.register.h = pop(self);
 }
 
 // POP B: Pop register pair B from stack.
 pub fn pop_BC(self: *Z80) !void {
-    std.log.debug("[C1]\tPOP \tBC", .{});
     self.register.c, self.register.b = pop(self);
 }
 
 // POP D: Pop register pair D from stack.
 pub fn pop_DE(self: *Z80) !void {
-    std.log.debug("[D1]\tPOP \tDE", .{});
     self.register.e, self.register.d = pop(self);
 }
 
 // POP AF: Pop accumulator and flags from stack.
 pub fn pop_AF(self: *Z80) !void {
-    std.log.debug("[F1]\tPOP \tAF", .{});
     const fl, self.register.a = pop(self);
     self.flag = Z80.Flag.fromByte(fl);
 }

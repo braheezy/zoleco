@@ -4,7 +4,7 @@ const Z80 = @import("Z80.zig");
 pub fn jump(self: *Z80) !void {
     const data = try self.fetchData(2);
     const jump_address = Z80.toUint16(data[1], data[0]);
-    std.log.debug("[C3]\tJMP \t${X:<4}", .{jump_address});
+
     self.pc = jump_address;
     self.cycle_count += 10;
 }
@@ -14,10 +14,9 @@ pub fn jump_NZ(self: *Z80) !void {
     if (!self.flag.zero) {
         const data = try self.fetchData(2);
         const address = Z80.toUint16(data[1], data[0]);
-        std.log.debug("[C2]\tJP  \tNZ,${X:<4}", .{address});
+
         self.pc = address;
     } else {
-        std.log.debug("[C2]\tJP  \tNZ,${X:<4}", .{self.pc + 2});
         self.pc += 2;
     }
     self.cycle_count += 10;
@@ -28,10 +27,9 @@ pub fn jump_Z(self: *Z80) !void {
     if (self.flag.zero) {
         const data = try self.fetchData(2);
         const address = Z80.toUint16(data[1], data[0]);
-        std.log.debug("[CA]\tJP  \tZ,${X:<4}", .{address});
+
         self.pc = address;
     } else {
-        std.log.debug("[CA]\tJP  \tZ,${X:<4}", .{self.pc + 2});
         self.pc += 2;
     }
     self.cycle_count += 10;
@@ -42,10 +40,9 @@ pub fn jump_NC(self: *Z80) !void {
     if (!self.flag.carry) {
         const data = try self.fetchData(2);
         const address = Z80.toUint16(data[1], data[0]);
-        std.log.debug("[D2]\tJP  \tNC,${X:<4}", .{address});
+
         self.pc = address;
     } else {
-        std.log.debug("[D2]\tJP  \tNC,${X:<4}", .{self.pc + 2});
         self.pc += 2;
     }
     self.cycle_count += 10;
@@ -56,10 +53,9 @@ pub fn jump_C(self: *Z80) !void {
     if (self.flag.carry) {
         const data = try self.fetchData(2);
         const address = Z80.toUint16(data[1], data[0]);
-        std.log.debug("[DA]\tJP  \tC,${X:<4}", .{address});
+
         self.pc = address;
     } else {
-        std.log.debug("[DA]\tJP  \tC,${X:<4}", .{self.pc + 2});
         self.pc += 2;
     }
     self.cycle_count += 10;
@@ -70,10 +66,9 @@ pub fn jump_M(self: *Z80) !void {
     if (self.flag.sign) {
         const data = try self.fetchData(2);
         const address = Z80.toUint16(data[1], data[0]);
-        std.log.debug("[FA]\tJP  \tM,${X:<4}", .{address});
+
         self.pc = address;
     } else {
-        std.log.debug("[FA]\tJP  \tM,${X:<4}", .{self.pc + 2});
         self.pc += 2;
     }
     self.cycle_count += 10;
@@ -84,10 +79,9 @@ pub fn jump_PE(self: *Z80) !void {
     if (self.flag.parity_overflow) {
         const data = try self.fetchData(2);
         const address = Z80.toUint16(data[1], data[0]);
-        std.log.debug("[EA]\tJP  \tPE,${X:<4}", .{address});
+
         self.pc = address;
     } else {
-        std.log.debug("[EA]\tJP  \tPE,${X:<4}", .{self.pc + 2});
         self.pc += 2;
     }
     self.cycle_count += 10;
@@ -98,10 +92,9 @@ pub fn jump_PO(self: *Z80) !void {
     if (!self.flag.parity_overflow) {
         const data = try self.fetchData(2);
         const address = Z80.toUint16(data[1], data[0]);
-        std.log.debug("[E2]\tJP  \tPO,${X:<4}", .{address});
+
         self.pc = address;
     } else {
-        std.log.debug("[E2]\tJP  \tPO,${X:<4}", .{self.pc + 2});
         self.pc += 2;
     }
     self.cycle_count += 10;
@@ -112,10 +105,9 @@ pub fn jump_P(self: *Z80) !void {
     if (!self.flag.sign) {
         const data = try self.fetchData(2);
         const address = Z80.toUint16(data[1], data[0]);
-        std.log.debug("[F2]\tJP  \tP,${X:<4}", .{address});
+
         self.pc = address;
     } else {
-        std.log.debug("[F2]\tJP  \tP,${X:<4}", .{self.pc + 2});
         self.pc += 2;
     }
     self.cycle_count += 10;
@@ -145,14 +137,11 @@ fn jump_relative(self: *Z80, displacement: u8) void {
 }
 // JR d: Jump relative by signed displacement d.
 pub fn jr(self: *Z80) !void {
-    std.log.debug("[18]\tJR e", .{});
-
     jump_relative(self, self.memory[self.pc]);
 }
 
 // JRNZ: If the zero flag is unset, the signed value d is added to PC. The jump is measured from the start of the instruction opcode.
 pub fn jr_NZ(self: *Z80) !void {
-    std.log.debug("[20]\tJR NZ, e", .{});
     if (!self.flag.zero) {
         jump_relative(self, self.memory[self.pc]);
     } else {
@@ -163,7 +152,6 @@ pub fn jr_NZ(self: *Z80) !void {
 
 // JRZ: If the zero flag is set, the signed value d is added to PC. The jump is measured from the start of the instruction opcode.
 pub fn jr_Z(self: *Z80) !void {
-    std.log.debug("[28]\tJR Z", .{});
     if (self.flag.zero) {
         jump_relative(self, self.memory[self.pc]);
     } else {
@@ -174,7 +162,6 @@ pub fn jr_Z(self: *Z80) !void {
 
 // JRNC: If the carry flag is unset, the signed value d is added to PC. The jump is measured from the start of the instruction opcode.
 pub fn jr_NC(self: *Z80) !void {
-    std.log.debug("[20]\tJR NC", .{});
     if (!self.flag.carry) {
         jump_relative(self, self.memory[self.pc]);
     } else {
@@ -185,7 +172,6 @@ pub fn jr_NC(self: *Z80) !void {
 
 // JRC: If the carry flag is set, the signed value d is added to PC. The jump is measured from the start of the instruction opcode.
 pub fn jr_C(self: *Z80) !void {
-    std.log.debug("[38]\tJR C, e", .{});
     if (self.flag.carry) {
         jump_relative(self, self.memory[self.pc]);
     } else {

@@ -5,7 +5,6 @@ const Z80 = @import("Z80.zig");
 pub fn store_HL(self: *Z80) !void {
     const data = try self.fetchData(2);
     const address = Z80.toUint16(data[1], data[0]);
-    std.log.debug("[22]\tLD  \t${X:<4},HL", .{address});
 
     self.memory[address] = self.register.l;
     self.memory[address + 1] = self.register.h;
@@ -16,7 +15,6 @@ pub fn store_HL(self: *Z80) !void {
 pub fn loadImm_HL(self: *Z80) !void {
     const data = try self.fetchData(2);
     const address = Z80.toUint16(data[1], data[0]);
-    std.log.debug("[2A]\tLD  \tHL,${X:<4}", .{address});
 
     self.register.l = self.memory[address];
     self.register.h = self.memory[address + 1];
@@ -27,7 +25,7 @@ pub fn loadImm_HL(self: *Z80) !void {
 pub fn store_A(self: *Z80) !void {
     const data = try self.fetchData(2);
     const address = Z80.toUint16(data[1], data[0]);
-    std.log.debug("[32]\tLD  \t${X:<4},A", .{address});
+
     self.memory[address] = self.register.a;
     self.cycle_count += 13;
 }
@@ -36,7 +34,7 @@ pub fn store_A(self: *Z80) !void {
 pub fn load_A(self: *Z80) !void {
     const data = try self.fetchData(2);
     const address = Z80.toUint16(data[1], data[0]);
-    std.log.debug("[3A]\tLD  \tA,${X:<4}", .{address});
+
     self.register.a = self.memory[address];
     self.cycle_count += 13;
 }

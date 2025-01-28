@@ -94,6 +94,7 @@ sp: u16 = 0,
 // index registers
 ix: u16 = 0,
 iy: u16 = 0,
+curr_index_reg: *u16 = undefined,
 // memory refresh register
 r: u8 = 0,
 // cpu memory
@@ -110,11 +111,12 @@ scratch: [2]u8 = [_]u8{0} ** 2,
 
 pub fn init(al: std.mem.Allocator, rom_data: []const u8, start_address: u16) !Z80 {
     const memory = try al.alloc(u8, 0x10000);
-    const z80 = Z80{
+    var z80 = Z80{
         .memory = memory,
         .pc = start_address,
     };
     z80.zeroMemory();
+    z80.curr_index_reg = &z80.ix;
 
     @memcpy(memory[start_address .. start_address + rom_data.len], rom_data);
     return z80;

@@ -20,20 +20,20 @@ fn setLowByte(x: u8, n: u16) u16 {
     return (@as(u16, x)) | (@as(u16, getHighByte(n)) << 8);
 }
 
-pub fn addix(self: *Z80, high: u8, low: u8) void {
-    const ix_val: u16 = self.ix;
+pub fn add_IdxReg(self: *Z80, high: u8, low: u8) void {
+    const idx_reg_val: u16 = self.curr_index_reg.*;
     const bc_val: u16 = (@as(u16, high) << 8) | @as(u16, low);
 
-    const sum: u32 = @as(u32, ix_val) + @as(u32, bc_val);
+    const sum: u32 = @as(u32, idx_reg_val) + @as(u32, bc_val);
     const result: u16 = @intCast(sum & 0xFFFF);
 
-    self.ix = result; // Store the new IX
+    self.curr_index_reg.* = result; // Store the new IX
 
     // Set carry if the 16-bit addition overflowed
     self.flag.carry = (sum > 0xFFFF);
 
     // Half-carry if carry from bit 11
-    self.flag.half_carry = ((ix_val & 0x0FFF) + (bc_val & 0x0FFF)) > 0x0FFF;
+    self.flag.half_carry = ((idx_reg_val & 0x0FFF) + (bc_val & 0x0FFF)) > 0x0FFF;
 
     // N is reset
     self.flag.add_subtract = false;
@@ -42,125 +42,103 @@ pub fn addix(self: *Z80, high: u8, low: u8) void {
 }
 
 pub fn add_BC(self: *Z80) !void {
-    std.log.debug("[DD 09]\tINC IX BC", .{});
-    addix(self, self.register.b, self.register.c);
+    add_IdxReg(self, self.register.b, self.register.c);
 }
 
 pub fn add_DE(self: *Z80) !void {
-    std.log.debug("[DD 19]\tINC IX DE", .{});
-    addix(self, self.register.d, self.register.e);
+    add_IdxReg(self, self.register.d, self.register.e);
 }
 
 pub fn add_IX(self: *Z80) !void {
-    std.log.debug("[DD 29]\tINC IX IX", .{});
-    addix(self, getHighByte(self.ix), getLowByte(self.ix));
+    add_IdxReg(self, getHighByte(self.curr_index_reg.*), getLowByte(self.curr_index_reg.*));
 }
 
 // LD IX, nn: Load 16-bit immediate into IX
 pub fn load_NN(self: *Z80) !void {
-    std.log.debug("[DD 21]\tLD  \tIX,NN", .{});
     const data = try self.fetchData(2);
     const address = Z80.toUint16(data[1], data[0]);
-    self.ix = address;
+    self.curr_index_reg.* = address;
     self.cycle_count += 14;
 }
 
 pub fn load_NNMem(self: *Z80) !void {
-    std.log.debug("[DD 2A]\tLD  \tIX,(NN)", .{});
     const data = try self.fetchData(2);
     const address = Z80.toUint16(data[1], data[0]);
-    self.ix = self.memory[address] | (@as(u16, self.memory[address + 1]) << 8);
+    self.curr_index_reg.* = self.memory[address] | (@as(u16, self.memory[address + 1]) << 8);
     self.cycle_count += 20;
 }
 
 // LD (nn), IX: Load IX into 16-bit address
 pub fn store(self: *Z80) !void {
-    std.log.debug("[DD 22]\tLD  \t(N),IX", .{});
     const data = try self.fetchData(2);
     const address = Z80.toUint16(data[1], data[0]);
 
-    self.memory[address] = getLowByte(self.ix);
-    self.memory[address + 1] = getHighByte(self.ix);
+    self.memory[address] = getLowByte(self.curr_index_reg.*);
+    self.memory[address + 1] = getHighByte(self.curr_index_reg.*);
     self.cycle_count += 20;
 }
 
 pub fn load_NIXH(self: *Z80) !void {
-    std.log.debug("[DD 26]\tLD  \tIXH,N", .{});
     const data = try self.fetchData(1);
-    self.ix = setHighByte(data[0], self.ix);
+    self.curr_index_reg.* = setHighByte(data[0], self.curr_index_reg.*);
     self.cycle_count += 11;
 }
 
 pub fn load_NIXL(self: *Z80) !void {
-    std.log.debug("[DD 2E]\tLD  \tIXL,N", .{});
     const data = try self.fetchData(1);
-    self.ix = setLowByte(data[0], self.ix);
+    self.curr_index_reg.* = setLowByte(data[0], self.curr_index_reg.*);
     self.cycle_count += 11;
 }
 
 pub fn inc(self: *Z80) !void {
-    std.log.debug("[DD 23]\tINC IX", .{});
-
-    self.ix = self.ix +% 1;
+    self.curr_index_reg.* = self.curr_index_reg.* +% 1;
 
     self.cycle_count += 10;
 }
 
 pub fn dec(self: *Z80) !void {
-    std.log.debug("[DD 2B]\tDEC IX", .{});
-
-    self.ix = self.ix -% 1;
+    self.curr_index_reg.* = self.curr_index_reg.* -% 1;
 
     self.cycle_count += 10;
 }
 
 pub fn inc_High(self: *Z80) !void {
-    std.log.debug("[DD 24]\tINC IXH", .{});
+    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
 
-    const ixh: u8 = getHighByte(self.ix);
-
-    const result = _inc(self, ixh);
-    self.ix = setHighByte(result, self.ix);
+    const result = _inc(self, reg_high);
+    self.curr_index_reg.* = setHighByte(result, self.curr_index_reg.*);
 
     self.cycle_count +%= 8;
 }
 
 pub fn dcr_High(self: *Z80) !void {
-    std.log.debug("[DD 25]\tDCR IXH", .{});
+    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
 
-    const ixh: u8 = getHighByte(self.ix);
-
-    const result = _dcr(self, ixh);
-    self.ix = setHighByte(result, self.ix);
+    const result = _dcr(self, reg_high);
+    self.curr_index_reg.* = setHighByte(result, self.curr_index_reg.*);
 
     self.cycle_count +%= 8;
 }
 
 pub fn inc_Low(self: *Z80) !void {
-    std.log.debug("[DD 2C]\tINC IXL", .{});
+    const reg_low: u8 = getLowByte(self.curr_index_reg.*);
 
-    const ixl: u8 = getLowByte(self.ix);
-
-    const result = _inc(self, ixl);
-    self.ix = setLowByte(result, self.ix);
+    const result = _inc(self, reg_low);
+    self.curr_index_reg.* = setLowByte(result, self.curr_index_reg.*);
 
     self.cycle_count +%= 8;
 }
 
 pub fn dcr_Low(self: *Z80) !void {
-    std.log.debug("[DD 2D]\tDCR IXL", .{});
+    const reg_high: u8 = getLowByte(self.curr_index_reg.*);
 
-    const ixh: u8 = getLowByte(self.ix);
-
-    const result = _dcr(self, ixh);
-    self.ix = setLowByte(result, self.ix);
+    const result = _dcr(self, reg_high);
+    self.curr_index_reg.* = setLowByte(result, self.curr_index_reg.*);
 
     self.cycle_count +%= 8;
 }
 
 pub fn inc_IXD(self: *Z80) !void {
-    std.log.debug("[DD 34 d]\tINC (IX+d)", .{});
-
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
@@ -183,8 +161,6 @@ pub fn inc_IXD(self: *Z80) !void {
 }
 
 pub fn dec_IXD(self: *Z80) !void {
-    std.log.debug("[DD 35 d]\tDEC (IX+d)", .{});
-
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
@@ -215,8 +191,6 @@ pub fn store_WithDisp(self: *Z80, n: u8) void {
 }
 
 pub fn store_NWithDisp(self: *Z80) !void {
-    std.log.debug("[DD 36]\tLD  \t(IX+d),n", .{});
-
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
@@ -228,63 +202,47 @@ pub fn store_NWithDisp(self: *Z80) !void {
 }
 
 pub fn store_BWithDisp(self: *Z80) !void {
-    std.log.debug("[DD 70 d]\tLD  \t(IX+d),B", .{});
-
     store_WithDisp(self, self.register.b);
 }
 
 pub fn store_CWithDisp(self: *Z80) !void {
-    std.log.debug("[DD 71 d]\tLD  \t(IX+d),C", .{});
-
     store_WithDisp(self, self.register.c);
 }
 
 pub fn store_DWithDisp(self: *Z80) !void {
-    std.log.debug("[DD 72 d]\tLD  \t(IX+d),D", .{});
-
     store_WithDisp(self, self.register.d);
 }
 
 pub fn store_EWithDisp(self: *Z80) !void {
-    std.log.debug("[DD 73 d]\tLD  \t(IX+d),E", .{});
-
     store_WithDisp(self, self.register.e);
 }
 
 pub fn store_HWithDisp(self: *Z80) !void {
-    std.log.debug("[DD 74 d]\tLD  \t(IX+d),H", .{});
-
     store_WithDisp(self, self.register.h);
 }
 
 pub fn store_LWithDisp(self: *Z80) !void {
-    std.log.debug("[DD 75 d]\tLD  \t(IX+d),L", .{});
-
     store_WithDisp(self, self.register.l);
 }
 
 pub fn store_AWithDisp(self: *Z80) !void {
-    std.log.debug("[DD 77 d]\tLD  \t(IX+d),A", .{});
-
     store_WithDisp(self, self.register.a);
 }
 
 pub fn add_SP(self: *Z80) !void {
-    std.log.debug("[DD 39]\tADD IX,SP", .{});
-
-    const ix_val: u16 = self.ix;
+    const idx_reg_val: u16 = self.curr_index_reg.*;
     const sp_val: u16 = self.sp;
 
-    const sum: u32 = @as(u32, ix_val) + @as(u32, sp_val);
+    const sum: u32 = @as(u32, idx_reg_val) + @as(u32, sp_val);
     const result: u16 = @intCast(sum & 0xFFFF);
 
-    self.ix = result;
+    self.curr_index_reg.* = result;
 
     // Set carry if the 16-bit addition overflowed
     self.flag.carry = (sum > 0xFFFF);
 
     // Half-carry if carry from bit 11
-    self.flag.half_carry = ((ix_val & 0x0FFF) + (sp_val & 0x0FFF)) > 0x0FFF;
+    self.flag.half_carry = ((idx_reg_val & 0x0FFF) + (sp_val & 0x0FFF)) > 0x0FFF;
 
     // N is reset
     self.flag.add_subtract = false;
@@ -293,72 +251,52 @@ pub fn add_SP(self: *Z80) !void {
 }
 
 pub fn load_BHigh(self: *Z80) !void {
-    std.log.debug("[DD 44]\tLD  \tB,IXH", .{});
-
-    self.register.b = getHighByte(self.ix);
+    self.register.b = getHighByte(self.curr_index_reg.*);
     self.cycle_count += 8;
 }
 
 pub fn load_BLow(self: *Z80) !void {
-    std.log.debug("[DD 45]\tLD  \tB,IXL", .{});
-
-    self.register.b = getLowByte(self.ix);
+    self.register.b = getLowByte(self.curr_index_reg.*);
     self.cycle_count += 8;
 }
 
 pub fn load_DHigh(self: *Z80) !void {
-    std.log.debug("[DD 54]\tLD  \tD,IXH", .{});
-
-    self.register.d = getHighByte(self.ix);
+    self.register.d = getHighByte(self.curr_index_reg.*);
     self.cycle_count += 8;
 }
 
 pub fn load_DLow(self: *Z80) !void {
-    std.log.debug("[DD 55]\tLD  \tD,IXL", .{});
-
-    self.register.d = getLowByte(self.ix);
+    self.register.d = getLowByte(self.curr_index_reg.*);
     self.cycle_count += 8;
 }
 
 pub fn load_CHigh(self: *Z80) !void {
-    std.log.debug("[DD 4C]\tLD  \tC,IXH", .{});
-
-    self.register.c = getHighByte(self.ix);
+    self.register.c = getHighByte(self.curr_index_reg.*);
     self.cycle_count += 8;
 }
 
 pub fn load_CLow(self: *Z80) !void {
-    std.log.debug("[DD 4D]\tLD  \tC,IXL", .{});
-
-    self.register.c = getLowByte(self.ix);
+    self.register.c = getLowByte(self.curr_index_reg.*);
     self.cycle_count += 8;
 }
 
 pub fn load_EHigh(self: *Z80) !void {
-    std.log.debug("[DD 5C]\tLD  \tE,IXH", .{});
-
-    self.register.e = getHighByte(self.ix);
+    self.register.e = getHighByte(self.curr_index_reg.*);
     self.cycle_count += 8;
 }
 
 pub fn load_ELow(self: *Z80) !void {
-    std.log.debug("[DD 5D]\tLD  \tE,IXL", .{});
-
-    self.register.e = getLowByte(self.ix);
+    self.register.e = getLowByte(self.curr_index_reg.*);
     self.cycle_count += 8;
 }
 
 pub fn load_AHigh(self: *Z80) !void {
-    std.log.debug("[DD 4C]\tLD  \tA,IXH", .{});
-
-    self.register.a = getHighByte(self.ix);
+    self.register.a = getHighByte(self.curr_index_reg.*);
     self.cycle_count += 8;
 }
 
 pub fn load_ALow(self: *Z80) !void {
-    std.log.debug("[DD 4D]\tLD  \tA,IXL", .{});
-
-    self.register.a = getLowByte(self.ix);
+    self.register.a = getLowByte(self.curr_index_reg.*);
     self.cycle_count += 8;
 }
 
@@ -370,59 +308,42 @@ fn load_Disp(self: *Z80) u8 {
 }
 
 pub fn load_BDisp(self: *Z80) !void {
-    std.log.debug("[DD 46 d]\tLD  \tB,(IX+d)", .{});
-
     self.register.b = load_Disp(self);
 }
 
 pub fn load_CDisp(self: *Z80) !void {
-    std.log.debug("[DD 4E d]\tLD  \tC,(IX+d)", .{});
-
     self.register.c = load_Disp(self);
 }
 
 pub fn load_DDisp(self: *Z80) !void {
-    std.log.debug("[DD 5E d]\tLD  \tD,(IX+d)", .{});
-
     self.register.d = load_Disp(self);
 }
 
 pub fn load_EDisp(self: *Z80) !void {
-    std.log.debug("[DD 5E d]\tLD  \tE,(IX+d)", .{});
-
     self.register.e = load_Disp(self);
 }
 
 pub fn load_IXHB(self: *Z80) !void {
-    std.log.debug("[DD 60]\tLD  \tIXH,B", .{});
-
-    self.ix = setHighByte(self.register.b, self.ix);
+    self.curr_index_reg.* = setHighByte(self.register.b, self.curr_index_reg.*);
     self.cycle_count +%= 8;
 }
 
 pub fn load_IXHC(self: *Z80) !void {
-    std.log.debug("[DD 61]\tLD  \tIXH,C", .{});
-
-    self.ix = setHighByte(self.register.c, self.ix);
+    self.curr_index_reg.* = setHighByte(self.register.c, self.curr_index_reg.*);
     self.cycle_count +%= 8;
 }
 
 pub fn load_IXHD(self: *Z80) !void {
-    std.log.debug("[DD 62]\tLD  \tIXH,D", .{});
-
-    self.ix = setHighByte(self.register.d, self.ix);
+    self.curr_index_reg.* = setHighByte(self.register.d, self.curr_index_reg.*);
     self.cycle_count +%= 8;
 }
 
 pub fn load_IXHE(self: *Z80) !void {
-    std.log.debug("[DD 63]\tLD  \tIXH,E", .{});
-
-    self.ix = setHighByte(self.register.e, self.ix);
+    self.curr_index_reg.* = setHighByte(self.register.e, self.curr_index_reg.*);
     self.cycle_count +%= 8;
 }
 
 pub fn load_IXH(self: *Z80) !void {
-    std.log.debug("[DD 64]\tLD  \tIXH", .{});
 
     // set IXH to IXH
     // we do nothing except consume cycles
@@ -431,16 +352,12 @@ pub fn load_IXH(self: *Z80) !void {
 }
 
 pub fn load_IXHL(self: *Z80) !void {
-    std.log.debug("[DD 65]\tLD  \tIXH,L", .{});
-
-    self.ix = setHighByte(getLowByte(self.ix), self.ix);
+    self.curr_index_reg.* = setHighByte(getLowByte(self.curr_index_reg.*), self.curr_index_reg.*);
     self.cycle_count +%= 8;
 }
 
 // Loads the value pointed to by IX plus d into H.
 pub fn load_IXHDsp(self: *Z80) !void {
-    std.log.debug("[DD 66 d]\tLD  \tIXH,(IX+d)", .{});
-
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
@@ -450,50 +367,37 @@ pub fn load_IXHDsp(self: *Z80) !void {
 
 // The contents of A are loaded into IXH.
 pub fn load_IXHA(self: *Z80) !void {
-    std.log.debug("[DD 67]\tLD  \tIXH,A", .{});
-
-    self.ix = setHighByte(self.register.a, self.ix);
+    self.curr_index_reg.* = setHighByte(self.register.a, self.curr_index_reg.*);
     self.cycle_count +%= 8;
 }
 
 pub fn load_IXLB(self: *Z80) !void {
-    std.log.debug("[DD 68]\tLD  \tIXL,B", .{});
-
-    self.ix = setLowByte(self.register.b, self.ix);
+    self.curr_index_reg.* = setLowByte(self.register.b, self.curr_index_reg.*);
     self.cycle_count +%= 8;
 }
 
 pub fn load_IXLC(self: *Z80) !void {
-    std.log.debug("[DD 69]\tLD  \tIXL,C", .{});
-
-    self.ix = setLowByte(self.register.c, self.ix);
+    self.curr_index_reg.* = setLowByte(self.register.c, self.curr_index_reg.*);
     self.cycle_count +%= 8;
 }
 
 pub fn load_IXLD(self: *Z80) !void {
-    std.log.debug("[DD 6A]\tLD  \tIXL,D", .{});
-
-    self.ix = setLowByte(self.register.d, self.ix);
+    self.curr_index_reg.* = setLowByte(self.register.d, self.curr_index_reg.*);
     self.cycle_count +%= 8;
 }
 
 pub fn load_IXLE(self: *Z80) !void {
-    std.log.debug("[DD 6B]\tLD  \tIXL,E", .{});
-
-    self.ix = setLowByte(self.register.e, self.ix);
+    self.curr_index_reg.* = setLowByte(self.register.e, self.curr_index_reg.*);
     self.cycle_count +%= 8;
 }
 
 // The contents of IXH are loaded into IXL.
 pub fn swap_IXBytes(self: *Z80) !void {
-    std.log.debug("[DD 6C]\tLD  \tIXL", .{});
-
-    self.ix = setLowByte(getHighByte(self.ix), self.ix);
+    self.curr_index_reg.* = setLowByte(getHighByte(self.curr_index_reg.*), self.curr_index_reg.*);
     self.cycle_count +%= 8;
 }
 
 pub fn load_IXL(self: *Z80) !void {
-    std.log.debug("[DD 6D]\tLD  \tIXL", .{});
 
     // set IXL to IXL
     // we do nothing except consume cycles
@@ -503,8 +407,6 @@ pub fn load_IXL(self: *Z80) !void {
 
 // Loads the value pointed to by IX plus d into L.
 pub fn loadDispL(self: *Z80) !void {
-    std.log.debug("[DD 6E d]\tLD  \tIX,L,(IX+d)", .{});
-
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
@@ -514,8 +416,6 @@ pub fn loadDispL(self: *Z80) !void {
 
 // Loads the value pointed to by IX plus d into A.
 pub fn loadDispA(self: *Z80) !void {
-    std.log.debug("[DD 6E d]\tLD  \tIX,A,(IX+d)", .{});
-
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
@@ -524,36 +424,28 @@ pub fn loadDispA(self: *Z80) !void {
 }
 
 pub fn load_IXLA(self: *Z80) !void {
-    std.log.debug("[DD 6F]\tLD  \tIXL,A", .{});
-
-    self.ix = setLowByte(self.register.a, self.ix);
+    self.curr_index_reg.* = setLowByte(self.register.a, self.curr_index_reg.*);
     self.cycle_count +%= 8;
 }
 
 // Adds IXH to A.
 pub fn add_IXH_A(self: *Z80) !void {
-    std.log.debug("[DD 84]\tADD A,IXH", .{});
-
-    const ixh: u8 = getHighByte(self.ix);
-    self.register.a = add(self, ixh);
+    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
+    self.register.a = add(self, reg_high);
 
     self.cycle_count +%= 4;
 }
 
 // Adds IXL to A.
 pub fn add_IXL_A(self: *Z80) !void {
-    std.log.debug("[DD 85]\tADD A,IXL", .{});
-
-    const ixl: u8 = getLowByte(self.ix);
-    self.register.a = add(self, ixl);
+    const reg_low: u8 = getLowByte(self.curr_index_reg.*);
+    self.register.a = add(self, reg_low);
 
     self.cycle_count +%= 4;
 }
 
 // Adds the value pointed to by IX plus d to A.
 pub fn add_IXD_A(self: *Z80) !void {
-    std.log.debug("[DD 86 d]\tADD A,(IX+d)", .{});
-
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
@@ -565,26 +457,20 @@ pub fn add_IXD_A(self: *Z80) !void {
 
 // Adds IXH and the carry flag to A.
 pub fn adc_IXH_A(self: *Z80) !void {
-    std.log.debug("[DD 8C]\tADC A,IXH", .{});
-
-    const ixh: u8 = getHighByte(self.ix);
-    self.register.a = adc(self, ixh);
+    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
+    self.register.a = adc(self, reg_high);
 
     self.cycle_count +%= 4;
 }
 
 pub fn adc_IXL_A(self: *Z80) !void {
-    std.log.debug("[DD 8D]\tADC A,IXL", .{});
-
-    const ixl: u8 = getLowByte(self.ix);
-    self.register.a = adc(self, ixl);
+    const reg_low: u8 = getLowByte(self.curr_index_reg.*);
+    self.register.a = adc(self, reg_low);
 
     self.cycle_count +%= 4;
 }
 // Adds the value pointed to by IX plus d and the carry flag to A.
 pub fn adc_IXD_A(self: *Z80) !void {
-    std.log.debug("[DD 8E d]\tADC A,(IX+d)", .{});
-
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
@@ -595,27 +481,21 @@ pub fn adc_IXD_A(self: *Z80) !void {
 }
 // Subtracts IXH from A.
 pub fn sub_IXH_A(self: *Z80) !void {
-    std.log.debug("[DD 94]\tSUB A,IXH", .{});
-
-    const ixh: u8 = getHighByte(self.ix);
-    self.register.a = sub(self, ixh);
+    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
+    self.register.a = sub(self, reg_high);
 
     self.cycle_count +%= 4;
 }
 
 // Subtracts IXL from A.
 pub fn sub_IXL_A(self: *Z80) !void {
-    std.log.debug("[DD 94]\tSUB A,IXL", .{});
-
-    const ixl: u8 = getLowByte(self.ix);
-    self.register.a = sub(self, ixl);
+    const reg_low: u8 = getLowByte(self.curr_index_reg.*);
+    self.register.a = sub(self, reg_low);
 
     self.cycle_count +%= 4;
 }
 // Subtracts the value pointed to by IX plus d from A.
 pub fn sub_IXD_A(self: *Z80) !void {
-    std.log.debug("[DD 96 d]\tSUB A,(IX+d)", .{});
-
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
@@ -627,27 +507,21 @@ pub fn sub_IXD_A(self: *Z80) !void {
 
 // Subtracts IXH and the carry flag from A.
 pub fn sbb_IXH_A(self: *Z80) !void {
-    std.log.debug("[DD 9C]\tSBB A,IXH", .{});
-
-    const ixh: u8 = getHighByte(self.ix);
-    self.register.a = sbb(self, ixh);
+    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
+    self.register.a = sbb(self, reg_high);
 
     self.cycle_count +%= 4;
 }
 
 pub fn sbb_IXL_A(self: *Z80) !void {
-    std.log.debug("[DD 9C]\tSBB A,IXL", .{});
-
-    const ixl: u8 = getLowByte(self.ix);
-    self.register.a = sbb(self, ixl);
+    const reg_low: u8 = getLowByte(self.curr_index_reg.*);
+    self.register.a = sbb(self, reg_low);
 
     self.cycle_count +%= 4;
 }
 
 // Subtracts the value pointed to by IX plus d and the carry flag from A.
 pub fn sbb_IXD_A(self: *Z80) !void {
-    std.log.debug("[DD 9E d]\tSBB A,(IX+d)", .{});
-
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
@@ -659,10 +533,8 @@ pub fn sbb_IXD_A(self: *Z80) !void {
 
 // Bitwise AND on A with IXH.
 pub fn ana_IXH(self: *Z80) !void {
-    std.log.debug("[DD A4]\tANA A,IXH", .{});
-
-    const ixh: u8 = getHighByte(self.ix);
-    self.register.a = ana(self, ixh);
+    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
+    self.register.a = ana(self, reg_high);
 
     self.cycle_count +%= 4;
 }

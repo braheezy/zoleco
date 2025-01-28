@@ -13,14 +13,12 @@ pub fn pushIy(self: *Z80) !void {
     self.sp = if (self.sp == 0) 0xFFFF else self.sp - 1;
     self.memory[self.sp] = getLowByte(self.iy);
 
-    std.log.debug("[FD E5]\tPUSH Iy", .{});
-
     self.cycle_count += 15;
 }
 
 // The 2-byte contents of register pairs DE and HL are exchanged.
 pub fn ex_M_HL(self: *Z80) !void {
-    std.log.debug("[E3]\tEX (SP), HL", .{});
+
     // Read the values from memory at SP and SP+1
     const sp = self.sp;
     const mem_l = self.memory[sp];
@@ -43,7 +41,7 @@ pub fn ex_M_HL(self: *Z80) !void {
 
 // The 2-byte contents of the register pairs AF and AF' are exchanged.
 pub fn ex_AF(self: *Z80) !void {
-    std.log.debug("[08]\tEX AF, AF'", .{});
+
     // Swap A registers
     const temp_a = self.register.a;
     self.register.a = self.shadow_register.a;
@@ -59,7 +57,6 @@ pub fn ex_AF(self: *Z80) !void {
 
 // The 2-byte contents of register pairs DE and HL are exchanged.
 pub fn ex_DE_HL(self: *Z80) !void {
-    std.log.debug("[EB]\tEX DE, HL", .{});
     const temp_d = self.register.d;
     self.register.d = self.register.h;
     self.register.h = temp_d;
@@ -73,7 +70,6 @@ pub fn ex_DE_HL(self: *Z80) !void {
 
 // Swap all register pairs with their shadow counterparts
 pub fn exx(self: *Z80) !void {
-    std.log.debug("[D9]\tEXX", .{});
     const tempB = self.register.b;
     self.register.b = self.shadow_register.b;
     self.shadow_register.b = tempB;

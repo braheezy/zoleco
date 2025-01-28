@@ -12,7 +12,7 @@ const rsi = @import("register_single_instr.zig");
 const dai = @import("direct_address_instr.zig");
 const ai = @import("accumulator_instr.zig");
 const ri = @import("return_instr.zig");
-const ix = @import("ix_instr.zig");
+const ix = @import("idx_instr.zig");
 const si = @import("shift_instr.zig");
 const bitTest = @import("bit_test_instr.zig").bitTest;
 const bitSetReset = @import("bit_test_instr.zig").bitSetReset;
@@ -42,9 +42,9 @@ pub const OpcodeTable = [256]?OpcodeHandler{
     ai.ana_B, ai.ana_C, ai.ana_D, ai.ana_E, ai.ana_H, ai.ana_L, ai.ana_M, ai.ana_A, ai.xra_B, ai.xra_C, ai.xra_D, ai.xra_E, ai.xra_H, ai.xra_L, ai.xra_M, ai.xra_A, // A0 - AF
     ai.ora_B, ai.ora_C, ai.ora_D, ai.ora_E, ai.ora_H, ai.ora_L, ai.ora_M, ai.ora_A, ai.cmp_B, ai.cmp_C, ai.cmp_D, ai.cmp_E, ai.cmp_H, ai.cmp_L, ai.cmp_M, ai.cmp_A, // B0 - BF
     ri.ret_NZ, rpi.pop_BC, ji.jump_NZ, ji.jump, ci.call_NZ, rpi.push_BC, ai.add_N, rst0, ri.ret_Z, ri.ret, ji.jump_Z, lookupBitOpcode, ci.call_Z, ci.call, ai.adc_N, rst8, // C0 - CF
-    ri.ret_NC, rpi.pop_DE, ji.jump_NC, out, ci.call_NC, rpi.push_DE, ai.sub_N, rst16, ri.ret_C, li.exx, ji.jump_C, in, ci.call_C, lookupIxOpcode, ai.sbb_N, rst24, // D0 - DF
+    ri.ret_NC, rpi.pop_DE, ji.jump_NC, out, ci.call_NC, rpi.push_DE, ai.sub_N, rst16, ri.ret_C, li.exx, ji.jump_C, in, ci.call_C, lookupIndexedOpcode, ai.sbb_N, rst24, // D0 - DF
     ri.ret_PO, rpi.pop_HL, ji.jump_PO, li.ex_M_HL, ci.call_PO, rpi.push_HL, null, null, ri.ret_PE, null, ji.jump_PE, li.ex_DE_HL, ci.call_PE, null, null, null, // E0 - EF
-    ri.ret_P, rpi.pop_AF, ji.jump_P, di, ci.call_P, rpi.push_AF, null, null, ri.ret_M, null, ji.jump_M, null, ci.call_M, lookupIyOpcode, null, null, // F0 - FF
+    ri.ret_P, rpi.pop_AF, ji.jump_P, di, ci.call_P, rpi.push_AF, null, null, ri.ret_M, null, ji.jump_M, null, ci.call_M, null, null, null, // F0 - FF
 };
 
 pub const IndexYOpcodeTable = [256]?OpcodeHandler{
@@ -66,7 +66,7 @@ pub const IndexYOpcodeTable = [256]?OpcodeHandler{
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // F0 - FF
 };
 
-pub const IndexXOpcodeTable = [256]?OpcodeHandler{
+pub const IndexOpcodeTable = [256]?OpcodeHandler{
     nop, immi.load_BC, dti.stax_B, rpi.inx_B, rsi.inr_B, rsi.dcr_B, immi.moveImm_B, rai.rlca, li.ex_AF, ix.add_BC, dti.loadAddr_B, rsi.dcx_B, rsi.inr_C, rsi.dcr_C, immi.moveImm_C, rai.rrca, // 00 - 0F
     ji.djnz, immi.load_DE, dti.stax_D, rpi.inx_D, rsi.inr_D, rsi.dcr_D, immi.moveImm_D, rai.rla, ji.jr, ix.add_DE, dti.loadAddr_D, rsi.dcx_D, rsi.inr_E, rsi.dcr_E, immi.moveImm_E, rai.rra, // 10 - 1F
     ji.jr_NZ, ix.load_NN, ix.store, ix.inc, ix.inc_High, ix.dcr_High, ix.load_NIXH, rsi.daa, ji.jr_Z, ix.add_IX, ix.load_NNMem, ix.dec, ix.inc_Low, ix.dcr_Low, ix.load_NIXL, rsi.cma, // 20 - 2F
@@ -119,57 +119,40 @@ pub fn lookupBitOpcode(self: *Z80) !void {
     }
 }
 
-pub fn lookupIyOpcode(self: *Z80) !void {
-    const next_opcode = self.memory[self.pc];
+pub fn lookupIndexedOpcode(self: *Z80) !void {
+    // was this called for IX or IY? check the previous opcode
+    const prev_opcode = self.memory[self.pc -% 1];
+    self.curr_index_reg = if (prev_opcode == 0xDD) &self.ix else &self.iy;
 
+    const opcode = self.memory[self.pc];
     self.pc +%= 1;
+
     // Increment memory register, but only the lower 7 bits
     self.r = (self.r & 0x80) | ((self.r + 1) & 0x7F);
 
-    if (IndexYOpcodeTable[next_opcode]) |handler| {
+    if (IndexOpcodeTable[opcode]) |handler| {
         try handler(self);
     } else {
-        std.debug.print("unknown bit opcode: {x}\n", .{next_opcode});
-        std.process.exit(1);
-    }
-}
-
-pub fn lookupIxOpcode(self: *Z80) !void {
-    const next_opcode = self.memory[self.pc];
-
-    self.pc +%= 1;
-    // Increment memory register, but only the lower 7 bits
-    self.r = (self.r & 0x80) | ((self.r + 1) & 0x7F);
-
-    if (IndexXOpcodeTable[next_opcode]) |handler| {
-        self.cycle_count += 4;
-
-        try handler(self);
-    } else {
-        std.debug.print("unknown bit opcode: {x}\n", .{next_opcode});
+        std.debug.print("unknown index opcode: {x}\n", .{opcode});
         std.process.exit(1);
     }
 }
 
 fn nop(self: *Z80) !void {
-    std.log.debug("[00]\tNOP", .{});
     self.cycle_count += 4;
 }
 
 fn di(self: *Z80) !void {
-    std.log.debug("[F3]\tDI", .{});
     self.interrupts_enabled = false;
     self.cycle_count += 4;
 }
 
 fn halt(self: *Z80) !void {
-    std.log.debug("[76]\tHALT", .{});
     self.halted = true;
     self.cycle_count += 4;
 }
 
 fn rst24(self: *Z80) !void {
-    std.log.debug("[DF]\tRST 24", .{});
     const return_addr = self.pc;
     self.sp -= 2;
     self.memory[self.sp + 1] = @intCast(return_addr >> 8);
@@ -179,7 +162,6 @@ fn rst24(self: *Z80) !void {
 }
 
 fn rst16(self: *Z80) !void {
-    std.log.debug("[D7]\tRST 16", .{});
     const return_addr = self.pc;
     self.sp -= 2;
     self.memory[self.sp + 1] = @intCast(return_addr >> 8);
@@ -189,7 +171,6 @@ fn rst16(self: *Z80) !void {
 }
 
 fn rst8(self: *Z80) !void {
-    std.log.debug("[CF]\tRST 8", .{});
     const return_addr = self.pc;
     self.sp -= 2;
     self.memory[self.sp + 1] = @intCast(return_addr >> 8);
@@ -199,7 +180,6 @@ fn rst8(self: *Z80) !void {
 }
 
 fn rst0(self: *Z80) !void {
-    std.log.debug("[C7]\tRST 0", .{});
     const return_addr = self.pc;
     self.sp -= 2;
     self.memory[self.sp + 1] = @intCast(return_addr >> 8);
