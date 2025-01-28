@@ -8,6 +8,9 @@ const adc = @import("accumulator_instr.zig").adc;
 const sub = @import("accumulator_instr.zig").sub;
 const sbb = @import("accumulator_instr.zig").sbb;
 const ana = @import("accumulator_instr.zig").ana;
+const xra = @import("accumulator_instr.zig").xra;
+const ora = @import("accumulator_instr.zig").ora;
+const compare = @import("accumulator_instr.zig").compare;
 
 const getHighByte = @import("opcode.zig").getHighByte;
 const getLowByte = @import("opcode.zig").getLowByte;
@@ -531,10 +534,99 @@ pub fn sbb_IXD_A(self: *Z80) !void {
     self.cycle_count +%= 15;
 }
 
-// Bitwise AND on A with IXH.
-pub fn ana_IXH(self: *Z80) !void {
+pub fn ana_IDXH(self: *Z80) !void {
     const reg_high: u8 = getHighByte(self.curr_index_reg.*);
-    self.register.a = ana(self, reg_high);
+    ana(self, reg_high);
 
     self.cycle_count +%= 4;
+}
+
+// Bitwise AND on A with IDXL.
+pub fn ana_IDXL(self: *Z80) !void {
+    const reg_low: u8 = getLowByte(self.curr_index_reg.*);
+    ana(self, reg_low);
+
+    self.cycle_count +%= 4;
+}
+
+// Bitwise AND on A with the value pointed to by IX plus d.
+pub fn ana_IDXDisp(self: *Z80) !void {
+    const displacement = self.getDisplacement();
+    const address = self.getDisplacedAddress(displacement);
+
+    const value: u8 = self.memory[address];
+    ana(self, value);
+
+    self.cycle_count += 15;
+}
+
+// Bitwise XOR on A with high byte of index register.
+pub fn xor_IDXH(self: *Z80) !void {
+    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
+    xra(self, reg_high);
+
+    self.cycle_count +%= 4;
+}
+pub fn xor_IDXL(self: *Z80) !void {
+    const reg_low: u8 = getLowByte(self.curr_index_reg.*);
+    xra(self, reg_low);
+
+    self.cycle_count +%= 4;
+}
+
+// Bitwise XOR on A with the value pointed to by IX plus d.
+pub fn xor_IDXDisp(self: *Z80) !void {
+    const displacement = self.getDisplacement();
+    const address = self.getDisplacedAddress(displacement);
+
+    const value: u8 = self.memory[address];
+    xra(self, value);
+
+    self.cycle_count += 15;
+}
+
+pub fn ora_IDXH(self: *Z80) !void {
+    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
+    ora(self, reg_high);
+
+    self.cycle_count +%= 4;
+}
+pub fn ora_IDXL(self: *Z80) !void {
+    const reg_low: u8 = getLowByte(self.curr_index_reg.*);
+    ora(self, reg_low);
+
+    self.cycle_count +%= 4;
+}
+
+pub fn ora_IDXDisp(self: *Z80) !void {
+    const displacement = self.getDisplacement();
+    const address = self.getDisplacedAddress(displacement);
+
+    const value: u8 = self.memory[address];
+    ora(self, value);
+
+    self.cycle_count += 15;
+}
+
+pub fn cmp_IDXH(self: *Z80) !void {
+    const reg_high: u8 = getHighByte(self.curr_index_reg.*);
+    compare(self, reg_high);
+
+    self.cycle_count +%= 4;
+}
+pub fn cmp_IDXL(self: *Z80) !void {
+    const reg_low: u8 = getLowByte(self.curr_index_reg.*);
+    compare(self, reg_low);
+
+    self.cycle_count +%= 4;
+}
+
+pub fn cmp_IDXDisp(self: *Z80) !void {
+    const displacement = self.getDisplacement();
+    const address = self.getDisplacedAddress(displacement);
+
+    const value: u8 = self.memory[address];
+    compare(self, value);
+
+    self.cycle_count += 15;
 }
