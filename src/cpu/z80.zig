@@ -20,12 +20,16 @@ pub const Flag = struct {
     parity_overflow: bool = false,
     add_subtract: bool = false,
     carry: bool = false,
+    y: bool = false,
+    x: bool = false,
 
     pub fn fromByte(b: u8) Flag {
         return Flag{
             .sign = b & (1 << 7) != 0,
             .zero = b & (1 << 6) != 0,
+            .y = b & (1 << 5) != 0,
             .half_carry = b & (1 << 4) != 0,
+            .x = b & (1 << 3) != 0,
             .parity_overflow = b & (1 << 2) != 0,
             .add_subtract = b & (1 << 1) != 0,
             .carry = b & 1 != 0,
@@ -43,9 +47,17 @@ pub const Flag = struct {
         if (self.zero) {
             result |= 0x40;
         }
+        // bit 5
+        if (self.y) {
+            result |= 0x20;
+        }
         // bit 4
         if (self.half_carry) {
             result |= 0x10;
+        }
+        // bit 3
+        if (self.x) {
+            result |= 0x08;
         }
         // bit 2
         if (self.parity_overflow) {
@@ -68,6 +80,19 @@ pub const Flag = struct {
 
     pub fn setS(self: *Flag, value: u16) void {
         self.sign = (value & 0x80) != 0;
+    }
+
+    pub fn setUndocumentedFlags(self: *Flag, result: anytype) void {
+        // Always look at bits 3 and 5 of the lower byte
+        const lower_byte: u8 = switch (@TypeOf(result)) {
+            u8 => result,
+            u16 => @truncate(result),
+            u32 => @truncate(result),
+            else => @compileError("Unsupported type for setUndocumentedFlags"),
+        };
+
+        self.x = (lower_byte & 0x08) != 0; // bit 3
+        self.y = (lower_byte & 0x20) != 0; // bit 5
     }
 };
 
@@ -108,6 +133,11 @@ interrupt_mode: InterruptMode = .{ .zero = {} },
 halted: bool = false,
 hardware: Hardware = Hardware{},
 scratch: [2]u8 = [_]u8{0} ** 2,
+displacement: i8 = 0,
+// Q is a special flag to track flag state. used in 2 opcodes
+// https://github.com/redcode/Z80/blob/f7ec2be293880059374bc9546370979fc97f69c5/sources/Z80.c#L501
+q: u8 = 0,
+wz: u16 = 0,
 
 pub fn init(al: std.mem.Allocator, rom_data: []const u8, start_address: u16) !Z80 {
     const memory = try al.alloc(u8, 0x10000);
@@ -266,5 +296,6 @@ pub inline fn getDisplacedAddress(self: *Z80, displacement: i8) u16 {
     const idx_i32: i32 = @intCast(self.curr_index_reg.?.*);
     const displacement_i32: i32 = @intCast(displacement);
     const address_i32: i32 = idx_i32 + displacement_i32;
+    self.wz = @intCast(address_i32 & 0xFFFF);
     return @intCast(address_i32 & 0xFFFF);
 }

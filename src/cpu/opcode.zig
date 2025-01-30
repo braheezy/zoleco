@@ -111,7 +111,23 @@ pub fn lookupIndexedOpcode(self: *Z80) !void {
     // Increment memory register, but only the lower 7 bits
     self.r = (self.r & 0x80) | ((self.r + 1) & 0x7F);
 
-    if (IndexOpcodeTable[opcode]) |handler| {
+    if (opcode == 0xCB) {
+        // Fetch displacement
+        self.displacement = self.getDisplacement();
+
+        // Fetch the actual bit opcode
+        const bitOp = self.memory[self.pc];
+        self.pc +%= 1;
+
+        // Lookup and execute
+        if (BitOpcodeTable[bitOp]) |handler| {
+            // Pass displacement along
+            try handler(self);
+        } else {
+            std.debug.print("unknown bit opcode: {x}\n", .{bitOp});
+            std.process.exit(1);
+        }
+    } else if (IndexOpcodeTable[opcode]) |handler| {
         try handler(self);
     } else {
         std.debug.print("unknown index opcode: {x}\n", .{opcode});
@@ -121,6 +137,7 @@ pub fn lookupIndexedOpcode(self: *Z80) !void {
 
 fn nop(self: *Z80) !void {
     self.cycle_count += 4;
+    self.q = 0;
 }
 
 fn di(self: *Z80) !void {
@@ -131,6 +148,7 @@ fn di(self: *Z80) !void {
 fn halt(self: *Z80) !void {
     self.halted = true;
     self.cycle_count += 4;
+    self.q = 0;
 }
 
 fn rst24(self: *Z80) !void {
@@ -140,6 +158,8 @@ fn rst24(self: *Z80) !void {
     self.memory[self.sp] = @intCast(return_addr & 0xFF);
     self.pc = 24;
     self.cycle_count += 11;
+    self.q = 0;
+    self.wz = 24;
 }
 
 fn rst16(self: *Z80) !void {
@@ -149,6 +169,8 @@ fn rst16(self: *Z80) !void {
     self.memory[self.sp] = @intCast(return_addr & 0xFF);
     self.pc = 16;
     self.cycle_count += 11;
+    self.q = 0;
+    self.wz = 16;
 }
 
 fn rst8(self: *Z80) !void {
@@ -158,6 +180,8 @@ fn rst8(self: *Z80) !void {
     self.memory[self.sp] = @intCast(return_addr & 0xFF);
     self.pc = 8;
     self.cycle_count += 11;
+    self.q = 0;
+    self.wz = 8;
 }
 
 fn rst0(self: *Z80) !void {
@@ -167,6 +191,8 @@ fn rst0(self: *Z80) !void {
     self.memory[self.sp] = @intCast(return_addr & 0xFF);
     self.pc = 0;
     self.cycle_count += 11;
+    self.q = 0;
+    self.wz = 0;
 }
 
 // Combine A (high bits) with immediate port_lo (low bits),
@@ -176,7 +202,10 @@ fn out(self: *Z80) !void {
     const port = (@as(u16, self.register.a) << 8) | @as(u16, data[0]);
     const actual_port: u8 = @intCast(port & 0xFF);
 
+    self.wz = (@as(u16, self.register.a) << 8) | (@as(u16, actual_port +% 1));
+
     try self.hardware.out(actual_port, self.register.a);
+    self.q = 0;
 }
 
 fn in(self: *Z80) !void {
@@ -186,4 +215,8 @@ fn in(self: *Z80) !void {
 
     const value = try self.hardware.in(actual_port);
     self.register.a = value;
+
+    // Set WZ to port number + 1
+    self.wz = port +% 1;
+    self.q = 0;
 }

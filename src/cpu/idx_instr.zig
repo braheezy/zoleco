@@ -27,10 +27,13 @@ pub fn add_IdxReg(self: *Z80, high: u8, low: u8) void {
     const idx_reg_val: u16 = self.curr_index_reg.?.*;
     const bc_val: u16 = (@as(u16, high) << 8) | @as(u16, low);
 
+    // Set WZ to IX/IY + 1 before the addition
+    self.wz = idx_reg_val +% 1;
+
     const sum: u32 = @as(u32, idx_reg_val) + @as(u32, bc_val);
     const result: u16 = @intCast(sum & 0xFFFF);
 
-    self.curr_index_reg.?.* = result; // Store the new IX
+    self.curr_index_reg.?.* = result;
 
     // Set carry if the 16-bit addition overflowed
     self.flag.carry = (sum > 0xFFFF);
@@ -40,6 +43,13 @@ pub fn add_IdxReg(self: *Z80, high: u8, low: u8) void {
 
     // N is reset
     self.flag.add_subtract = false;
+
+    // X and Y flags come from bits 3 and 5 of high byte of result
+    self.flag.x = ((@as(u8, @truncate(result >> 8)) & 0x08) != 0);
+    self.flag.y = ((@as(u8, @truncate(result >> 8)) & 0x20) != 0);
+
+    // Update Q with new flags
+    self.q = self.flag.toByte();
 
     self.cycle_count += 7;
 }
@@ -62,13 +72,16 @@ pub fn load_NN(self: *Z80) !void {
     const address = Z80.toUint16(data[1], data[0]);
     self.curr_index_reg.?.* = address;
     self.cycle_count += 14;
+    self.q = 0;
 }
 
 pub fn load_NNMem(self: *Z80) !void {
     const data = try self.fetchData(2);
     const address = Z80.toUint16(data[1], data[0]);
     self.curr_index_reg.?.* = self.memory[address] | (@as(u16, self.memory[address + 1]) << 8);
+    self.wz = address +% 1;
     self.cycle_count += 20;
+    self.q = 0;
 }
 
 // LD (nn), IX: Load IX into 16-bit address
@@ -79,29 +92,33 @@ pub fn store(self: *Z80) !void {
     self.memory[address] = getLowByte(self.curr_index_reg.?.*);
     self.memory[address + 1] = getHighByte(self.curr_index_reg.?.*);
     self.cycle_count += 20;
+    self.q = 0;
+    self.wz = address +% 1;
 }
 
 pub fn load_NIXH(self: *Z80) !void {
     const data = try self.fetchData(1);
     self.curr_index_reg.?.* = setHighByte(data[0], self.curr_index_reg.?.*);
     self.cycle_count += 11;
+    self.q = 0;
 }
 
 pub fn load_NIXL(self: *Z80) !void {
     const data = try self.fetchData(1);
     self.curr_index_reg.?.* = setLowByte(data[0], self.curr_index_reg.?.*);
     self.cycle_count += 11;
+    self.q = 0;
 }
 
 pub fn inc(self: *Z80) !void {
     self.curr_index_reg.?.* = self.curr_index_reg.?.* +% 1;
-
+    self.q = 0;
     self.cycle_count += 10;
 }
 
 pub fn dec(self: *Z80) !void {
     self.curr_index_reg.?.* = self.curr_index_reg.?.* -% 1;
-
+    self.q = 0;
     self.cycle_count += 10;
 }
 
@@ -161,6 +178,8 @@ pub fn inc_IXD(self: *Z80) !void {
     self.flag.add_subtract = false; // Add/Subtract Flag Reset
 
     self.cycle_count += 23;
+    self.flag.setUndocumentedFlags(new_value);
+    self.q = self.flag.toByte();
 }
 
 pub fn dec_IXD(self: *Z80) !void {
@@ -182,11 +201,14 @@ pub fn dec_IXD(self: *Z80) !void {
     self.flag.add_subtract = true; // Add/Subtract Flag Reset
 
     self.cycle_count += 23;
+    self.flag.setUndocumentedFlags(new_value);
+    self.q = self.flag.toByte();
 }
 
 pub fn store_WithDisp(self: *Z80, n: u8) void {
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
+    self.q = 0;
 
     self.memory[address] = n;
 
@@ -202,6 +224,7 @@ pub fn store_NWithDisp(self: *Z80) !void {
 
     self.memory[address] = n;
     self.cycle_count += 19;
+    self.q = 0;
 }
 
 pub fn store_BWithDisp(self: *Z80) !void {
@@ -236,6 +259,9 @@ pub fn add_SP(self: *Z80) !void {
     const idx_reg_val: u16 = self.curr_index_reg.?.*;
     const sp_val: u16 = self.sp;
 
+    // Set WZ to IX/IY + 1 before the addition
+    self.wz = idx_reg_val +% 1;
+
     const sum: u32 = @as(u32, idx_reg_val) + @as(u32, sp_val);
     const result: u16 = @intCast(sum & 0xFFFF);
 
@@ -250,61 +276,79 @@ pub fn add_SP(self: *Z80) !void {
     // N is reset
     self.flag.add_subtract = false;
 
+    // X and Y flags come from bits 3 and 5 of high byte of result
+    self.flag.x = ((@as(u8, @truncate(result >> 8)) & 0x08) != 0);
+    self.flag.y = ((@as(u8, @truncate(result >> 8)) & 0x20) != 0);
+
+    // Update Q with new flags
+    self.q = self.flag.toByte();
+
     self.cycle_count += 15;
 }
 
 pub fn load_BHigh(self: *Z80) !void {
     self.register.b = getHighByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
+    self.q = 0;
 }
 
 pub fn load_BLow(self: *Z80) !void {
     self.register.b = getLowByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
+    self.q = 0;
 }
 
 pub fn load_DHigh(self: *Z80) !void {
     self.register.d = getHighByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
+    self.q = 0;
 }
 
 pub fn load_DLow(self: *Z80) !void {
     self.register.d = getLowByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
+    self.q = 0;
 }
 
 pub fn load_CHigh(self: *Z80) !void {
     self.register.c = getHighByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
+    self.q = 0;
 }
 
 pub fn load_CLow(self: *Z80) !void {
     self.register.c = getLowByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
+    self.q = 0;
 }
 
 pub fn load_EHigh(self: *Z80) !void {
     self.register.e = getHighByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
+    self.q = 0;
 }
 
 pub fn load_ELow(self: *Z80) !void {
     self.register.e = getLowByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
+    self.q = 0;
 }
 
 pub fn load_AHigh(self: *Z80) !void {
     self.register.a = getHighByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
+    self.q = 0;
 }
 
 pub fn load_ALow(self: *Z80) !void {
     self.register.a = getLowByte(self.curr_index_reg.?.*);
     self.cycle_count += 8;
+    self.q = 0;
 }
 
 fn load_Disp(self: *Z80) u8 {
     self.cycle_count += 19;
+    self.q = 0;
 
     const displacement = self.getDisplacement();
     return self.memory[self.getDisplacedAddress(displacement)];
@@ -329,25 +373,29 @@ pub fn load_EDisp(self: *Z80) !void {
 pub fn load_IXHB(self: *Z80) !void {
     self.curr_index_reg.?.* = setHighByte(self.register.b, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
+    self.q = 0;
 }
 
 pub fn load_IXHC(self: *Z80) !void {
     self.curr_index_reg.?.* = setHighByte(self.register.c, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
+    self.q = 0;
 }
 
 pub fn load_IXHD(self: *Z80) !void {
     self.curr_index_reg.?.* = setHighByte(self.register.d, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
+    self.q = 0;
 }
 
 pub fn load_IXHE(self: *Z80) !void {
     self.curr_index_reg.?.* = setHighByte(self.register.e, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
+    self.q = 0;
 }
 
 pub fn load_IXH(self: *Z80) !void {
-
+    self.q = 0;
     // set IXH to IXH
     // we do nothing except consume cycles
 
@@ -357,6 +405,7 @@ pub fn load_IXH(self: *Z80) !void {
 pub fn load_IXHL(self: *Z80) !void {
     self.curr_index_reg.?.* = setHighByte(getLowByte(self.curr_index_reg.?.*), self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
+    self.q = 0;
 }
 
 // Loads the value pointed to by IX plus d into H.
@@ -366,45 +415,52 @@ pub fn load_IXHDsp(self: *Z80) !void {
 
     self.register.h = self.memory[address];
     self.cycle_count += 19;
+    self.q = 0;
 }
 
 // The contents of A are loaded into IXH.
 pub fn load_IXHA(self: *Z80) !void {
     self.curr_index_reg.?.* = setHighByte(self.register.a, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
+    self.q = 0;
 }
 
 pub fn load_IXLB(self: *Z80) !void {
     self.curr_index_reg.?.* = setLowByte(self.register.b, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
+    self.q = 0;
 }
 
 pub fn load_IXLC(self: *Z80) !void {
     self.curr_index_reg.?.* = setLowByte(self.register.c, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
+    self.q = 0;
 }
 
 pub fn load_IXLD(self: *Z80) !void {
     self.curr_index_reg.?.* = setLowByte(self.register.d, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
+    self.q = 0;
 }
 
 pub fn load_IXLE(self: *Z80) !void {
     self.curr_index_reg.?.* = setLowByte(self.register.e, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
+    self.q = 0;
 }
 
 // The contents of IXH are loaded into IXL.
 pub fn swap_IXBytes(self: *Z80) !void {
     self.curr_index_reg.?.* = setLowByte(getHighByte(self.curr_index_reg.?.*), self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
+    self.q = 0;
 }
 
 pub fn load_IXL(self: *Z80) !void {
 
     // set IXL to IXL
     // we do nothing except consume cycles
-
+    self.q = 0;
     self.cycle_count +%= 8;
 }
 
@@ -415,6 +471,7 @@ pub fn loadDispL(self: *Z80) !void {
 
     self.register.l = self.memory[address];
     self.cycle_count += 19;
+    self.q = 0;
 }
 
 // Loads the value pointed to by IX plus d into A.
@@ -424,11 +481,13 @@ pub fn loadDispA(self: *Z80) !void {
 
     self.register.a = self.memory[address];
     self.cycle_count += 19;
+    self.q = 0;
 }
 
 pub fn load_IXLA(self: *Z80) !void {
     self.curr_index_reg.?.* = setLowByte(self.register.a, self.curr_index_reg.?.*);
     self.cycle_count +%= 8;
+    self.q = 0;
 }
 
 // Adds IXH to A.
@@ -629,4 +688,13 @@ pub fn cmp_IDXDisp(self: *Z80) !void {
     compare(self, value);
 
     self.cycle_count += 15;
+}
+
+// For indexed instructions (IX+d), (IY+d)
+pub fn getIndexedAddress(self: *Z80) !u16 {
+    const displacement = try self.getDisplacement();
+    const base = self.curr_index_reg.?.*;
+    const addr = @as(i32, @intCast(base)) + @as(i32, @intCast(displacement));
+    self.wz = @intCast(addr & 0xFFFF); // Set WZ to effective address
+    return self.wz;
 }

@@ -9,6 +9,7 @@
       "request": "launch",
       "name": "Debug",
       "program": "${workspaceFolder}/zig-out/bin/cputest",
+      "args": ["cb 7e"],
       "cwd": "${workspaceFolder}",
       "preLaunchTask": "build",
       "terminal": "console"

@@ -7,6 +7,7 @@ pub fn moveImm_A(self: *Z80) !void {
 
     self.register.a = data[0];
     self.cycle_count += 7;
+    self.q = 0;
 }
 
 // MVI B, D8: Move 8-bit immediate value into register B.
@@ -15,6 +16,7 @@ pub fn moveImm_B(self: *Z80) !void {
 
     self.register.b = data[0];
     self.cycle_count += 7;
+    self.q = 0;
 }
 
 // MVI C, D8: Move 8-bit immediate value into register C.
@@ -23,6 +25,7 @@ pub fn moveImm_C(self: *Z80) !void {
 
     self.register.c = data[0];
     self.cycle_count += 7;
+    self.q = 0;
 }
 
 // MVI D, D8: Move 8-bit immediate value into register L.
@@ -31,6 +34,7 @@ pub fn moveImm_D(self: *Z80) !void {
 
     self.register.d = data[0];
     self.cycle_count += 7;
+    self.q = 0;
 }
 
 // MVI E, D8: Move 8-bit immediate value into register E.
@@ -39,6 +43,7 @@ pub fn moveImm_E(self: *Z80) !void {
 
     self.register.e = data[0];
     self.cycle_count += 7;
+    self.q = 0;
 }
 
 // MVI H, D8: Move 8-bit immediate value into register H.
@@ -47,6 +52,7 @@ pub fn moveImm_H(self: *Z80) !void {
 
     self.register.h = data[0];
     self.cycle_count += 7;
+    self.q = 0;
 }
 
 // MVI L, D8: Move 8-bit immediate value into register L.
@@ -55,6 +61,7 @@ pub fn moveImm_L(self: *Z80) !void {
 
     self.register.l = data[0];
     self.cycle_count += 7;
+    self.q = 0;
 }
 
 // MVI M: Move 8-bit immediate value into memory address from register pair HL
@@ -64,6 +71,7 @@ pub fn moveImm_M(self: *Z80) !void {
     const address = self.getHL();
     self.memory[address] = data[0];
     self.cycle_count += 10;
+    self.q = 0;
 }
 
 // LXI B, D16: Load 16-bit immediate value into register pair B.
@@ -73,6 +81,7 @@ pub fn load_BC(self: *Z80) !void {
     self.register.c = data[0];
     self.register.b = data[1];
     self.cycle_count += 10;
+    self.q = 0;
 }
 
 // LXI D, D16: Load 16-bit immediate value into register pair D.
@@ -82,6 +91,7 @@ pub fn load_DE(self: *Z80) !void {
     self.register.e = data[0];
     self.register.d = data[1];
     self.cycle_count += 10;
+    self.q = 0;
 }
 
 // LXI H, D16: Load 16-bit immediate value into register pair H.
@@ -91,6 +101,7 @@ pub fn load_HL(self: *Z80) !void {
     self.register.l = data[0];
     self.register.h = data[1];
     self.cycle_count += 10;
+    self.q = 0;
 }
 
 // LXI SP, D16: Load 16-bit immediate value into register pair SP.
@@ -100,4 +111,5 @@ pub fn load_SP(self: *Z80) !void {
 
     self.sp = operand;
     self.cycle_count += 10;
+    self.q = 0;
 }

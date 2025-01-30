@@ -53,6 +53,7 @@ pub fn ex_AF(self: *Z80) !void {
     self.shadow_flag = temp_f;
 
     self.cycle_count += 4;
+    self.q = 0;
 }
 
 // The 2-byte contents of register pairs DE and HL are exchanged.
@@ -98,6 +99,8 @@ pub fn exx(self: *Z80) !void {
 
     // Add the T-cycle cost
     self.cycle_count += 4;
+
+    self.q = 0;
 }
 
 test "pushIy" {

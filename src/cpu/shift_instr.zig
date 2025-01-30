@@ -8,6 +8,8 @@ fn setShiftFlags(self: *Z80, val: u8, carry_out: bool) void {
     self.flag.setZ(@intCast(val));
     self.flag.setS(@intCast(val));
     self.flag.parity_overflow = Z80.parity(u8, val);
+    self.flag.setUndocumentedFlags(val);
+    self.q = self.flag.toByte();
 }
 
 /// SLA (Shift Left Arithmetic): bit 7 -> CF, bit 0 = 0
@@ -16,6 +18,7 @@ fn shiftLeftArithmetic(self: *Z80, val: u8) u8 {
     const result = @as(u8, (val << 1) & 0xFE);
     setShiftFlags(self, result, carry_out);
     self.cycle_count += 8;
+    self.q = self.flag.toByte();
     return result;
 }
 

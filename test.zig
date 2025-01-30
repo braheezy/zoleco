@@ -70,9 +70,18 @@ pub fn main() !void {
     const cwd = std.fs.cwd();
 
     for (args[1..]) |arg| {
-        std.debug.print("running single file: {s}\n", .{arg});
-        const single_test_file = try std.fmt.allocPrint(allocator, "{s}.json", .{arg});
+        const single_test_file = if (arg.len <= 5) try std.fmt.allocPrint(allocator, "{s}.json", .{arg}) else blk: {
+            var it = std.mem.splitScalar(u8, arg, ' ');
+            var result: [3][]const u8 = undefined;
+            var i: u3 = 0;
+            while (it.next()) |op| {
+                result[i] = op;
+                i += 1;
+            }
+            break :blk try std.fmt.allocPrint(allocator, "{s} {s} __ {s}.json", .{ result[0], result[1], result[2] });
+        };
         defer allocator.free(single_test_file);
+        std.debug.print("running single file: {s}\n", .{single_test_file});
         try processFile(single_test_file, allocator);
         std.process.exit(0);
     } else {
@@ -102,16 +111,58 @@ fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
     var file = try cwd.openFile(full_path, .{});
     defer file.close();
 
-    const opcode = name[0..2];
+    // Ensure the filename is long enough to contain the prefixes and opcode
+    if (name.len < 5) {
+        std.debug.print("Invalid filename format: {s}\n", .{name});
+        return;
+    }
 
-    if (std.mem.eql(u8, opcode, "cb")) {
-        const next_opcode = name[3..5];
-        std.debug.print("0x{s} {s} ==> ", .{ opcode, next_opcode });
-    } else if (std.mem.eql(u8, opcode, "dd")) {
-        const next_opcode = name[3..5];
-        std.debug.print("0x{s} {s} ==> ", .{ opcode, next_opcode });
-    } else {
-        std.debug.print("0x{s}    ==> ", .{opcode});
+    // Check for double prefixes like "dd cb" or "fd cb"
+    if ((std.mem.eql(u8, name[0..2], "dd") or std.mem.eql(u8, name[0..2], "fd")) and
+        std.mem.eql(u8, name[3..5], "cb"))
+    {
+        // Ensure there's an opcode after the prefixes
+        if (name.len < 8) {
+            std.debug.print("Incomplete opcode in filename: {s}\n", .{name});
+            return;
+        }
+
+        const prefix = name[0..2]; // "dd" or "fd"
+        const middle = name[3..5]; // "cb"
+        const main_opcode = name[8..10]; // The actual opcode after "__"
+
+        std.debug.print("0x{s} {s} {s} ==> ", .{ prefix, middle, main_opcode });
+    }
+    // Check for single prefix "cb"
+    else if (std.mem.eql(u8, name[0..2], "cb")) {
+        // Ensure there's an opcode after the prefix
+        if (name.len < 5) {
+            std.debug.print("Incomplete opcode in filename: {s}\n", .{name});
+            return;
+        }
+
+        const prefix = name[0..2]; // "cb"
+        const main_opcode = name[3..5]; // The actual opcode after prefix
+
+        std.debug.print("0x{s} {s} =====> ", .{ prefix, main_opcode });
+    }
+    // Check for single prefix "dd" or "fd"
+    else if (std.mem.eql(u8, name[0..2], "dd") or std.mem.eql(u8, name[0..2], "fd")) {
+        // Ensure there's an opcode after the prefix
+        if (name.len < 5) {
+            std.debug.print("Incomplete opcode in filename: {s}\n", .{name});
+            return;
+        }
+
+        const prefix = name[0..2]; // "dd" or "fd"
+        const main_opcode = name[3..5]; // The actual opcode after prefix
+
+        std.debug.print("0x{s} {s} =====> ", .{ prefix, main_opcode });
+    }
+    // Handle filenames without any recognized prefixes
+    else {
+        const main_opcode = name[0..2];
+        std.debug.print("0x{s} ========> ", .{main_opcode});
     }
 
     const json_content = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
@@ -186,6 +237,8 @@ fn loadState(z80: *Z80, state: State) void {
     z80.register.h = state.h;
     z80.register.l = state.l;
 
+    z80.wz = state.wz;
+
     z80.shadow_register.a = @intCast((state.af_ >> 8) & 0xFF);
     z80.shadow_register.b = @intCast((state.bc_ >> 8) & 0xFF);
     z80.shadow_register.c = @intCast(state.bc_ & 0xFF);
@@ -196,7 +249,9 @@ fn loadState(z80: *Z80, state: State) void {
 
     z80.flag.sign = (state.f & 0x80) != 0;
     z80.flag.zero = (state.f & 0x40) != 0;
+    z80.flag.y = (state.f & 0x20) != 0;
     z80.flag.half_carry = (state.f & 0x10) != 0;
+    z80.flag.x = (state.f & 0x08) != 0;
     z80.flag.parity_overflow = (state.f & 0x04) != 0;
     z80.flag.add_subtract = (state.f & 0x02) != 0;
     z80.flag.carry = (state.f & 0x01) != 0;
@@ -205,10 +260,14 @@ fn loadState(z80: *Z80, state: State) void {
 
     z80.shadow_flag.sign = (shadow_flag & 0x80) != 0;
     z80.shadow_flag.zero = (shadow_flag & 0x40) != 0;
+    z80.shadow_flag.y = (shadow_flag & 0x20) != 0;
     z80.shadow_flag.half_carry = (shadow_flag & 0x10) != 0;
+    z80.shadow_flag.x = (shadow_flag & 0x08) != 0;
     z80.shadow_flag.parity_overflow = (shadow_flag & 0x04) != 0;
     z80.shadow_flag.add_subtract = (shadow_flag & 0x02) != 0;
     z80.shadow_flag.carry = (shadow_flag & 0x01) != 0;
+
+    z80.q = state.q;
 
     z80.interrupts_enabled = state.iff1 != 0;
     z80.interrupt_mode = switch (state.im) {
@@ -265,17 +324,23 @@ fn validateState(z80: Z80, state: State, al: std.mem.Allocator, failures: *std.A
     const exp_flags = Z80.Flag{
         .sign = (state.f & 0x80) != 0,
         .zero = (state.f & 0x40) != 0,
+        .y = (state.f & 0x20) != 0,
         .half_carry = (state.f & 0x10) != 0,
+        .x = (state.f & 0x08) != 0,
         .parity_overflow = (state.f & 0x04) != 0,
         .add_subtract = (state.f & 0x02) != 0,
         .carry = (state.f & 0x01) != 0,
     };
     try checkEquals(bool, al, failures, "flag.sign", z80.flag.sign, exp_flags.sign);
     try checkEquals(bool, al, failures, "flag.zero", z80.flag.zero, exp_flags.zero);
+    try checkEquals(bool, al, failures, "flag.y", z80.flag.y, exp_flags.y);
     try checkEquals(bool, al, failures, "flag.half_carry", z80.flag.half_carry, exp_flags.half_carry);
     try checkEquals(bool, al, failures, "flag.parity_overflow", z80.flag.parity_overflow, exp_flags.parity_overflow);
+    try checkEquals(bool, al, failures, "flag.x", z80.flag.x, exp_flags.x);
     try checkEquals(bool, al, failures, "flag.carry", z80.flag.carry, exp_flags.carry);
     try checkEquals(bool, al, failures, "flag.add_subtract", z80.flag.add_subtract, exp_flags.add_subtract);
+
+    try checkEquals(u8, al, failures, "q", z80.q, state.q);
 
     try checkEquals(bool, al, failures, "interrupts_enabled", z80.interrupts_enabled, (state.iff1 != 0));
     const expected_interrupt_mode: Z80.InterruptMode = switch (state.im) {
@@ -285,6 +350,8 @@ fn validateState(z80: Z80, state: State, al: std.mem.Allocator, failures: *std.A
         else => unreachable,
     };
     try checkEquals(@TypeOf(z80.interrupt_mode), al, failures, "interrupt_mode", z80.interrupt_mode, expected_interrupt_mode);
+
+    try checkEquals(u16, al, failures, "wz", z80.wz, state.wz);
 
     for (state.ram) |entry| {
         const addr = entry[0];

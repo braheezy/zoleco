@@ -11,6 +11,8 @@ pub fn rlca(self: *Z80) !void {
     self.flag.add_subtract = false;
     self.cycle_count += 4;
     self.register.a = std.math.rotl(u8, self.register.a, 1);
+    self.flag.setUndocumentedFlags(self.register.a);
+    self.q = self.flag.toByte();
 }
 
 pub fn rlc(self: *Z80, data: u8) u8 {
@@ -22,9 +24,9 @@ pub fn rlc(self: *Z80, data: u8) u8 {
     self.flag.setZ(result);
     self.flag.setS(result);
     self.flag.parity_overflow = Z80.parity(u8, result);
-
+    self.flag.setUndocumentedFlags(result);
     self.cycle_count += 8;
-
+    self.q = self.flag.toByte();
     return result;
 }
 
@@ -76,6 +78,8 @@ pub fn rrca(self: *Z80) !void {
     self.flag.add_subtract = false;
 
     self.cycle_count += 4;
+    self.flag.setUndocumentedFlags(self.register.a);
+    self.q = self.flag.toByte();
 }
 
 fn rrc(self: *Z80, data: u8) u8 {
@@ -87,6 +91,8 @@ fn rrc(self: *Z80, data: u8) u8 {
     self.flag.setZ(result);
     self.flag.setS(result);
     self.flag.parity_overflow = Z80.parity(u8, result);
+    self.flag.setUndocumentedFlags(result);
+    self.q = self.flag.toByte();
 
     self.cycle_count += 8;
 
@@ -144,6 +150,8 @@ pub fn rla(self: *Z80) !void {
     self.flag.half_carry = false;
     self.flag.add_subtract = false;
     self.cycle_count += 4;
+    self.flag.setUndocumentedFlags(self.register.a);
+    self.q = self.flag.toByte();
 }
 
 pub fn rl(self: *Z80, data: u8) u8 {
@@ -163,7 +171,8 @@ pub fn rl(self: *Z80, data: u8) u8 {
     self.flag.setZ(result);
     self.flag.setS(result);
     self.flag.parity_overflow = Z80.parity(u8, result);
-
+    self.flag.setUndocumentedFlags(result);
+    self.q = self.flag.toByte();
     return result;
 }
 
@@ -217,6 +226,8 @@ pub fn rra(self: *Z80) !void {
     // Rotate accumulator right through carry
     self.register.a = (self.register.a >> 1) | (carry_rotate << (8 - 1));
     self.cycle_count += 4;
+    self.flag.setUndocumentedFlags(self.register.a);
+    self.q = self.flag.toByte();
 }
 
 fn rr(self: *Z80, data: u8) u8 {
@@ -235,6 +246,8 @@ fn rr(self: *Z80, data: u8) u8 {
     self.flag.setZ(result);
     self.flag.setS(result);
     self.flag.parity_overflow = Z80.parity(u8, result);
+    self.flag.setUndocumentedFlags(result);
+    self.q = self.flag.toByte();
 
     return result;
 }

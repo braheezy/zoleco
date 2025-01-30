@@ -9,6 +9,8 @@ pub fn store_HL(self: *Z80) !void {
     self.memory[address] = self.register.l;
     self.memory[address + 1] = self.register.h;
     self.cycle_count += 16;
+    self.q = 0;
+    self.wz = address +% 1;
 }
 
 // LHLD A16: Load register pair HL from 16-bit immediate address.
@@ -19,6 +21,8 @@ pub fn loadImm_HL(self: *Z80) !void {
     self.register.l = self.memory[address];
     self.register.h = self.memory[address + 1];
     self.cycle_count += 16;
+    self.q = 0;
+    self.wz = address +% 1;
 }
 
 // STA A16: Store accumulator in 16-bit immediate address.
@@ -28,6 +32,8 @@ pub fn store_A(self: *Z80) !void {
 
     self.memory[address] = self.register.a;
     self.cycle_count += 13;
+    self.q = 0;
+    self.wz = (@as(u16, self.register.a) << 8) | (@as(u16, address +% 1 & 0xFF));
 }
 
 // LDA A16: Load accumulator from 16-bit immediate address.
@@ -37,4 +43,6 @@ pub fn load_A(self: *Z80) !void {
 
     self.register.a = self.memory[address];
     self.cycle_count += 13;
+    self.wz = address +% 1;
+    self.q = 0;
 }

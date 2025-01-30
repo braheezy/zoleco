@@ -21,6 +21,8 @@ pub fn add(self: *Z80, data: u8) u8 {
     self.flag.half_carry = Z80.auxCarryAdd(self.register.a, data);
     self.flag.parity_overflow = detectOverflow(self.register.a, data, result);
     self.flag.add_subtract = false;
+    self.flag.setUndocumentedFlags(result);
+    self.q = self.flag.toByte();
 
     self.cycle_count += 4;
 
@@ -98,9 +100,11 @@ pub fn adc(self: *Z80, data: u8) u8 {
     self.flag.setZ(@as(u16, result));
     self.flag.setS(@as(u16, result));
     self.flag.carry = carryAdd(self.register.a, data, carry);
-    self.flag.half_carry = ((self.register.a & 0xF) +% (data & 0xF) +% @as(u8, carry)) > 0xF;
+    self.flag.half_carry = ((self.register.a & 0xF) +% (data & 0xF) + @as(u8, carry)) > 0xF;
     self.flag.parity_overflow = parity_add(self.register.a, data, carry);
     self.flag.add_subtract = false;
+    self.flag.setUndocumentedFlags(result);
+    self.q = self.flag.toByte();
 
     self.cycle_count += 4;
 
@@ -162,7 +166,8 @@ pub fn adc_N(self: *Z80) !void {
     self.flag.setS(@intCast(result));
     self.flag.setZ(@intCast(result));
     self.flag.add_subtract = false;
-
+    self.flag.setUndocumentedFlags(result);
+    self.q = self.flag.toByte();
     self.register.a = result;
     self.cycle_count += 7;
 }
@@ -187,6 +192,8 @@ pub fn sub(self: *Z80, data: u8) u8 {
     self.flag.half_carry = Z80.auxCarrySub(self.register.a, data);
     self.flag.parity_overflow = detectOverflowSub(self.register.a, data, @truncate(result));
     self.flag.add_subtract = true;
+    self.flag.setUndocumentedFlags(result);
+    self.q = self.flag.toByte();
 
     self.cycle_count += 4;
 
@@ -273,6 +280,8 @@ pub fn sbb(self: *Z80, data: u8) u8 {
     self.flag.setS(@as(u16, result));
     self.flag.setZ(@as(u16, result));
     self.flag.add_subtract = true;
+    self.flag.setUndocumentedFlags(result);
+    self.q = self.flag.toByte();
 
     self.cycle_count += 4;
     self.register.a = result;
@@ -338,6 +347,8 @@ pub fn ana(self: *Z80, data: u8) void {
     self.flag.add_subtract = false;
     self.flag.half_carry = true;
     self.flag.parity_overflow = Z80.parity(u16, result);
+    self.flag.setUndocumentedFlags(result);
+    self.q = self.flag.toByte();
 
     self.register.a = @intCast(result);
 }
@@ -393,6 +404,8 @@ pub fn xra(self: *Z80, data: u8) void {
     self.flag.parity_overflow = Z80.parity(u16, result);
     self.flag.half_carry = false;
     self.flag.add_subtract = false;
+    self.flag.setUndocumentedFlags(result);
+    self.q = self.flag.toByte();
 
     self.register.a = @intCast(result);
 }
@@ -448,6 +461,8 @@ pub fn ora(self: *Z80, reg: u8) void {
     self.flag.parity_overflow = Z80.parity(u16, result);
     self.flag.add_subtract = false;
     self.flag.half_carry = false;
+    self.flag.setUndocumentedFlags(result);
+    self.q = self.flag.toByte();
 
     self.register.a = @intCast(result);
 }
@@ -503,10 +518,12 @@ pub fn compare(self: *Z80, data: u8) void {
     self.flag.carry = Z80.carrySub(self.register.a, data);
     self.flag.half_carry = Z80.auxCarrySub(self.register.a, data);
     self.flag.add_subtract = true;
+    self.flag.setUndocumentedFlags(data);
 
     const diff = (@as(i16, self.register.a) - @as(i16, data)) & 0xFF;
     const res: u8 = @intCast(diff);
     self.flag.parity_overflow = ((self.register.a ^ data) & (self.register.a ^ res) & 0x80) != 0;
+    self.q = self.flag.toByte();
 }
 
 // CMP B: Compare A with register B

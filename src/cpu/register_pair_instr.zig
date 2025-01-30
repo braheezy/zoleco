@@ -2,28 +2,30 @@ const std = @import("std");
 const Z80 = @import("Z80.zig");
 
 // increment pair helper
-pub fn inx(reg1: u8, reg2: u8) struct { u8, u8 } {
+pub fn inx(self: *Z80, reg1: u8, reg2: u8) struct { u8, u8 } {
     var combined = Z80.toUint16(reg1, reg2);
     combined += 1;
+
+    self.q = 0;
 
     return .{ @as(u8, @intCast(combined >> 8)), @as(u8, @intCast(combined & 0xFF)) };
 }
 
 // INX B: Increment register pair B.
 pub fn inx_B(self: *Z80) !void {
-    self.register.b, self.register.c = inx(self.register.b, self.register.c);
+    self.register.b, self.register.c = inx(self, self.register.b, self.register.c);
     self.cycle_count += 6;
 }
 
 // INX D: Increment register pair D.
 pub fn inx_D(self: *Z80) !void {
-    self.register.d, self.register.e = inx(self.register.d, self.register.e);
+    self.register.d, self.register.e = inx(self, self.register.d, self.register.e);
     self.cycle_count += 6;
 }
 
 // INX H: Increment register pair H.
 pub fn inx_H(self: *Z80) !void {
-    self.register.h, self.register.l = inx(self.register.h, self.register.l);
+    self.register.h, self.register.l = inx(self, self.register.h, self.register.l);
     self.cycle_count += 6;
 }
 
@@ -31,11 +33,15 @@ pub fn inx_H(self: *Z80) !void {
 pub fn inx_SP(self: *Z80) !void {
     self.sp += 1;
     self.cycle_count += 6;
+    self.q = 0;
 }
 
 fn dad(self: *Z80, reg1: u8, reg2: u8) void {
     const reg_pair = @as(u32, Z80.toUint16(reg1, reg2));
     const hl = @as(u32, self.getHL());
+
+    // Set WZ to HL+1 before the addition
+    self.wz = @as(u16, @truncate(hl +% 1));
 
     const result = hl + reg_pair;
 
@@ -43,8 +49,16 @@ fn dad(self: *Z80, reg1: u8, reg2: u8) void {
     self.flag.half_carry = (hl & 0xFFF) + (reg_pair & 0xFFF) > 0xFFF;
     self.flag.add_subtract = false;
 
+    // Set new HL value
     self.register.h = @as(u8, @truncate(result >> 8));
     self.register.l = @as(u8, @truncate(result));
+
+    // X and Y flags come from bits 3 and 5 of high byte of result
+    self.flag.x = (self.register.h & 0x08) != 0;
+    self.flag.y = (self.register.h & 0x20) != 0;
+
+    // Update Q with new flags
+    self.q = self.flag.toByte();
 
     self.cycle_count += 11;
 }
@@ -66,18 +80,12 @@ pub fn dad_H(self: *Z80) !void {
 
 // DAD SP: Add stack pointer to register pair H.
 pub fn dad_SP(self: *Z80) !void {
-    const hl = @as(u32, self.getHL());
+    // Split SP into high and low bytes
+    const sp_high: u8 = @truncate(self.sp >> 8);
+    const sp_low: u8 = @truncate(self.sp);
 
-    const result = hl + @as(u32, self.sp);
-
-    self.flag.carry = result > 0xFFFF;
-    self.flag.half_carry = (hl & 0xFFF) + (self.sp & 0xFFF) > 0xFFF;
-    self.flag.add_subtract = false;
-
-    self.register.h = @as(u8, @truncate(result >> 8));
-    self.register.l = @as(u8, @truncate(result));
-
-    self.cycle_count += 11;
+    // Use the common dad helper
+    dad(self, sp_high, sp_low);
 }
 
 pub fn push(self: *Z80, lower: u8, upper: u8) void {
@@ -86,6 +94,7 @@ pub fn push(self: *Z80, lower: u8, upper: u8) void {
     self.memory[self.sp - 2] = lower;
     self.sp -= 2;
     self.cycle_count += 11;
+    self.q = 0;
 }
 
 // PUSH D: Push register pair D onto stack.
@@ -114,6 +123,7 @@ pub fn pop(self: *Z80) struct { u8, u8 } {
     const upper = self.memory[self.sp + 1];
     self.sp += 2;
     self.cycle_count += 10;
+    self.q = 0;
 
     return .{ lower, upper };
 }
