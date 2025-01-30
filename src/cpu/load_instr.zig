@@ -65,6 +65,7 @@ pub fn ex_DE_HL(self: *Z80) !void {
     const temp_e = self.register.e;
     self.register.e = self.register.l;
     self.register.l = temp_e;
+    self.q = 0;
 
     self.cycle_count += 4;
 }

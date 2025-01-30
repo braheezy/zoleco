@@ -42,9 +42,9 @@ pub const OpcodeTable = [256]?OpcodeHandler{
     ai.ana_B, ai.ana_C, ai.ana_D, ai.ana_E, ai.ana_H, ai.ana_L, ai.ana_M, ai.ana_A, ai.xra_B, ai.xra_C, ai.xra_D, ai.xra_E, ai.xra_H, ai.xra_L, ai.xra_M, ai.xra_A, // A0 - AF
     ai.ora_B, ai.ora_C, ai.ora_D, ai.ora_E, ai.ora_H, ai.ora_L, ai.ora_M, ai.ora_A, ai.cmp_B, ai.cmp_C, ai.cmp_D, ai.cmp_E, ai.cmp_H, ai.cmp_L, ai.cmp_M, ai.cmp_A, // B0 - BF
     ri.ret_NZ, rpi.pop_BC, ji.jump_NZ, ji.jump, ci.call_NZ, rpi.push_BC, ai.add_N, rst0, ri.ret_Z, ri.ret, ji.jump_Z, lookupBitOpcode, ci.call_Z, ci.call, ai.adc_N, rst8, // C0 - CF
-    ri.ret_NC, rpi.pop_DE, ji.jump_NC, out, ci.call_NC, rpi.push_DE, ai.sub_N, rst16, ri.ret_C, li.exx, ji.jump_C, in, ci.call_C, lookupIndexedOpcode, ai.sbb_N, rst24, // D0 - DF
-    ri.ret_PO, rpi.pop_HL, ji.jump_PO, li.ex_M_HL, ci.call_PO, rpi.push_HL, null, null, ri.ret_PE, null, ji.jump_PE, li.ex_DE_HL, ci.call_PE, null, null, null, // E0 - EF
-    ri.ret_P, rpi.pop_AF, ji.jump_P, di, ci.call_P, rpi.push_AF, null, null, ri.ret_M, null, ji.jump_M, null, ci.call_M, null, null, null, // F0 - FF
+    ri.ret_NC, rpi.pop_DE, ji.jump_NC, out, ci.call_NC, rpi.push_DE, ai.sub_N, rst10, ri.ret_C, li.exx, ji.jump_C, in, ci.call_C, lookupIndexedOpcode, ai.sbb_N, rst18, // D0 - DF
+    ri.ret_PO, rpi.pop_HL, ji.jump_PO, li.ex_M_HL, ci.call_PO, rpi.push_HL, ai.ana_N, rst20, ri.ret_PE, ji.jp_HL, ji.jump_PE, li.ex_DE_HL, ci.call_PE, null, ai.xra_N, rst28, // E0 - EF
+    ri.ret_P, rpi.pop_AF, ji.jump_P, di, ci.call_P, rpi.push_AF, ai.xra_N, rst30, ri.ret_M, dti.load_HL_SP, ji.jump_M, ei, ci.call_M, lookupIndexedOpcode, ai.cmp_N, rst38, // F0 - FF
 };
 
 pub const IndexOpcodeTable = [256]?OpcodeHandler{
@@ -62,8 +62,8 @@ pub const IndexOpcodeTable = [256]?OpcodeHandler{
     ai.ora_B, ai.ora_C, ai.ora_D, ai.ora_E, ix.ora_IDXH, ix.ora_IDXL, ix.ora_IDXDisp, ai.ora_A, ai.cmp_B, ai.cmp_C, ai.cmp_D, ai.cmp_E, ix.cmp_IDXH, ix.cmp_IDXL, ix.cmp_IDXDisp, ai.cmp_A, // B0 - BF
     ri.ret_NZ, rpi.pop_BC, ji.jump_NZ, ji.jump, ci.call_NZ, rpi.push_BC, ai.add_N, rst0, ri.ret_Z, ri.ret, ji.jump_Z, lookupBitOpcode, ci.call_Z, ci.call, ai.adc_N, rst8, // C0 - CF
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // D0 - DF
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // E0 - EF
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // F0 - FF
+    ri.ret_PO, rpi.pop_IX, ji.jump_PO, rpi.ex_SP_IX, ci.call_PO, rpi.push_IX, ai.ana_N, rst20, ri.ret_PE, ji.jp_IX, ji.jump_PE, li.ex_DE_HL, ci.call_PE, nop, ai.xra_N, rst28, // E0 - EF
+    ri.ret_P, rpi.pop_AF, ji.jump_P, di, ci.call_P, rpi.push_AF, ai.ora_N, rst30, ri.ret_M, rpi.load_IX_SP, ji.jump_M, ei, ci.call_M, nop, ai.cmp_N, rst38, // F0 - FF
 };
 
 const BitOpcodeTable = [256]?OpcodeHandler{
@@ -143,6 +143,13 @@ fn nop(self: *Z80) !void {
 fn di(self: *Z80) !void {
     self.interrupts_enabled = false;
     self.cycle_count += 4;
+    self.q = 0;
+}
+
+fn ei(self: *Z80) !void {
+    self.interrupts_enabled = true;
+    self.cycle_count += 4;
+    self.q = 0;
 }
 
 fn halt(self: *Z80) !void {
@@ -151,26 +158,70 @@ fn halt(self: *Z80) !void {
     self.q = 0;
 }
 
-fn rst24(self: *Z80) !void {
+fn rst38(self: *Z80) !void {
     const return_addr = self.pc;
     self.sp -= 2;
     self.memory[self.sp + 1] = @intCast(return_addr >> 8);
     self.memory[self.sp] = @intCast(return_addr & 0xFF);
-    self.pc = 24;
+    self.pc = 0x38;
     self.cycle_count += 11;
     self.q = 0;
-    self.wz = 24;
+    self.wz = 0x38;
 }
 
-fn rst16(self: *Z80) !void {
+fn rst30(self: *Z80) !void {
     const return_addr = self.pc;
     self.sp -= 2;
     self.memory[self.sp + 1] = @intCast(return_addr >> 8);
     self.memory[self.sp] = @intCast(return_addr & 0xFF);
-    self.pc = 16;
+    self.pc = 0x30;
     self.cycle_count += 11;
     self.q = 0;
-    self.wz = 16;
+    self.wz = 0x30;
+}
+
+fn rst28(self: *Z80) !void {
+    const return_addr = self.pc;
+    self.sp -= 2;
+    self.memory[self.sp + 1] = @intCast(return_addr >> 8);
+    self.memory[self.sp] = @intCast(return_addr & 0xFF);
+    self.pc = 0x28;
+    self.cycle_count += 11;
+    self.q = 0;
+    self.wz = 0x28;
+}
+
+fn rst20(self: *Z80) !void {
+    const return_addr = self.pc;
+    self.sp -= 2;
+    self.memory[self.sp + 1] = @intCast(return_addr >> 8);
+    self.memory[self.sp] = @intCast(return_addr & 0xFF);
+    self.pc = 0x20;
+    self.cycle_count += 11;
+    self.q = 0;
+    self.wz = 0x20;
+}
+
+fn rst18(self: *Z80) !void {
+    const return_addr = self.pc;
+    self.sp -= 2;
+    self.memory[self.sp + 1] = @intCast(return_addr >> 8);
+    self.memory[self.sp] = @intCast(return_addr & 0xFF);
+    self.pc = 0x18;
+    self.cycle_count += 11;
+    self.q = 0;
+    self.wz = 0x18;
+}
+
+fn rst10(self: *Z80) !void {
+    const return_addr = self.pc;
+    self.sp -= 2;
+    self.memory[self.sp + 1] = @intCast(return_addr >> 8);
+    self.memory[self.sp] = @intCast(return_addr & 0xFF);
+    self.pc = 0x10;
+    self.cycle_count += 11;
+    self.q = 0;
+    self.wz = 0x10;
 }
 
 fn rst8(self: *Z80) !void {
@@ -178,10 +229,10 @@ fn rst8(self: *Z80) !void {
     self.sp -= 2;
     self.memory[self.sp + 1] = @intCast(return_addr >> 8);
     self.memory[self.sp] = @intCast(return_addr & 0xFF);
-    self.pc = 8;
+    self.pc = 0x08;
     self.cycle_count += 11;
     self.q = 0;
-    self.wz = 8;
+    self.wz = 0x08;
 }
 
 fn rst0(self: *Z80) !void {

@@ -31,6 +31,14 @@ pub fn loadAddr_D(self: *Z80) !void {
     self.wz = addr +% 1;
     self.q = 0;
 }
+
+// Loads the value of HL into SP.
+pub fn load_HL_SP(self: *Z80) !void {
+    self.sp = self.getHL();
+    self.cycle_count += 10;
+    self.q = 0;
+}
+
 // MOV M,A: Move value from accumulator into register pair H.
 pub fn move_MA(self: *Z80) !void {
     const address = self.getHL();

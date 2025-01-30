@@ -71,10 +71,8 @@ pub fn call_P(self: *Z80) !void {
     const jump_address = Z80.toUint16(data[1], data[0]);
     if (!self.flag.sign) {
         _call(self, jump_address);
-    } else {
-        self.pc += 2;
-        self.cycle_count += 10;
     }
+    self.cycle_count += 10;
     self.wz = jump_address;
     self.q = 0;
 }
@@ -84,10 +82,9 @@ pub fn call_M(self: *Z80) !void {
     const jump_address = Z80.toUint16(data[1], data[0]);
     if (self.flag.sign) {
         _call(self, jump_address);
-    } else {
-        self.pc += 2;
-        self.cycle_count += 10;
     }
+
+    self.cycle_count += 10;
     self.wz = jump_address;
     self.q = 0;
 }
@@ -97,10 +94,8 @@ pub fn call_PO(self: *Z80) !void {
     const jump_address = Z80.toUint16(data[1], data[0]);
     if (!self.flag.parity_overflow) {
         _call(self, jump_address);
-    } else {
-        self.pc += 2;
-        self.cycle_count += 10;
     }
+    self.cycle_count += 10;
     self.wz = jump_address;
     self.q = 0;
 }
@@ -110,10 +105,8 @@ pub fn call_PE(self: *Z80) !void {
     const jump_address = Z80.toUint16(data[1], data[0]);
     if (self.flag.parity_overflow) {
         _call(self, jump_address);
-    } else {
-        self.pc += 2;
-        self.cycle_count += 10;
     }
+    self.cycle_count += 10;
     self.wz = jump_address;
     self.q = 0;
 }

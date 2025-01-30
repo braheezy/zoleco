@@ -393,6 +393,13 @@ pub fn ana_A(self: *Z80) !void {
     ana(self, self.register.a);
 }
 
+pub fn ana_N(self: *Z80) !void {
+    const data = try self.fetchData(1);
+    const n = data[0];
+
+    ana(self, n);
+}
+
 // xra performs Exclusive OR register with accumulator
 pub fn xra(self: *Z80, data: u8) void {
     const result = @as(u16, self.register.a) ^ @as(u16, data);
@@ -406,6 +413,8 @@ pub fn xra(self: *Z80, data: u8) void {
     self.flag.add_subtract = false;
     self.flag.setUndocumentedFlags(result);
     self.q = self.flag.toByte();
+
+    self.cycle_count += 4;
 
     self.register.a = @intCast(result);
 }
@@ -448,6 +457,14 @@ pub fn xra_M(self: *Z80) !void {
 // XRA A: Exclusive-OR accumulator with accumulator.
 pub fn xra_A(self: *Z80) !void {
     xra(self, self.register.a);
+}
+
+pub fn xra_N(self: *Z80) !void {
+    const data = try self.fetchData(1);
+    const n = data[0];
+
+    xra(self, n);
+    self.cycle_count += 3;
 }
 
 // ora performs OR with accumulator
@@ -508,6 +525,14 @@ pub fn ora_A(self: *Z80) !void {
     ora(self, self.register.a);
 }
 
+pub fn ora_N(self: *Z80) !void {
+    const data = try self.fetchData(1);
+    const n = data[0];
+
+    ora(self, n);
+    self.cycle_count += 3;
+}
+
 // compare helper
 pub fn compare(self: *Z80, data: u8) void {
     const result = @as(u16, self.register.a) -% @as(u16, data);
@@ -564,4 +589,11 @@ pub fn cmp_M(self: *Z80) !void {
 // CMP A: Compare A with register A
 pub fn cmp_A(self: *Z80) !void {
     compare(self, self.register.a);
+}
+
+pub fn cmp_N(self: *Z80) !void {
+    const data = try self.fetchData(1);
+    const n = data[0];
+
+    compare(self, n);
 }

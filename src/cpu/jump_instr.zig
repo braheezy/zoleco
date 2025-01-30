@@ -185,3 +185,19 @@ pub fn jr_C(self: *Z80) !void {
     }
     self.q = 0;
 }
+
+// Loads the value of HL into PC.
+pub fn jp_HL(self: *Z80) !void {
+    const hl = self.getHL();
+    self.pc = hl;
+    self.wz = hl;
+    self.cycle_count += 4;
+    self.q = 0;
+}
+
+// Loads the value of IX into PC.
+pub fn jp_IX(self: *Z80) !void {
+    self.pc = self.ix;
+    self.cycle_count += 4;
+    self.q = 0;
+}

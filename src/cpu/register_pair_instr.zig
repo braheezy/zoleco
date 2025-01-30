@@ -1,6 +1,9 @@
 const std = @import("std");
 const Z80 = @import("Z80.zig");
 
+const getHighByte = @import("opcode.zig").getHighByte;
+const getLowByte = @import("opcode.zig").getLowByte;
+
 // increment pair helper
 pub fn inx(self: *Z80, reg1: u8, reg2: u8) struct { u8, u8 } {
     var combined = Z80.toUint16(reg1, reg2);
@@ -147,4 +150,44 @@ pub fn pop_DE(self: *Z80) !void {
 pub fn pop_AF(self: *Z80) !void {
     const fl, self.register.a = pop(self);
     self.flag = Z80.Flag.fromByte(fl);
+}
+
+// The memory location pointed to by SP is stored into IXL and SP is incremented. The memory location pointed to by SP is stored into IXH and SP is incremented again.
+pub fn pop_IX(self: *Z80) !void {
+    const ixl, const ixh = pop(self);
+    self.ix = Z80.toUint16(ixh, ixl);
+    self.cycle_count += 10;
+    self.q = 0;
+}
+// Exchanges (SP) with IXL, and (SP+1) with IXH.
+pub fn ex_SP_IX(self: *Z80) !void {
+    const lower = self.memory[self.sp];
+    const upper = self.memory[self.sp + 1];
+    const ixh = getHighByte(self.ix);
+    const ixl = getLowByte(self.ix);
+
+    self.ix = Z80.toUint16(upper, lower);
+    self.memory[self.sp] = ixl;
+    self.memory[self.sp + 1] = ixh;
+    self.cycle_count += 23;
+    self.wz = self.ix;
+    self.q = 0;
+}
+
+// SP is decremented and IXH is stored into the memory location pointed to by SP. SP is decremented again and IXL is stored into the memory location pointed to by SP.
+pub fn push_IX(self: *Z80) !void {
+    const ixh = getHighByte(self.ix);
+    const ixl = getLowByte(self.ix);
+    self.memory[self.sp - 1] = ixh;
+    self.memory[self.sp - 2] = ixl;
+    self.sp -= 2;
+    self.cycle_count += 15;
+    self.q = 0;
+}
+
+// Loads the value of IX into SP.
+pub fn load_IX_SP(self: *Z80) !void {
+    self.sp = self.ix;
+    self.cycle_count += 10;
+    self.q = 0;
 }
