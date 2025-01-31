@@ -111,25 +111,13 @@ fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
     var file = try cwd.openFile(full_path, .{});
     defer file.close();
 
-    // Ensure the filename is long enough to contain the prefixes and opcode
-    if (name.len < 5) {
-        std.debug.print("Invalid filename format: {s}\n", .{name});
-        return;
-    }
-
     // Check for double prefixes like "dd cb" or "fd cb"
     if ((std.mem.eql(u8, name[0..2], "dd") or std.mem.eql(u8, name[0..2], "fd")) and
         std.mem.eql(u8, name[3..5], "cb"))
     {
-        // Ensure there's an opcode after the prefixes
-        if (name.len < 8) {
-            std.debug.print("Incomplete opcode in filename: {s}\n", .{name});
-            return;
-        }
-
         const prefix = name[0..2]; // "dd" or "fd"
         const middle = name[3..5]; // "cb"
-        const main_opcode = name[8..10]; // The actual opcode after "__"
+        const main_opcode = name[name.len - 7 .. name.len - 5]; // Get the hex digits before .json
 
         std.debug.print("0x{s} {s} {s} ==> ", .{ prefix, middle, main_opcode });
     }

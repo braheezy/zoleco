@@ -16,17 +16,42 @@ pub fn rlca(self: *Z80) !void {
 }
 
 pub fn rlc(self: *Z80, data: u8) u8 {
-    self.flag.carry = (data & 0x80) == 0x80;
+    var value = data;
+
+    // Handle indexed addressing if we're in an indexed context
+    if (self.curr_index_reg != null) {
+        const addr = self.getDisplacedAddress(self.displacement);
+        // Set WZ for indexed operations
+        self.wz = addr;
+        // Get value from memory
+        value = self.memory[addr];
+    }
+
+    // Use value (not data) for all operations
+    self.flag.carry = (value & 0x80) == 0x80;
     self.flag.half_carry = false;
     self.flag.add_subtract = false;
 
-    const result = std.math.rotl(u8, data, 1);
+    const result = std.math.rotl(u8, value, 1);
     self.flag.setZ(result);
     self.flag.setS(result);
     self.flag.parity_overflow = Z80.parity(u8, result);
-    self.flag.setUndocumentedFlags(result);
-    self.cycle_count += 8;
+
+    // X/Y flags come from result for bit operations
+    self.flag.x = (result & 0x08) != 0;
+    self.flag.y = (result & 0x20) != 0;
+
     self.q = self.flag.toByte();
+
+    // Write result back to memory if indexed
+    if (self.curr_index_reg != null) {
+        const addr = self.getDisplacedAddress(self.displacement);
+        self.memory[addr] = result;
+        self.cycle_count += 4;
+    }
+
+    self.cycle_count += 8;
+
     return result;
 }
 
@@ -83,16 +108,42 @@ pub fn rrca(self: *Z80) !void {
 }
 
 fn rrc(self: *Z80, data: u8) u8 {
-    self.flag.carry = data & 0x01 == 1;
+    var value = data;
+
+    // Handle indexed addressing if we're in an indexed context
+    if (self.curr_index_reg != null) {
+        const addr = self.getDisplacedAddress(self.displacement);
+        // Set WZ for indexed operations
+        self.wz = addr;
+        // Get value from memory
+        value = self.memory[addr];
+    }
+
+    // Use value for all operations
+    const carry_bit = value & 0x01;
+    self.flag.carry = carry_bit == 1;
     self.flag.half_carry = false;
     self.flag.add_subtract = false;
 
-    const result = std.math.rotr(u8, data, 1);
+    // Perform right rotation: move bit 0 to bit 7 and shift right
+    const result = (value >> 1) | (carry_bit << 7);
+
     self.flag.setZ(result);
     self.flag.setS(result);
     self.flag.parity_overflow = Z80.parity(u8, result);
-    self.flag.setUndocumentedFlags(result);
+
+    // X/Y flags from result value for DD CB operations
+    self.flag.x = (result & 0x08) != 0;
+    self.flag.y = (result & 0x20) != 0;
+
     self.q = self.flag.toByte();
+
+    // Write result back to memory if indexed
+    if (self.curr_index_reg != null) {
+        const addr = self.getDisplacedAddress(self.displacement);
+        self.memory[addr] = result;
+        self.cycle_count += 4;
+    }
 
     self.cycle_count += 8;
 
@@ -124,7 +175,11 @@ pub fn rrc_L(self: *Z80) !void {
 }
 
 pub fn rrc_M(self: *Z80) !void {
-    const address = self.getHL();
+    const address = if (self.curr_index_reg != null)
+        self.getDisplacedAddress(self.displacement)
+    else
+        self.getHL();
+
     self.memory[address] = rrc(self, self.memory[address]);
 }
 
@@ -155,24 +210,45 @@ pub fn rla(self: *Z80) !void {
 }
 
 pub fn rl(self: *Z80, data: u8) u8 {
-    const carry: u8 = if (self.flag.carry)
-        1
-    else
-        0;
+    var value = data;
+
+    // Handle indexed addressing if we're in an indexed context
+    if (self.curr_index_reg != null) {
+        const addr = self.getDisplacedAddress(self.displacement);
+        // Set WZ for indexed operations
+        self.wz = addr;
+        // Get value from memory
+        value = self.memory[addr];
+    }
+
+    const carry: u8 = if (self.flag.carry) 1 else 0;
 
     // Isolate most significant bit to check for Carry
-    self.flag.carry = (data & 0x80) == 0x80;
-    // Rotate accumulator left through carry
-    const result = (data << 1) | carry;
+    self.flag.carry = (value & 0x80) == 0x80;
+    // Rotate left through carry
+    const result = (value << 1) | carry;
 
     self.flag.half_carry = false;
     self.flag.add_subtract = false;
-    self.cycle_count += 8;
     self.flag.setZ(result);
     self.flag.setS(result);
     self.flag.parity_overflow = Z80.parity(u8, result);
-    self.flag.setUndocumentedFlags(result);
+
+    // X/Y flags from result for bit operations
+    self.flag.x = (result & 0x08) != 0;
+    self.flag.y = (result & 0x20) != 0;
+
     self.q = self.flag.toByte();
+
+    // Write result back to memory if indexed
+    if (self.curr_index_reg != null) {
+        const addr = self.getDisplacedAddress(self.displacement);
+        self.memory[addr] = result;
+        self.cycle_count += 4;
+    }
+
+    self.cycle_count += 8;
+
     return result;
 }
 
@@ -231,23 +307,45 @@ pub fn rra(self: *Z80) !void {
 }
 
 fn rr(self: *Z80, data: u8) u8 {
-    const carry_rotate: u8 = if (self.flag.carry)
-        1
-    else
-        0;
+    var value = data;
+
+    // Handle indexed addressing if we're in an indexed context
+    if (self.curr_index_reg != null) {
+        const addr = self.getDisplacedAddress(self.displacement);
+        // Set WZ for indexed operations
+        self.wz = addr;
+        // Get value from memory
+        value = self.memory[addr];
+    }
+
+    const carry_rotate: u8 = if (self.flag.carry) 1 else 0;
 
     // Isolate least significant bit to check for Carry
-    self.flag.carry = data & 0x01 != 0;
+    self.flag.carry = value & 0x01 != 0;
     self.flag.half_carry = false;
     self.flag.add_subtract = false;
-    // Rotate accumulator right through carry
-    const result = (data >> 1) | (carry_rotate << (8 - 1));
-    self.cycle_count += 8;
+
+    // Rotate right through carry
+    const result = (value >> 1) | (carry_rotate << 7);
+
     self.flag.setZ(result);
     self.flag.setS(result);
     self.flag.parity_overflow = Z80.parity(u8, result);
-    self.flag.setUndocumentedFlags(result);
+
+    // X/Y flags from result for bit operations
+    self.flag.x = (result & 0x08) != 0;
+    self.flag.y = (result & 0x20) != 0;
+
     self.q = self.flag.toByte();
+
+    // Write result back to memory if indexed
+    if (self.curr_index_reg != null) {
+        const addr = self.getDisplacedAddress(self.displacement);
+        self.memory[addr] = result;
+        self.cycle_count += 4;
+    }
+
+    self.cycle_count += 8;
 
     return result;
 }

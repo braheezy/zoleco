@@ -61,7 +61,7 @@ pub const IndexOpcodeTable = [256]?OpcodeHandler{
     ai.ana_B, ai.ana_C, ai.ana_D, ai.ana_E, ix.ana_IDXH, ix.ana_IDXL, ix.ana_IDXDisp, ai.ana_A, ai.xra_B, ai.xra_C, ai.xra_D, ai.xra_E, ix.xor_IDXH, ix.xor_IDXL, ix.xor_IDXDisp, ai.xra_A, // A0 - AF
     ai.ora_B, ai.ora_C, ai.ora_D, ai.ora_E, ix.ora_IDXH, ix.ora_IDXL, ix.ora_IDXDisp, ai.ora_A, ai.cmp_B, ai.cmp_C, ai.cmp_D, ai.cmp_E, ix.cmp_IDXH, ix.cmp_IDXL, ix.cmp_IDXDisp, ai.cmp_A, // B0 - BF
     ri.ret_NZ, rpi.pop_BC, ji.jump_NZ, ji.jump, ci.call_NZ, rpi.push_BC, ai.add_N, rst0, ri.ret_Z, ri.ret, ji.jump_Z, lookupBitOpcode, ci.call_Z, ci.call, ai.adc_N, rst8, // C0 - CF
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // D0 - DF
+    ri.ret_NC, rpi.pop_DE, ji.jump_NC, out, ci.call_NC, rpi.push_DE, ai.sub_N, rst10, ri.ret_C, li.exx, ji.jump_C, in, ci.call_C, lookupIndexedOpcode, ai.sbb_N, rst18, // D0 - DF
     ri.ret_PO, rpi.pop_IX, ji.jump_PO, rpi.ex_SP_IX, ci.call_PO, rpi.push_IX, ai.ana_N, rst20, ri.ret_PE, ji.jp_IX, ji.jump_PE, li.ex_DE_HL, ci.call_PE, nop, ai.xra_N, rst28, // E0 - EF
     ri.ret_P, rpi.pop_AF, ji.jump_P, di, ci.call_P, rpi.push_AF, ai.ora_N, rst30, ri.ret_M, rpi.load_IX_SP, ji.jump_M, ei, ci.call_M, nop, ai.cmp_N, rst38, // F0 - FF
 };
@@ -100,7 +100,7 @@ pub fn lookupBitOpcode(self: *Z80) !void {
     }
 }
 
-pub fn lookupIndexedOpcode(self: *Z80) !void {
+pub fn lookupIndexedOpcode(self: *Z80) OpError!void {
     // was this called for IX or IY? check the previous opcode
     const prev_opcode = self.memory[self.pc -% 1];
     self.curr_index_reg = if (prev_opcode == 0xDD) &self.ix else &self.iy;

@@ -91,6 +91,7 @@ pub fn bitSetReset(self: *Z80) !void {
     self.q = 0;
 
     var val: u8 = undefined;
+    var result: u8 = undefined;
 
     if (self.curr_index_reg != null) {
         // For DD CB / FD CB opcodes, we've already read the displacement
@@ -101,13 +102,28 @@ pub fn bitSetReset(self: *Z80) !void {
         self.cycle_count +%= 4;
 
         if (is_set) {
-            val |= (@as(u8, 1) << bit_index);
+            result = val | (@as(u8, 1) << bit_index);
         } else {
-            val &= ~(@as(u8, 1) << bit_index);
+            result = val & ~(@as(u8, 1) << bit_index);
         }
 
-        self.memory[addr] = val;
+        // Always write result to memory for indexed operations
+        self.memory[addr] = result;
+
+        // For DD/FD CB opcodes, also store result in target register
+        switch (reg_index) {
+            0 => self.register.b = result,
+            1 => self.register.c = result,
+            2 => self.register.d = result,
+            3 => self.register.e = result,
+            4 => self.register.h = result,
+            5 => self.register.l = result,
+            6 => {}, // For (HL), we've already written to memory
+            7 => self.register.a = result,
+            else => unreachable,
+        }
     } else {
+        // Original non-indexed behavior remains unchanged
         val = switch (reg_index) {
             0 => self.register.b,
             1 => self.register.c,
@@ -117,7 +133,6 @@ pub fn bitSetReset(self: *Z80) !void {
             5 => self.register.l,
             6 => blk: {
                 const addr = (@as(u16, self.register.h) << 8) | @as(u16, self.register.l);
-                // For non-indexed memory access (HL), WZ is not affected
                 self.cycle_count +%= 4;
                 break :blk self.memory[addr];
             },
@@ -126,24 +141,24 @@ pub fn bitSetReset(self: *Z80) !void {
         };
 
         if (is_set) {
-            val |= (@as(u8, 1) << bit_index);
+            result = val | (@as(u8, 1) << bit_index);
         } else {
-            val &= ~(@as(u8, 1) << bit_index);
+            result = val & ~(@as(u8, 1) << bit_index);
         }
 
         switch (reg_index) {
-            0 => self.register.b = val,
-            1 => self.register.c = val,
-            2 => self.register.d = val,
-            3 => self.register.e = val,
-            4 => self.register.h = val,
-            5 => self.register.l = val,
+            0 => self.register.b = result,
+            1 => self.register.c = result,
+            2 => self.register.d = result,
+            3 => self.register.e = result,
+            4 => self.register.h = result,
+            5 => self.register.l = result,
             6 => {
                 const addr = (@as(u16, self.register.h) << 8) | @as(u16, self.register.l);
-                self.memory[addr] = val;
+                self.memory[addr] = result;
                 self.cycle_count +%= 7;
             },
-            7 => self.register.a = val,
+            7 => self.register.a = result,
             else => unreachable,
         }
     }

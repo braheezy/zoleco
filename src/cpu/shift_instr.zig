@@ -14,39 +14,117 @@ fn setShiftFlags(self: *Z80, val: u8, carry_out: bool) void {
 
 /// SLA (Shift Left Arithmetic): bit 7 -> CF, bit 0 = 0
 fn shiftLeftArithmetic(self: *Z80, val: u8) u8 {
-    const carry_out = (val & 0x80) != 0;
-    const result = @as(u8, (val << 1) & 0xFE);
+    var value = val;
+
+    // Handle indexed addressing if we're in an indexed context
+    if (self.curr_index_reg != null) {
+        const addr = self.getDisplacedAddress(self.displacement);
+        // Set WZ for indexed operations
+        self.wz = addr;
+        // Get value from memory
+        value = self.memory[addr];
+    }
+
+    const carry_out = (value & 0x80) != 0;
+    const result = @as(u8, (value << 1) & 0xFE);
     setShiftFlags(self, result, carry_out);
+
+    // Write result back to memory if indexed
+    if (self.curr_index_reg != null) {
+        const addr = self.getDisplacedAddress(self.displacement);
+        self.memory[addr] = result;
+        self.cycle_count += 4;
+    }
+
+    self.cycle_count += 8;
+    self.q = self.flag.toByte();
+    return result;
+}
+/// SLL (Shift Left, set LSB = 1): bit 7 -> CF, bit 0 = 1
+fn shiftLeft(self: *Z80, val: u8) u8 {
+    var value = val;
+
+    // Handle indexed addressing if we're in an indexed context
+    if (self.curr_index_reg != null) {
+        const addr = self.getDisplacedAddress(self.displacement);
+        // Set WZ for indexed operations
+        self.wz = addr;
+        // Get value from memory
+        value = self.memory[addr];
+    }
+
+    const carry_out = (value & 0x80) != 0;
+    const result = @as(u8, (value << 1) | 0x01);
+    setShiftFlags(self, result, carry_out);
+
+    // Write result back to memory if indexed
+    if (self.curr_index_reg != null) {
+        const addr = self.getDisplacedAddress(self.displacement);
+        self.memory[addr] = result;
+        self.cycle_count += 4;
+    }
+
     self.cycle_count += 8;
     self.q = self.flag.toByte();
     return result;
 }
 
-/// SLL (Shift Left, set LSB = 1): bit 7 -> CF, bit 0 = 1
-fn shiftLeft(self: *Z80, val: u8) u8 {
-    const carry_out = (val & 0x80) != 0;
-    const result = @as(u8, (val << 1) | 0x01);
-    setShiftFlags(self, result, carry_out);
-    self.cycle_count += 8;
-    return result;
-}
-
 /// SRL (Shift Right Logical): bit 0 -> CF, bit 7 = 0
 fn shiftRight(self: *Z80, val: u8) u8 {
-    const carry_out = (val & 0x01) != 0;
-    const result = @as(u8, val >> 1);
+    var value = val;
+
+    // Handle indexed addressing if we're in an indexed context
+    if (self.curr_index_reg != null) {
+        const addr = self.getDisplacedAddress(self.displacement);
+        // Set WZ for indexed operations
+        self.wz = addr;
+        // Get value from memory
+        value = self.memory[addr];
+    }
+
+    const carry_out = (value & 0x01) != 0;
+    const result = @as(u8, value >> 1);
     setShiftFlags(self, result, carry_out);
+
+    // Write result back to memory if indexed
+    if (self.curr_index_reg != null) {
+        const addr = self.getDisplacedAddress(self.displacement);
+        self.memory[addr] = result;
+        self.cycle_count += 4;
+    }
+
     self.cycle_count += 8;
+    self.q = self.flag.toByte();
     return result;
 }
 
 /// SRA (Shift Right Arithmetic): bit 0 -> CF, bit 7 preserved
 fn shiftRightArithmetic(self: *Z80, val: u8) u8 {
-    const carry_out = (val & 0x01) != 0;
+    var value = val;
+
+    // Handle indexed addressing if we're in an indexed context
+    if (self.curr_index_reg != null) {
+        const addr = self.getDisplacedAddress(self.displacement);
+        // Set WZ for indexed operations
+        self.wz = addr;
+        // Get value from memory
+        value = self.memory[addr];
+    }
+
+    const carry_out = (value & 0x01) != 0;
     // Preserve bit 7
-    const result = @as(u8, (val & 0x80) | (val >> 1));
+    const result = @as(u8, (value & 0x80) | (value >> 1));
     setShiftFlags(self, result, carry_out);
+
+    // Write result back to memory if indexed
+    if (self.curr_index_reg != null) {
+        const addr = self.getDisplacedAddress(self.displacement);
+        self.memory[addr] = result;
+        self.cycle_count += 4;
+    }
+
     self.cycle_count += 8;
+    self.q = self.flag.toByte();
     return result;
 }
 
