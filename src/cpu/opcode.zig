@@ -44,7 +44,7 @@ pub const OpcodeTable = [256]?OpcodeHandler{
     ri.ret_NZ, rpi.pop_BC, ji.jump_NZ, ji.jump, ci.call_NZ, rpi.push_BC, ai.add_N, rst0, ri.ret_Z, ri.ret, ji.jump_Z, lookupBitOpcode, ci.call_Z, ci.call, ai.adc_N, rst8, // C0 - CF
     ri.ret_NC, rpi.pop_DE, ji.jump_NC, out, ci.call_NC, rpi.push_DE, ai.sub_N, rst10, ri.ret_C, li.exx, ji.jump_C, in, ci.call_C, lookupIndexedOpcode, ai.sbb_N, rst18, // D0 - DF
     ri.ret_PO, rpi.pop_HL, ji.jump_PO, li.ex_M_HL, ci.call_PO, rpi.push_HL, ai.ana_N, rst20, ri.ret_PE, ji.jp_HL, ji.jump_PE, li.ex_DE_HL, ci.call_PE, null, ai.xra_N, rst28, // E0 - EF
-    ri.ret_P, rpi.pop_AF, ji.jump_P, di, ci.call_P, rpi.push_AF, ai.xra_N, rst30, ri.ret_M, dti.load_HL_SP, ji.jump_M, ei, ci.call_M, lookupIndexedOpcode, ai.cmp_N, rst38, // F0 - FF
+    ri.ret_P, rpi.pop_AF, ji.jump_P, di, ci.call_P, rpi.push_AF, ai.ora_N, rst30, ri.ret_M, dti.load_HL_SP, ji.jump_M, ei, ci.call_M, lookupIndexedOpcode, ai.cmp_N, rst38, // F0 - FF
 };
 
 pub const IndexOpcodeTable = [256]?OpcodeHandler{

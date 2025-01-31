@@ -190,7 +190,6 @@ pub fn jr_C(self: *Z80) !void {
 pub fn jp_HL(self: *Z80) !void {
     const hl = self.getHL();
     self.pc = hl;
-    self.wz = hl;
     self.cycle_count += 4;
     self.q = 0;
 }

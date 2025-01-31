@@ -36,6 +36,9 @@ pub fn ex_M_HL(self: *Z80) !void {
     self.memory[sp] = temp_l;
     self.memory[sp + 1] = temp_h;
 
+    self.q = 0;
+    self.wz = Z80.toUint16(self.register.h, self.register.l);
+
     self.total_cycle_count += 19;
 }
 
