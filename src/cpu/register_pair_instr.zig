@@ -155,29 +155,36 @@ pub fn pop_AF(self: *Z80) !void {
 // The memory location pointed to by SP is stored into IXL and SP is incremented. The memory location pointed to by SP is stored into IXH and SP is incremented again.
 pub fn pop_IX(self: *Z80) !void {
     const ixl, const ixh = pop(self);
-    self.ix = Z80.toUint16(ixh, ixl);
+    self.curr_index_reg.?.* = Z80.toUint16(ixh, ixl);
     self.cycle_count += 10;
     self.q = 0;
 }
 // Exchanges (SP) with IXL, and (SP+1) with IXH.
 pub fn ex_SP_IX(self: *Z80) !void {
-    const lower = self.memory[self.sp];
-    const upper = self.memory[self.sp + 1];
-    const ixh = getHighByte(self.ix);
-    const ixl = getLowByte(self.ix);
+    const curr_index_reg = self.curr_index_reg.?.*;
+    // Read from memory using wrapping addition for SP+1
+    const sp_low = self.memory[self.sp];
+    const sp_high = self.memory[self.sp +% 1];
 
-    self.ix = Z80.toUint16(upper, lower);
-    self.memory[self.sp] = ixl;
-    self.memory[self.sp + 1] = ixh;
+    // Get current IX values
+    const ix_high = getHighByte(curr_index_reg);
+    const ix_low = getLowByte(curr_index_reg);
+
+    // Exchange values
+    self.memory[self.sp] = ix_low;
+    self.memory[self.sp +% 1] = ix_high;
+    self.curr_index_reg.?.* = Z80.toUint16(sp_high, sp_low);
+
+    self.wz = self.curr_index_reg.?.*;
+
     self.cycle_count += 23;
-    self.wz = self.ix;
     self.q = 0;
 }
 
 // SP is decremented and IXH is stored into the memory location pointed to by SP. SP is decremented again and IXL is stored into the memory location pointed to by SP.
 pub fn push_IX(self: *Z80) !void {
-    const ixh = getHighByte(self.ix);
-    const ixl = getLowByte(self.ix);
+    const ixh = getHighByte(self.curr_index_reg.?.*);
+    const ixl = getLowByte(self.curr_index_reg.?.*);
     self.memory[self.sp - 1] = ixh;
     self.memory[self.sp - 2] = ixl;
     self.sp -= 2;
@@ -187,7 +194,7 @@ pub fn push_IX(self: *Z80) !void {
 
 // Loads the value of IX into SP.
 pub fn load_IX_SP(self: *Z80) !void {
-    self.sp = self.ix;
+    self.sp = self.curr_index_reg.?.*;
     self.cycle_count += 10;
     self.q = 0;
 }

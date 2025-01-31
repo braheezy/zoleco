@@ -223,9 +223,12 @@ pub fn sll_L(self: *Z80) !void {
 }
 
 pub fn sll_M(self: *Z80) !void {
-    const addr = Z80.getHL(self);
-    const val = self.memory[addr];
-    self.memory[addr] = shiftLeft(self, val);
+    const address = if (self.curr_index_reg != null)
+        self.getDisplacedAddress(self.displacement)
+    else
+        self.getHL();
+    const val = self.memory[address];
+    self.memory[address] = shiftLeft(self, val);
     self.cycle_count += 7;
 }
 

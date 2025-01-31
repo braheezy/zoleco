@@ -196,7 +196,7 @@ pub fn jp_HL(self: *Z80) !void {
 
 // Loads the value of IX into PC.
 pub fn jp_IX(self: *Z80) !void {
-    self.pc = self.ix;
+    self.pc = self.curr_index_reg.?.*;
     self.cycle_count += 4;
     self.q = 0;
 }
