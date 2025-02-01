@@ -70,16 +70,10 @@ pub fn main() !void {
     const cwd = std.fs.cwd();
 
     for (args[1..]) |arg| {
-        const single_test_file = if (arg.len <= 5) try std.fmt.allocPrint(allocator, "{s}.json", .{arg}) else blk: {
-            var it = std.mem.splitScalar(u8, arg, ' ');
-            var result: [3][]const u8 = undefined;
-            var i: u3 = 0;
-            while (it.next()) |op| {
-                result[i] = op;
-                i += 1;
-            }
-            break :blk try std.fmt.allocPrint(allocator, "{s} {s} __ {s}.json", .{ result[0], result[1], result[2] });
-        };
+        const single_test_file = if (std.mem.indexOf(u8, arg, " ") == null)
+            try std.fmt.allocPrint(allocator, "{s}.json", .{arg})
+        else
+            try std.fmt.allocPrint(allocator, "{s}.json", .{arg});
         defer allocator.free(single_test_file);
         std.debug.print("running single file: {s}\n", .{single_test_file});
         try processFile(single_test_file, allocator);
@@ -111,46 +105,31 @@ fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
     var file = try cwd.openFile(full_path, .{});
     defer file.close();
 
-    // Check for double prefixes like "dd cb" or "fd cb"
-    if ((std.mem.eql(u8, name[0..2], "dd") or std.mem.eql(u8, name[0..2], "fd")) and
-        std.mem.eql(u8, name[3..5], "cb"))
-    {
-        const prefix = name[0..2]; // "dd" or "fd"
-        const middle = name[3..5]; // "cb"
-        const main_opcode = name[name.len - 7 .. name.len - 5]; // Get the hex digits before .json
+    // Split the filename (without .json) into parts
+    const base_name = name[0 .. name.len - 5]; // Remove .json
+    var parts = std.mem.split(u8, base_name, " ");
+    var opcodes = std.ArrayList([]const u8).init(allocator);
+    defer opcodes.deinit();
 
-        std.debug.print("0x{s} {s} {s} ==> ", .{ prefix, middle, main_opcode });
+    while (parts.next()) |part| {
+        try opcodes.append(part);
     }
-    // Check for single prefix "cb"
-    else if (std.mem.eql(u8, name[0..2], "cb")) {
-        // Ensure there's an opcode after the prefix
-        if (name.len < 5) {
-            std.debug.print("Incomplete opcode in filename: {s}\n", .{name});
+
+    // Print opcode info based on number of parts
+    switch (opcodes.items.len) {
+        1 => { // Single opcode like "00"
+            std.debug.print("0x{s} ========> ", .{opcodes.items[0]});
+        },
+        2 => { // Prefix + opcode like "dd 00"
+            std.debug.print("0x{s} {s} =====> ", .{ opcodes.items[0], opcodes.items[1] });
+        },
+        3 => { // Double prefix like "dd cb 00"
+            std.debug.print("0x{s} {s} {s} ==> ", .{ opcodes.items[0], opcodes.items[1], opcodes.items[2] });
+        },
+        else => {
+            std.debug.print("Invalid opcode format in filename: {s}\n", .{name});
             return;
-        }
-
-        const prefix = name[0..2]; // "cb"
-        const main_opcode = name[3..5]; // The actual opcode after prefix
-
-        std.debug.print("0x{s} {s} =====> ", .{ prefix, main_opcode });
-    }
-    // Check for single prefix "dd" or "fd"
-    else if (std.mem.eql(u8, name[0..2], "dd") or std.mem.eql(u8, name[0..2], "fd") or std.mem.eql(u8, name[0..2], "ed")) {
-        // Ensure there's an opcode after the prefix
-        if (name.len < 5) {
-            std.debug.print("Incomplete opcode in filename: {s}\n", .{name});
-            return;
-        }
-
-        const prefix = name[0..2]; // "dd" or "fd"
-        const main_opcode = name[3..5]; // The actual opcode after prefix
-
-        std.debug.print("0x{s} {s} =====> ", .{ prefix, main_opcode });
-    }
-    // Handle filenames without any recognized prefixes
-    else {
-        const main_opcode = name[0..2];
-        std.debug.print("0x{s} ========> ", .{main_opcode});
+        },
     }
 
     const json_content = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
