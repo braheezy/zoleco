@@ -14,6 +14,8 @@ const ai = @import("accumulator_instr.zig");
 const ri = @import("return_instr.zig");
 const ix = @import("idx_instr.zig");
 const si = @import("shift_instr.zig");
+const io = @import("io_instr.zig");
+
 const bitTest = @import("bit_test_instr.zig").bitTest;
 const bitSetReset = @import("bit_test_instr.zig").bitSetReset;
 
@@ -42,8 +44,8 @@ pub const OpcodeTable = [256]?OpcodeHandler{
     ai.ana_B, ai.ana_C, ai.ana_D, ai.ana_E, ai.ana_H, ai.ana_L, ai.ana_M, ai.ana_A, ai.xra_B, ai.xra_C, ai.xra_D, ai.xra_E, ai.xra_H, ai.xra_L, ai.xra_M, ai.xra_A, // A0 - AF
     ai.ora_B, ai.ora_C, ai.ora_D, ai.ora_E, ai.ora_H, ai.ora_L, ai.ora_M, ai.ora_A, ai.cmp_B, ai.cmp_C, ai.cmp_D, ai.cmp_E, ai.cmp_H, ai.cmp_L, ai.cmp_M, ai.cmp_A, // B0 - BF
     ri.ret_NZ, rpi.pop_BC, ji.jump_NZ, ji.jump, ci.call_NZ, rpi.push_BC, ai.add_N, rst0, ri.ret_Z, ri.ret, ji.jump_Z, lookupBitOpcode, ci.call_Z, ci.call, ai.adc_N, rst8, // C0 - CF
-    ri.ret_NC, rpi.pop_DE, ji.jump_NC, out, ci.call_NC, rpi.push_DE, ai.sub_N, rst10, ri.ret_C, li.exx, ji.jump_C, in, ci.call_C, lookupIndexedOpcode, ai.sbb_N, rst18, // D0 - DF
-    ri.ret_PO, rpi.pop_HL, ji.jump_PO, li.ex_M_HL, ci.call_PO, rpi.push_HL, ai.ana_N, rst20, ri.ret_PE, ji.jp_HL, ji.jump_PE, li.ex_DE_HL, ci.call_PE, null, ai.xra_N, rst28, // E0 - EF
+    ri.ret_NC, rpi.pop_DE, ji.jump_NC, io.out, ci.call_NC, rpi.push_DE, ai.sub_N, rst10, ri.ret_C, li.exx, ji.jump_C, io.in, ci.call_C, lookupIndexedOpcode, ai.sbb_N, rst18, // D0 - DF
+    ri.ret_PO, rpi.pop_HL, ji.jump_PO, li.ex_M_HL, ci.call_PO, rpi.push_HL, ai.ana_N, rst20, ri.ret_PE, ji.jp_HL, ji.jump_PE, li.ex_DE_HL, ci.call_PE, lookupMiscOpcode, ai.xra_N, rst28, // E0 - EF
     ri.ret_P, rpi.pop_AF, ji.jump_P, di, ci.call_P, rpi.push_AF, ai.ora_N, rst30, ri.ret_M, dti.load_HL_SP, ji.jump_M, ei, ci.call_M, lookupIndexedOpcode, ai.cmp_N, rst38, // F0 - FF
 };
 
@@ -61,7 +63,7 @@ pub const IndexOpcodeTable = [256]?OpcodeHandler{
     ai.ana_B, ai.ana_C, ai.ana_D, ai.ana_E, ix.ana_IDXH, ix.ana_IDXL, ix.ana_IDXDisp, ai.ana_A, ai.xra_B, ai.xra_C, ai.xra_D, ai.xra_E, ix.xor_IDXH, ix.xor_IDXL, ix.xor_IDXDisp, ai.xra_A, // A0 - AF
     ai.ora_B, ai.ora_C, ai.ora_D, ai.ora_E, ix.ora_IDXH, ix.ora_IDXL, ix.ora_IDXDisp, ai.ora_A, ai.cmp_B, ai.cmp_C, ai.cmp_D, ai.cmp_E, ix.cmp_IDXH, ix.cmp_IDXL, ix.cmp_IDXDisp, ai.cmp_A, // B0 - BF
     ri.ret_NZ, rpi.pop_BC, ji.jump_NZ, ji.jump, ci.call_NZ, rpi.push_BC, ai.add_N, rst0, ri.ret_Z, ri.ret, ji.jump_Z, lookupBitOpcode, ci.call_Z, ci.call, ai.adc_N, rst8, // C0 - CF
-    ri.ret_NC, rpi.pop_DE, ji.jump_NC, out, ci.call_NC, rpi.push_DE, ai.sub_N, rst10, ri.ret_C, li.exx, ji.jump_C, in, ci.call_C, lookupIndexedOpcode, ai.sbb_N, rst18, // D0 - DF
+    ri.ret_NC, rpi.pop_DE, ji.jump_NC, io.out, ci.call_NC, rpi.push_DE, ai.sub_N, rst10, ri.ret_C, li.exx, ji.jump_C, io.in, ci.call_C, lookupIndexedOpcode, ai.sbb_N, rst18, // D0 - DF
     ri.ret_PO, rpi.pop_IX, ji.jump_PO, rpi.ex_SP_IX, ci.call_PO, rpi.push_IX, ai.ana_N, rst20, ri.ret_PE, ji.jp_IX, ji.jump_PE, li.ex_DE_HL, ci.call_PE, nop, ai.xra_N, rst28, // E0 - EF
     ri.ret_P, rpi.pop_AF, ji.jump_P, di, ci.call_P, rpi.push_AF, ai.ora_N, rst30, ri.ret_M, rpi.load_IX_SP, ji.jump_M, ei, ci.call_M, nop, ai.cmp_N, rst38, // F0 - FF
 };
@@ -85,12 +87,30 @@ const BitOpcodeTable = [256]?OpcodeHandler{
     bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, bitSetReset, // F0 - FF
 };
 
+const MiscOpcodeTable = [256]?OpcodeHandler{
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 00 - 0F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 10 - 1F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 20 - 2F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 30 - 3F
+    io.in_B, io.out_B, rpi.sbc_HL_BC, dti.load_BC_nn, ai.neg, retn, im0, load_I, io.in_C, io.out_C, rpi.adc_HL_BC, dti.load_nn_BC, ai.neg, reti, im0, li.load_A_R, // 40 - 4F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 50 - 5F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 60 - 6F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 70 - 7F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 80 - 8F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 90 - 9F
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // A0 - AF
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // B0 - BF
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // C0 - CF
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // D0 - DF
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // E0 - EF
+    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // F0 - FF
+};
+
 pub fn lookupBitOpcode(self: *Z80) !void {
     const next_opcode = self.memory[self.pc];
 
     self.pc +%= 1;
-    // Increment memory register, but only the lower 7 bits
-    self.r = (self.r & 0x80) | ((self.r + 1) & 0x7F);
+    self.increment_r();
 
     if (BitOpcodeTable[next_opcode]) |handler| {
         try handler(self);
@@ -107,9 +127,7 @@ pub fn lookupIndexedOpcode(self: *Z80) OpError!void {
 
     const opcode = self.memory[self.pc];
     self.pc +%= 1;
-
-    // Increment memory register, but only the lower 7 bits
-    self.r = (self.r & 0x80) | ((self.r + 1) & 0x7F);
+    self.increment_r();
 
     if (opcode == 0xCB) {
         // Fetch displacement
@@ -135,19 +153,34 @@ pub fn lookupIndexedOpcode(self: *Z80) OpError!void {
     }
 }
 
+pub fn lookupMiscOpcode(self: *Z80) OpError!void {
+    const opcode = self.memory[self.pc];
+    self.pc +%= 1;
+    self.increment_r();
+
+    if (MiscOpcodeTable[opcode]) |handler| {
+        try handler(self);
+    } else {
+        std.debug.print("unknown misc opcode: {x}\n", .{opcode});
+        std.process.exit(1);
+    }
+}
+
 fn nop(self: *Z80) !void {
     self.cycle_count += 4;
     self.q = 0;
 }
 
 fn di(self: *Z80) !void {
-    self.interrupts_enabled = false;
+    self.iff1 = false;
+    self.iff2 = false;
     self.cycle_count += 4;
     self.q = 0;
 }
 
 fn ei(self: *Z80) !void {
-    self.interrupts_enabled = true;
+    self.iff1 = true;
+    self.iff2 = true;
     self.cycle_count += 4;
     self.q = 0;
 }
@@ -246,28 +279,35 @@ fn rst0(self: *Z80) !void {
     self.wz = 0;
 }
 
-// Combine A (high bits) with immediate port_lo (low bits),
-// then take only as many bits as needed, e.g. 8-bit port.
-fn out(self: *Z80) !void {
-    const data = try self.fetchData(1);
-    const port = (@as(u16, self.register.a) << 8) | @as(u16, data[0]);
-    const actual_port: u8 = @intCast(port & 0xFF);
+// Used at the end of a non-maskable interrupt service routine (located at 0066h) to pop the top stack entry into PC. The value of IFF2 is copied to IFF1 so that maskable interrupts are allowed to continue as before.
+fn retn(self: *Z80) !void {
+    self.pc = Z80.toUint16(self.memory[self.sp + 1], self.memory[self.sp]);
+    self.sp += 2;
+    self.iff1 = self.iff2;
+    self.cycle_count += 14;
+    self.q = 0;
+    self.wz = self.pc;
+}
 
-    self.wz = (@as(u16, self.register.a) << 8) | (@as(u16, actual_port +% 1));
+// Used at the end of a maskable interrupt service routine. The top stack entry is popped into PC, and signals an I/O device that the interrupt has finished, allowing nested interrupts
+fn reti(self: *Z80) !void {
+    self.pc = Z80.toUint16(self.memory[self.sp + 1], self.memory[self.sp]);
+    self.sp += 2;
+    self.iff1 = self.iff2;
+    self.cycle_count += 14;
+    self.q = 0;
+    self.wz = self.pc;
+}
 
-    try self.hardware.out(actual_port, self.register.a);
+fn im0(self: *Z80) !void {
+    self.interrupt_mode = .{ .zero = {} };
+    self.cycle_count += 8;
     self.q = 0;
 }
 
-fn in(self: *Z80) !void {
-    const data = try self.fetchData(1);
-    const port = Z80.toUint16(self.register.a, data[0]);
-    const actual_port: u8 = @intCast(port & 0xFF);
-
-    const value = try self.hardware.in(actual_port);
-    self.register.a = value;
-
-    // Set WZ to port number + 1
-    self.wz = port +% 1;
+// Stores the value of A into register I.
+fn load_I(self: *Z80) !void {
+    self.i = self.register.a;
+    self.cycle_count += 9;
     self.q = 0;
 }

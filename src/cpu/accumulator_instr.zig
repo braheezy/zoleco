@@ -597,3 +597,25 @@ pub fn cmp_N(self: *Z80) !void {
 
     compare(self, n);
 }
+
+// The contents of A are negated (two's complement). Operation is the same as subtracting A from zero.
+pub fn neg(self: *Z80) !void {
+    const orig_a = self.register.a;
+    const result = @as(u8, 0) -% orig_a;
+
+    // Set flags based on the operation 0 - A
+    self.flag.carry = orig_a != 0; // Carry if A was not 0
+    self.flag.add_subtract = true; // Always set for subtraction
+    self.flag.parity_overflow = orig_a == 0x80; // Overflow if A was 80h
+    self.flag.half_carry = (orig_a & 0x0F) > 0; // Half-carry if low nibble of A was not 0
+    self.flag.zero = result == 0; // Zero if result is 0
+    self.flag.sign = (result & 0x80) != 0; // Sign if bit 7 is set
+
+    // Set X/Y flags from result
+    self.flag.x = (result & 0x08) != 0;
+    self.flag.y = (result & 0x20) != 0;
+
+    self.register.a = result;
+    self.q = self.flag.toByte();
+    self.cycle_count += 8;
+}

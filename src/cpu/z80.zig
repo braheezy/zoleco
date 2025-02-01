@@ -128,8 +128,10 @@ memory: []u8 = undefined,
 cycle_count: usize = 0,
 total_cycle_count: usize = 0,
 // interrupts
-interrupts_enabled: bool = false,
 interrupt_mode: InterruptMode = .{ .zero = {} },
+iff1: bool = false, // Main interrupt enable flag
+iff2: bool = false, // Backup interrupt enable flag
+i: u8 = 0, // interrupt vector
 halted: bool = false,
 hardware: Hardware = Hardware{},
 scratch: [2]u8 = [_]u8{0} ** 2,
@@ -174,8 +176,7 @@ pub fn step(self: *Z80) !void {
     const opcode = self.memory[self.pc];
     // Move PC to the next byte
     self.pc +%= 1;
-    // Increment memory register, but only the lower 7 bits
-    self.r = (self.r & 0x80) | ((self.r + 1) & 0x7F);
+    self.increment_r();
 
     // Execute the instruction
     if (OpcodeTable[opcode]) |handler| {
@@ -298,4 +299,9 @@ pub inline fn getDisplacedAddress(self: *Z80, displacement: i8) u16 {
     const address_i32: i32 = idx_i32 + displacement_i32;
     self.wz = @intCast(address_i32 & 0xFFFF);
     return @intCast(address_i32 & 0xFFFF);
+}
+
+pub inline fn increment_r(self: *Z80) void {
+    // Increment memory register, but only the lower 7 bits
+    self.r = (self.r & 0x80) | ((self.r + 1) & 0x7F);
 }

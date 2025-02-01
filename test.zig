@@ -135,7 +135,7 @@ fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
         std.debug.print("0x{s} {s} =====> ", .{ prefix, main_opcode });
     }
     // Check for single prefix "dd" or "fd"
-    else if (std.mem.eql(u8, name[0..2], "dd") or std.mem.eql(u8, name[0..2], "fd")) {
+    else if (std.mem.eql(u8, name[0..2], "dd") or std.mem.eql(u8, name[0..2], "fd") or std.mem.eql(u8, name[0..2], "ed")) {
         // Ensure there's an opcode after the prefix
         if (name.len < 5) {
             std.debug.print("Incomplete opcode in filename: {s}\n", .{name});
@@ -257,7 +257,9 @@ fn loadState(z80: *Z80, state: State) void {
 
     z80.q = state.q;
 
-    z80.interrupts_enabled = state.iff1 != 0;
+    z80.iff1 = state.iff1 != 0;
+    z80.iff2 = state.iff2 != 0;
+    z80.i = state.i;
     z80.interrupt_mode = switch (state.im) {
         0 => .{ .zero = {} },
         1 => .{ .one = {} },
@@ -330,7 +332,9 @@ fn validateState(z80: Z80, state: State, al: std.mem.Allocator, failures: *std.A
 
     try checkEquals(u8, al, failures, "q", z80.q, state.q);
 
-    try checkEquals(bool, al, failures, "interrupts_enabled", z80.interrupts_enabled, (state.iff1 != 0));
+    try checkEquals(bool, al, failures, "interrupts_enabled 1", z80.iff1, (state.iff1 != 0));
+    try checkEquals(bool, al, failures, "interrupts_enabled 2", z80.iff2, (state.iff2 != 0));
+    try checkEquals(u8, al, failures, "i", z80.i, state.i);
     const expected_interrupt_mode: Z80.InterruptMode = switch (state.im) {
         0 => Z80.InterruptMode{ .zero = {} },
         1 => Z80.InterruptMode{ .one = {} },
