@@ -67,7 +67,13 @@ pub fn in_H(self: *Z80) !void {
 pub fn in_L(self: *Z80) !void {
     self.register.l = in_reg(self, self.register.l);
 }
-
+pub fn in_A(self: *Z80) !void {
+    self.register.a = in_reg(self, self.register.a);
+}
+// Inputs a byte from the port at the 16-bit address contained in the BC register pair and affects flags only.
+pub fn in_BC(self: *Z80) !void {
+    _ = in_reg(self, self.register.b);
+}
 fn out_reg(self: *Z80, reg: u8) void {
     const data = self.memory[self.pc];
     const port = Z80.toUint16(reg, data);
@@ -97,4 +103,16 @@ pub fn out_H(self: *Z80) !void {
 }
 pub fn out_L(self: *Z80) !void {
     out_reg(self, self.register.l);
+}
+pub fn out_A(self: *Z80) !void {
+    out_reg(self, self.register.a);
+}
+
+pub fn out_BC(self: *Z80) !void {
+    // For NMOS Z80 (used in ColecoVision), output 0
+    try self.hardware.out(@intCast(self.register.c), 0);
+
+    self.wz = Z80.toUint16(self.register.b, self.register.c) +% 1;
+    self.cycle_count += 12;
+    self.q = 0;
 }

@@ -41,6 +41,20 @@ pub fn load_HL_nn(self: *Z80) !void {
     try store_pair_to_nn(self, self.register.h, self.register.l);
 }
 
+// Stores SP into the memory location pointed to by nn.
+pub fn load_SP_nn(self: *Z80) !void {
+    const data = try self.fetchData(2);
+    const nn = Z80.toUint16(data[1], data[0]);
+
+    // Store SP into memory location nn (low byte) and nn+1 (high byte)
+    self.memory[nn] = @truncate(self.sp & 0xFF); // Low byte
+    self.memory[nn +% 1] = @truncate(self.sp >> 8); // High byte
+
+    self.wz = nn +% 1;
+    self.cycle_count += 20;
+    self.q = 0;
+}
+
 // Loads the value pointed to by nn into BC.
 pub fn load_nn_BC(self: *Z80) !void {
     const data = try self.fetchData(2);
@@ -83,6 +97,20 @@ pub fn load_nn_HL(self: *Z80) !void {
     // Set WZ to nn+1
     self.wz = nn +% 1;
 
+    self.cycle_count += 20;
+    self.q = 0;
+}
+
+pub fn load_nn_SP(self: *Z80) !void {
+    const data = try self.fetchData(2);
+    const nn = Z80.toUint16(data[1], data[0]);
+
+    // Load SP from memory location nn (low byte) and nn+1 (high byte)
+    const low = self.memory[nn];
+    const high = self.memory[nn +% 1];
+    self.sp = Z80.toUint16(high, low);
+
+    self.wz = nn +% 1;
     self.cycle_count += 20;
     self.q = 0;
 }

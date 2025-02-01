@@ -234,6 +234,11 @@ pub fn sbc_HL_HL(self: *Z80) !void {
     sbc_HL(self, hl);
 }
 
+pub fn sbc_HL_SP(self: *Z80) !void {
+    const sp = self.sp;
+    sbc_HL(self, sp);
+}
+
 // Helper function for flag setting
 fn sbc_hl_flags(self: *Z80, hl: u16, pair: u16, result: u16) void {
     // Sign flag: set if result is negative (bit 15 is 1)
@@ -299,6 +304,11 @@ pub fn adc_HL_DE(self: *Z80) !void {
 pub fn adc_HL_HL(self: *Z80) !void {
     const hl = self.getHL();
     adc_HL(self, hl);
+}
+
+pub fn adc_HL_SP(self: *Z80) !void {
+    const sp = self.sp;
+    adc_HL(self, sp);
 }
 
 fn adc_hl_flags(self: *Z80, hl: u16, pair: u16, result: u16) void {

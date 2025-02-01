@@ -15,6 +15,7 @@ const ri = @import("return_instr.zig");
 const ix = @import("idx_instr.zig");
 const si = @import("shift_instr.zig");
 const io = @import("io_instr.zig");
+const bl = @import("block_instr.zig");
 
 const bitTest = @import("bit_test_instr.zig").bitTest;
 const bitSetReset = @import("bit_test_instr.zig").bitSetReset;
@@ -95,11 +96,11 @@ const MiscOpcodeTable = [256]?OpcodeHandler{
     io.in_B, io.out_B, rpi.sbc_HL_BC, dti.load_BC_nn, ai.neg, retn, im0, load_I_A, io.in_C, io.out_C, rpi.adc_HL_BC, dti.load_nn_BC, ai.neg, reti, im0, li.load_A_R, // 40 - 4F
     io.in_D, io.out_D, rpi.sbc_HL_DE, dti.load_DE_nn, ai.neg, retn, im1, load_A_I, io.in_E, io.out_E, rpi.adc_HL_DE, dti.load_nn_DE, ai.neg, reti, im2, li.load_R_A, // 50 - 5F
     io.in_H, io.out_H, rpi.sbc_HL_HL, dti.load_HL_nn, ai.neg, retn, im0, li.rrd, io.in_L, io.out_L, rpi.adc_HL_HL, dti.load_nn_HL, ai.neg, reti, im0, li.rld, // 60 - 6F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 70 - 7F
+    io.in_BC, io.out_BC, rpi.sbc_HL_SP, dti.load_SP_nn, ai.neg, retn, im1, nop, io.in_A, io.out_A, rpi.adc_HL_SP, dti.load_nn_SP, ai.neg, reti, im2, dti.move_AA, // 70 - 7F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 80 - 8F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 90 - 9F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // A0 - AF
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // B0 - BF
+    bl.ldi, bl.cpi, bl.ini, bl.outi, null, null, null, null, bl.ldd, bl.cpd, bl.ind, bl.outd, null, null, null, null, // A0 - AF
+    bl.ldir, bl.cpir, bl.inir, bl.otir, null, null, null, null, bl.lddr, bl.cpdr, bl.indr, bl.otdr, null, null, null, null, // B0 - BF
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // C0 - CF
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // D0 - DF
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // E0 - EF
