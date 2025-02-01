@@ -92,9 +92,9 @@ const MiscOpcodeTable = [256]?OpcodeHandler{
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 10 - 1F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 20 - 2F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 30 - 3F
-    io.in_B, io.out_B, rpi.sbc_HL_BC, dti.load_BC_nn, ai.neg, retn, im0, load_I, io.in_C, io.out_C, rpi.adc_HL_BC, dti.load_nn_BC, ai.neg, reti, im0, li.load_A_R, // 40 - 4F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 50 - 5F
-    null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 60 - 6F
+    io.in_B, io.out_B, rpi.sbc_HL_BC, dti.load_BC_nn, ai.neg, retn, im0, load_I_A, io.in_C, io.out_C, rpi.adc_HL_BC, dti.load_nn_BC, ai.neg, reti, im0, li.load_A_R, // 40 - 4F
+    io.in_D, io.out_D, rpi.sbc_HL_DE, dti.load_DE_nn, ai.neg, retn, im1, load_A_I, io.in_E, io.out_E, rpi.adc_HL_DE, dti.load_nn_DE, ai.neg, reti, im2, li.load_R_A, // 50 - 5F
+    io.in_H, io.out_H, rpi.sbc_HL_HL, dti.load_HL_nn, ai.neg, retn, im0, li.rrd, io.in_L, io.out_L, rpi.adc_HL_HL, dti.load_nn_HL, ai.neg, reti, im0, li.rld, // 60 - 6F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 70 - 7F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 80 - 8F
     null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, null, // 90 - 9F
@@ -305,9 +305,36 @@ fn im0(self: *Z80) !void {
     self.q = 0;
 }
 
+fn im1(self: *Z80) !void {
+    self.interrupt_mode = .{ .one = {} };
+    self.cycle_count += 8;
+    self.q = 0;
+}
+
+fn im2(self: *Z80) !void {
+    self.interrupt_mode = .{ .two = {} };
+    self.cycle_count += 8;
+    self.q = 0;
+}
+
 // Stores the value of A into register I.
-fn load_I(self: *Z80) !void {
+fn load_I_A(self: *Z80) !void {
     self.i = self.register.a;
     self.cycle_count += 9;
     self.q = 0;
+}
+
+fn load_A_I(self: *Z80) !void {
+    self.register.a = self.i;
+
+    self.flag.add_subtract = false;
+    self.flag.half_carry = false;
+    self.flag.zero = self.register.a == 0;
+    self.flag.sign = self.register.a & 0x80 != 0;
+    self.flag.setUndocumentedFlags(self.register.a);
+
+    self.flag.parity_overflow = self.iff2;
+
+    self.cycle_count += 9;
+    self.q = self.flag.toByte();
 }

@@ -14,15 +14,31 @@ pub fn stax_B(self: *Z80) !void {
     self.q = 0;
 }
 
-// Stores BC into the memory location pointed to by nn.
-pub fn load_BC_nn(self: *Z80) !void {
+fn store_pair_to_nn(self: *Z80, high: u8, low: u8) !void {
     const data = try self.fetchData(2);
     const nn = Z80.toUint16(data[1], data[0]);
-    self.memory[nn + 1] = self.register.b;
-    self.memory[nn] = self.register.c;
+
+    self.memory[nn + 1] = high;
+    self.memory[nn] = low;
+
     self.wz = nn +% 1;
     self.cycle_count += 20;
     self.q = 0;
+}
+
+// Stores BC into the memory location pointed to by nn.
+pub fn load_BC_nn(self: *Z80) !void {
+    try store_pair_to_nn(self, self.register.b, self.register.c);
+}
+
+// Stores DE into the memory location pointed to by nn.
+pub fn load_DE_nn(self: *Z80) !void {
+    try store_pair_to_nn(self, self.register.d, self.register.e);
+}
+
+// Stores HL into the memory location pointed to by nn.
+pub fn load_HL_nn(self: *Z80) !void {
+    try store_pair_to_nn(self, self.register.h, self.register.l);
 }
 
 // Loads the value pointed to by nn into BC.
@@ -33,6 +49,36 @@ pub fn load_nn_BC(self: *Z80) !void {
     // Load BC from memory location nn (low byte) and nn+1 (high byte)
     self.register.c = self.memory[nn];
     self.register.b = self.memory[nn +% 1];
+
+    // Set WZ to nn+1
+    self.wz = nn +% 1;
+
+    self.cycle_count += 20;
+    self.q = 0;
+}
+
+pub fn load_nn_DE(self: *Z80) !void {
+    const data = try self.fetchData(2);
+    const nn = Z80.toUint16(data[1], data[0]);
+
+    // Load DE from memory location nn (low byte) and nn+1 (high byte)
+    self.register.e = self.memory[nn];
+    self.register.d = self.memory[nn +% 1];
+
+    // Set WZ to nn+1
+    self.wz = nn +% 1;
+
+    self.cycle_count += 20;
+    self.q = 0;
+}
+
+pub fn load_nn_HL(self: *Z80) !void {
+    const data = try self.fetchData(2);
+    const nn = Z80.toUint16(data[1], data[0]);
+
+    // Load HL from memory location nn (low byte) and nn+1 (high byte)
+    self.register.l = self.memory[nn];
+    self.register.h = self.memory[nn +% 1];
 
     // Set WZ to nn+1
     self.wz = nn +% 1;

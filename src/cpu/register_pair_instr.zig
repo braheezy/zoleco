@@ -199,15 +199,13 @@ pub fn load_IX_SP(self: *Z80) !void {
     self.q = 0;
 }
 
-// Subtracts BC and the carry flag from HL.
-pub fn sbc_HL_BC(self: *Z80) !void {
+fn sbc_HL(self: *Z80, pair: u16) void {
     const hl = self.getHL();
-    const bc = Z80.toUint16(self.register.b, self.register.c);
     const carry: u16 = if (self.flag.carry) 1 else 0;
-    const result = hl -% bc -% carry;
+    const result = hl -% pair -% carry;
 
     // Set flags
-    sbc_hl_flags(self, hl, bc, result);
+    sbc_hl_flags(self, hl, pair, result);
 
     // Store result
     self.register.h = @truncate((result & 0xFF00) >> 8);
@@ -218,7 +216,26 @@ pub fn sbc_HL_BC(self: *Z80) !void {
 
     self.cycle_count += 15;
 }
-fn sbc_hl_flags(self: *Z80, hl: u16, bc: u16, result: u16) void {
+
+// Subtracts BC and the carry flag from HL.
+pub fn sbc_HL_BC(self: *Z80) !void {
+    const bc = Z80.toUint16(self.register.b, self.register.c);
+    sbc_HL(self, bc);
+}
+
+// Subtracts DE and the carry flag from HL.
+pub fn sbc_HL_DE(self: *Z80) !void {
+    const de = Z80.toUint16(self.register.d, self.register.e);
+    sbc_HL(self, de);
+}
+
+pub fn sbc_HL_HL(self: *Z80) !void {
+    const hl = self.getHL();
+    sbc_HL(self, hl);
+}
+
+// Helper function for flag setting
+fn sbc_hl_flags(self: *Z80, hl: u16, pair: u16, result: u16) void {
     // Sign flag: set if result is negative (bit 15 is 1)
     self.flag.sign = (result & 0x8000) != 0;
 
@@ -226,16 +243,16 @@ fn sbc_hl_flags(self: *Z80, hl: u16, bc: u16, result: u16) void {
     self.flag.zero = result == 0;
 
     // Half carry: set if borrow from bit 12
-    self.flag.half_carry = ((@as(i32, hl) & 0xFFF) - (@as(i32, bc) & 0xFFF) - @as(i32, if (self.flag.carry) 1 else 0)) < 0;
+    self.flag.half_carry = ((@as(i32, hl) & 0xFFF) - (@as(i32, pair) & 0xFFF) - @as(i32, if (self.flag.carry) 1 else 0)) < 0;
 
     // Overflow: set if sign of result differs from sign of original when subtracting from same sign
     const sign_hl = (hl & 0x8000) != 0;
-    const sign_bc = (bc & 0x8000) != 0;
+    const sign_pair = (pair & 0x8000) != 0;
     const sign_result = (result & 0x8000) != 0;
-    self.flag.parity_overflow = (sign_hl != sign_bc) and (sign_hl != sign_result);
+    self.flag.parity_overflow = (sign_hl != sign_pair) and (sign_hl != sign_result);
 
     // Carry: set if result is negative in unsigned arithmetic
-    self.flag.carry = (@as(i32, hl) - @as(i32, bc) - @as(i32, if (self.flag.carry) 1 else 0)) < 0;
+    self.flag.carry = (@as(i32, hl) - @as(i32, pair) - @as(i32, if (self.flag.carry) 1 else 0)) < 0;
 
     // Add/subtract: always set for subtraction
     self.flag.add_subtract = true;
@@ -249,15 +266,13 @@ fn sbc_hl_flags(self: *Z80, hl: u16, bc: u16, result: u16) void {
     self.q = self.flag.toByte();
 }
 
-// Adds BC and the carry flag to HL.
-pub fn adc_HL_BC(self: *Z80) !void {
+fn adc_HL(self: *Z80, pair: u16) void {
     const hl = self.getHL();
-    const bc = Z80.toUint16(self.register.b, self.register.c);
     const carry: u16 = if (self.flag.carry) 1 else 0;
-    const result = hl +% bc +% carry;
+    const result = hl +% pair +% carry;
 
     // Set flags
-    adc_hl_flags(self, hl, bc, result);
+    adc_hl_flags(self, hl, pair, result);
 
     // Store result
     self.register.h = @truncate((result & 0xFF00) >> 8);
@@ -268,7 +283,25 @@ pub fn adc_HL_BC(self: *Z80) !void {
 
     self.cycle_count += 15;
 }
-fn adc_hl_flags(self: *Z80, hl: u16, bc: u16, result: u16) void {
+
+// Adds BC and the carry flag to HL.
+pub fn adc_HL_BC(self: *Z80) !void {
+    const bc = Z80.toUint16(self.register.b, self.register.c);
+    adc_HL(self, bc);
+}
+
+// Adds DE and the carry flag to HL.
+pub fn adc_HL_DE(self: *Z80) !void {
+    const de = Z80.toUint16(self.register.d, self.register.e);
+    adc_HL(self, de);
+}
+
+pub fn adc_HL_HL(self: *Z80) !void {
+    const hl = self.getHL();
+    adc_HL(self, hl);
+}
+
+fn adc_hl_flags(self: *Z80, hl: u16, pair: u16, result: u16) void {
     // Sign flag: set if result is negative (bit 15 is 1)
     self.flag.sign = (result & 0x8000) != 0;
 
@@ -276,18 +309,18 @@ fn adc_hl_flags(self: *Z80, hl: u16, bc: u16, result: u16) void {
     self.flag.zero = result == 0;
 
     // Half carry: set if borrow from bit 12
-    self.flag.half_carry = ((@as(i32, hl) & 0xFFF) + (@as(i32, bc) & 0xFFF) + @as(i32, if (self.flag.carry) 1 else 0)) > 0x0FFF;
+    self.flag.half_carry = ((@as(i32, hl) & 0xFFF) + (@as(i32, pair) & 0xFFF) + @as(i32, if (self.flag.carry) 1 else 0)) > 0x0FFF;
 
     // Overflow: set if sign of result differs from sign of operands when adding numbers with same sign
     const sign_hl = (hl & 0x8000) != 0;
-    const sign_bc = (bc & 0x8000) != 0;
+    const sign_pair = (pair & 0x8000) != 0;
     const sign_result = (result & 0x8000) != 0;
-    self.flag.parity_overflow = (sign_hl == sign_bc) and (sign_hl != sign_result);
+    self.flag.parity_overflow = (sign_hl == sign_pair) and (sign_hl != sign_result);
 
     // Carry: set if result is negative in unsigned arithmetic
-    self.flag.carry = (@as(i32, hl) + @as(i32, bc) + @as(i32, if (self.flag.carry) 1 else 0)) > 0xFFFF;
+    self.flag.carry = (@as(i32, hl) + @as(i32, pair) + @as(i32, if (self.flag.carry) 1 else 0)) > 0xFFFF;
 
-    // Add/subtract: always set for subtraction
+    // Add/subtract: always clear for addition
     self.flag.add_subtract = false;
 
     // X flag: copy of bit 11 of result
