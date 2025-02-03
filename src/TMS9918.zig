@@ -68,7 +68,7 @@ const sprite_attr_bytes = 4;
 const last_sprite_y_pos = 0xD0;
 const max_scanline_sprites = 4;
 
-const status_int = 0x80;
+const status_int: u8 = 0x80;
 const status_5s = 0x40;
 const status_col = 0x20;
 
@@ -141,12 +141,13 @@ mode: Mode,
 vram: []u8 = undefined,
 // collision mask
 row_sprite_bits: [pixels_x]u8,
+// framebuffer
+framebuffer: [pixels_x * pixels_y * 3]u8,
 
 // create a new TMS9918 instance. Call free() to clean up.
 pub fn init(al: std.mem.Allocator) !*TMS9918 {
     const emu = try al.create(TMS9918);
     emu.vram = try al.alloc(u8, vram_size);
-    // emu.row_sprite_bits = try al.alloc(comptime T: type, n: usize)
     try emu.reset(al);
     return emu;
 }
@@ -449,4 +450,38 @@ pub fn colorTableAddress(self: *TMS9918) u16 {
     const reg = self.registers[@intFromEnum(Register.color_table)];
     const result: u16 = @as(u16, reg & mask) << 6;
     return result;
+}
+
+// Read data from VRAM at current address
+pub fn readData(self: *TMS9918) u8 {
+    self.reg_write_stage = 0;
+    const value = self.read_ahead_buffer;
+    self.read_ahead_buffer = self.vram[self.current_address & vram_mask];
+    self.current_address += 1;
+    return value;
+}
+
+// Read status register
+pub fn readStatus(self: *TMS9918) u8 {
+    self.reg_write_stage = 0;
+    const value = self.status;
+    // Reading status register clears interrupt flag
+    self.status &= ~status_int;
+    return value;
+}
+
+pub fn updateFrame(self: *TMS9918) !void {
+    var scanline = [_]u8{0} ** pixels_x;
+    var c: usize = 0;
+
+    for (0..pixels_y) |y| {
+        self.scanLine(@intCast(y), &scanline);
+        for (0..pixels_x) |x| {
+            const color = palette[scanline[x]];
+            self.framebuffer[c] = @intCast((color >> 24) & 0xFF); // R
+            self.framebuffer[c + 1] = @intCast((color >> 16) & 0xFF); // G
+            self.framebuffer[c + 2] = @intCast((color >> 8) & 0xFF); // B
+            c += 3;
+        }
+    }
 }

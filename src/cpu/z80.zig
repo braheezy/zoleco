@@ -176,6 +176,7 @@ pub fn step(self: *Z80) !void {
 
     // Fetch the opcode
     const opcode = self.memory[self.pc];
+    std.debug.print("opcode: {X}\n", .{opcode});
     // Move PC to the next byte
     self.pc +%= 1;
     self.increment_r();
@@ -220,13 +221,13 @@ pub fn runCycles(self: *Z80, cycle_count: usize) !void {
     //  slow down or speed up accordingly to hardware-specific info
 
     while (self.cycle_count < cycle_count) {
-        if (self.interrupts_enabled) {
+        if (self.iff1 or self.iff2) {
             // TODO: do interrupt handling
             std.debug.print("interrupts enabled\n", .{});
         }
 
         // fetch and execute next instruction
-        self.step();
+        try self.step();
 
         if (self.pc >= self.memory.len) {
             return error.OutOfBounds;

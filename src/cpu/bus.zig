@@ -12,13 +12,17 @@ pub const IODevice = struct {
     /// Creates an IODevice instance for a given device type T
     pub fn init(
         context: anytype,
-        comptime in_func: fn (context: @TypeOf(context), port: u16) u8,
-        comptime out_func: fn (context: @TypeOf(context), port: u16, value: u8) void,
+        comptime in_fn: fn (@TypeOf(context), port: u16) u8,
+        comptime out_fn: fn (@TypeOf(context), port: u16, value: u8) void,
     ) IODevice {
+        const Ptr = @TypeOf(context);
+        const ptr_info = @typeInfo(Ptr);
+        if (ptr_info != .Pointer) @compileError("context must be a pointer");
+
         return .{
-            .context = @ptrCast(context),
-            .in_fn = @ptrCast(&in_func),
-            .out_fn = @ptrCast(&out_func),
+            .context = context,
+            .in_fn = @ptrCast(&in_fn),
+            .out_fn = @ptrCast(&out_fn),
         };
     }
 

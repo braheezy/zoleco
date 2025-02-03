@@ -29,31 +29,31 @@ pub fn build(b: *std.Build) !void {
     try modules.put("raygui", raygui);
 
     // Create main executable
-    // const exe = b.addExecutable(.{
-    //     .name = "colecovision",
-    //     .root_source_file = b.path("src/main.zig"),
-    //     .target = target,
-    //     .optimize = optimize,
-    // });
-    // exe.linkLibrary(raylib_artifact);
-    // b.installArtifact(exe);
+    const exe = b.addExecutable(.{
+        .name = "colecovision",
+        .root_source_file = b.path("src/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.linkLibrary(raylib_artifact);
+    b.installArtifact(exe);
 
     // Create non-install compile step for code editors to check
     const exe_check = b.addExecutable(.{
         .name = "check",
-        .root_source_file = b.path("examples/tms9918_viewer/main.zig"),
+        .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
     exe_check.linkLibrary(raylib_artifact);
 
-    addModulesToExe(exe_check, modules, &[_][]const u8{"tms9918"});
-    // addModulesToExe(exe, modules, &[_][]const u8{ "SN76489", "z80", "tms9918" });
+    addModulesToExe(exe_check, modules, &[_][]const u8{ "SN76489", "z80", "tms9918" });
+    addModulesToExe(exe, modules, &[_][]const u8{ "SN76489", "z80", "tms9918" });
 
     const check = b.step("check", "Check if it compiles");
     check.dependOn(&exe_check.step);
 
-    // defineRun(b, exe);
+    defineRun(b, exe);
     try defineCpuTest(b, target, optimize, modules);
     defineExamples(b, target, optimize, modules, raylib_artifact);
 }

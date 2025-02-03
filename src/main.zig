@@ -1,0 +1,64 @@
+const std = @import("std");
+const ColecoVisionEmulator = @import("colecovision.zig");
+
+// Embed the default ROM
+const default_rom = @embedFile("roms/hello.rom");
+
+const usage =
+    \\ColecoVision Emulator
+    \\
+    \\Usage: colecovision [options] [rom_path]
+    \\
+    \\Options:
+    \\  -h, --help    Print this help message
+    \\
+    \\Arguments:
+    \\  rom_path      Path to ROM file (optional, defaults to built-in hello.rom)
+    \\
+;
+
+pub fn main() !void {
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer if (gpa.deinit() == .leak) {
+        std.process.exit(1);
+    };
+    const allocator = gpa.allocator();
+
+    // Get command line arguments
+    const args = try std.process.argsAlloc(allocator);
+    defer std.process.argsFree(allocator, args);
+
+    // Handle help flag
+    if (args.len > 1) {
+        const arg = args[1];
+        if (std.mem.eql(u8, arg, "-h") or std.mem.eql(u8, arg, "--help")) {
+            try std.io.getStdOut().writeAll(usage);
+            return;
+        }
+    }
+
+    // Initialize emulator
+    var emu = try ColecoVisionEmulator.init(allocator);
+    defer emu.deinit();
+
+    // Load BIOS
+    try emu.loadBios();
+
+    // Load ROM (either from file or default)
+    if (args.len > 1) {
+        // Load ROM from file
+        const rom_path = args[1];
+        const rom_data = try std.fs.cwd().readFileAlloc(allocator, rom_path, 1024 * 1024); // 1MB max
+        defer allocator.free(rom_data);
+        try emu.loadRom(rom_data);
+    } else {
+        // Load default ROM
+        try emu.loadRom(default_rom);
+    }
+
+    // Main emulation loop
+    while (true) {
+        try emu.runFrame();
+        // TODO: Add display/input handling
+    }
+}
