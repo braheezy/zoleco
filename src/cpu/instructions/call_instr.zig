@@ -1,5 +1,5 @@
 const std = @import("std");
-const Z80 = @import("Z80.zig");
+const Z80 = @import("../Z80.zig");
 const rpi = @import("register_pair_instr.zig");
 
 fn _call(self: *Z80, jump_address: u16) void {

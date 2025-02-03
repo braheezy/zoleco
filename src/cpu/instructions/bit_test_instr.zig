@@ -1,7 +1,7 @@
 const std = @import("std");
-const Z80 = @import("Z80.zig");
+const Z80 = @import("../Z80.zig");
 
-const getHighByte = @import("opcode.zig").getHighByte;
+const getHighByte = @import("util.zig").getHighByte;
 
 fn bitTestFlags(self: *Z80, value: u8, bit_index: u3, xy_src: u8, reg_index: u3) void {
     const mask = @as(u8, 1) << bit_index;

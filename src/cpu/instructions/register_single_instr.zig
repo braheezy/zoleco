@@ -1,5 +1,5 @@
 const std = @import("std");
-const Z80 = @import("Z80.zig");
+const Z80 = @import("../Z80.zig");
 
 // increment helper
 pub fn inc(self: *Z80, data: u8) u8 {

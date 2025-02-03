@@ -1,5 +1,5 @@
 const std = @import("std");
-const Z80 = @import("Z80.zig");
+const Z80 = @import("../Z80.zig");
 
 // MVI A, D8: Move 8-bit immediate value into accumulator.
 pub fn moveImm_A(self: *Z80) !void {

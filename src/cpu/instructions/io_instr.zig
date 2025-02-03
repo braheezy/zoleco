@@ -1,5 +1,5 @@
 const std = @import("std");
-const Z80 = @import("Z80.zig");
+const Z80 = @import("../Z80.zig");
 
 // Combine A (high bits) with immediate port_lo (low bits),
 // then take only as many bits as needed, e.g. 8-bit port.

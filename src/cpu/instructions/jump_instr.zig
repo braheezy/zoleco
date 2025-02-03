@@ -1,5 +1,5 @@
 const std = @import("std");
-const Z80 = @import("Z80.zig");
+const Z80 = @import("../Z80.zig");
 
 pub fn jump(self: *Z80) !void {
     const data = try self.fetchData(2);

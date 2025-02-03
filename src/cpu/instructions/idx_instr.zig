@@ -1,5 +1,5 @@
 const std = @import("std");
-const Z80 = @import("Z80.zig");
+const Z80 = @import("../Z80.zig");
 
 const _inc = @import("register_single_instr.zig").inc;
 const _dcr = @import("register_single_instr.zig").dcr;
@@ -12,8 +12,8 @@ const xra = @import("accumulator_instr.zig").xra;
 const ora = @import("accumulator_instr.zig").ora;
 const compare = @import("accumulator_instr.zig").compare;
 
-const getHighByte = @import("opcode.zig").getHighByte;
-const getLowByte = @import("opcode.zig").getLowByte;
+const getHighByte = @import("util.zig").getHighByte;
+const getLowByte = @import("util.zig").getLowByte;
 
 fn setHighByte(high_byte: u8, target: u16) u16 {
     return (@as(u16, high_byte) << 8) | getLowByte(target);

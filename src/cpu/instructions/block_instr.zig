@@ -1,8 +1,8 @@
 const std = @import("std");
-const Z80 = @import("Z80.zig");
+const Z80 = @import("../Z80.zig");
 
-const getHighByte = @import("opcode.zig").getHighByte;
-const getLowByte = @import("opcode.zig").getLowByte;
+const getHighByte = @import("util.zig").getHighByte;
+const getLowByte = @import("util.zig").getLowByte;
 
 // Helper functions for register pairs
 fn getHL(self: *Z80) u16 {

@@ -1,5 +1,5 @@
 const std = @import("std");
-const Z80 = @import("Z80.zig");
+const Z80 = @import("../Z80.zig");
 
 // RLC: Rotate accumulator left. The Carry bit is set equal to the high-order
 // bit of the accumulator. The contents of the accumulator are rotated one bit

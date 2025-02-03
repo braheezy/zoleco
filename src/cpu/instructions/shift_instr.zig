@@ -1,5 +1,5 @@
 const std = @import("std");
-const Z80 = @import("Z80.zig");
+const Z80 = @import("../Z80.zig");
 
 fn setShiftFlags(self: *Z80, val: u8, carry_out: bool) void {
     self.flag.carry = carry_out;

@@ -1,8 +1,8 @@
 const std = @import("std");
-const Z80 = @import("Z80.zig");
+const Z80 = @import("../Z80.zig");
 
-const getHighByte = @import("opcode.zig").getHighByte;
-const getLowByte = @import("opcode.zig").getLowByte;
+const getHighByte = @import("util.zig").getHighByte;
+const getLowByte = @import("util.zig").getLowByte;
 
 // increment pair helper
 pub fn inx(self: *Z80, reg1: u8, reg2: u8) struct { u8, u8 } {

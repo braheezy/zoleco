@@ -1,10 +1,8 @@
 const std = @import("std");
-const Z80 = @import("Z80.zig");
+const Z80 = @import("../Z80.zig");
 
-const getHighByte = @import("opcode.zig").getHighByte;
-const getLowByte = @import("opcode.zig").getLowByte;
-
-const OpcodeTable = @import("opcode.zig").OpcodeTable;
+const getHighByte = @import("util.zig").getHighByte;
+const getLowByte = @import("util.zig").getLowByte;
 
 // The 2-byte contents of register pairs DE and HL are exchanged.
 pub fn ex_M_HL(self: *Z80) !void {

@@ -1,5 +1,5 @@
 const std = @import("std");
-const Z80 = @import("Z80.zig");
+const Z80 = @import("../Z80.zig");
 
 // STAX B: Store accumulator in 16-bit immediate address pointed to by register pair BC
 pub fn stax_B(self: *Z80) !void {

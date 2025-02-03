@@ -1,5 +1,5 @@
 const std = @import("std");
-const Z80 = @import("Z80.zig");
+const Z80 = @import("../Z80.zig");
 
 fn detectOverflow(a: u8, b: u8, result: u8) bool {
     // Overflow occurs if a and b have the same sign but the result has a different sign

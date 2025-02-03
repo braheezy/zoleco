@@ -1,5 +1,5 @@
 const std = @import("std");
-const Z80 = @import("Z80.zig");
+const Z80 = @import("../Z80.zig");
 
 // SHLD A16: Store register pair HL into 16-bit immediate address.
 pub fn store_HL(self: *Z80) !void {

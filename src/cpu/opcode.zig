@@ -1,32 +1,24 @@
 const std = @import("std");
 const Z80 = @import("Z80.zig");
 
-const li = @import("load_instr.zig");
-const ci = @import("call_instr.zig");
-const ji = @import("jump_instr.zig");
-const immi = @import("immediate_instr.zig");
-const dti = @import("data_transfer_instr.zig");
-const rpi = @import("register_pair_instr.zig");
-const rai = @import("rotate_instr.zig");
-const rsi = @import("register_single_instr.zig");
-const dai = @import("direct_address_instr.zig");
-const ai = @import("accumulator_instr.zig");
-const ri = @import("return_instr.zig");
-const ix = @import("idx_instr.zig");
-const si = @import("shift_instr.zig");
-const io = @import("io_instr.zig");
-const bl = @import("block_instr.zig");
+const li = @import("instructions/load_instr.zig");
+const ci = @import("instructions/call_instr.zig");
+const ji = @import("instructions/jump_instr.zig");
+const immi = @import("instructions/immediate_instr.zig");
+const dti = @import("instructions/data_transfer_instr.zig");
+const rpi = @import("instructions/register_pair_instr.zig");
+const rai = @import("instructions/rotate_instr.zig");
+const rsi = @import("instructions/register_single_instr.zig");
+const dai = @import("instructions/direct_address_instr.zig");
+const ai = @import("instructions/accumulator_instr.zig");
+const ri = @import("instructions/return_instr.zig");
+const ix = @import("instructions/idx_instr.zig");
+const si = @import("instructions/shift_instr.zig");
+const io = @import("instructions/io_instr.zig");
+const bl = @import("instructions/block_instr.zig");
 
-const bitTest = @import("bit_test_instr.zig").bitTest;
-const bitSetReset = @import("bit_test_instr.zig").bitSetReset;
-
-pub fn getHighByte(value: u16) u8 {
-    return @intCast(value >> 8);
-}
-
-pub fn getLowByte(value: u16) u8 {
-    return @intCast(value & 0xFF);
-}
+const bitTest = @import("instructions/bit_test_instr.zig").bitTest;
+const bitSetReset = @import("instructions/bit_test_instr.zig").bitSetReset;
 
 const OpError = error{OutOfBoundsMemory};
 
