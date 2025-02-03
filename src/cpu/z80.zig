@@ -1,6 +1,7 @@
 const std = @import("std");
 const OpcodeTable = @import("opcode.zig").OpcodeTable;
-const Hardware = @import("hardware.zig");
+const Bus = @import("bus.zig").Bus;
+
 const Z80 = @This();
 
 pub const Register = struct {
@@ -133,7 +134,7 @@ iff1: bool = false, // Main interrupt enable flag
 iff2: bool = false, // Backup interrupt enable flag
 i: u8 = 0, // interrupt vector
 halted: bool = false,
-hardware: Hardware = Hardware{},
+bus: *Bus,
 scratch: [2]u8 = [_]u8{0} ** 2,
 displacement: i8 = 0,
 // Q is a special flag to track flag state. used in 2 opcodes
@@ -141,11 +142,12 @@ displacement: i8 = 0,
 q: u8 = 0,
 wz: u16 = 0,
 
-pub fn init(al: std.mem.Allocator, rom_data: []const u8, start_address: u16) !Z80 {
+pub fn init(al: std.mem.Allocator, rom_data: []const u8, start_address: u16, bus: *Bus) !Z80 {
     const memory = try al.alloc(u8, 0x10000);
     var z80 = Z80{
         .memory = memory,
         .pc = start_address,
+        .bus = bus,
     };
     z80.zeroMemory();
 

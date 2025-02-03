@@ -1,7 +1,8 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
-const Z80 = @import("z80");
-const assets = @import("assets");
+const Z80 = @import("z80").Z80;
+const Bus = @import("z80").Bus;
+const IODevice = @import("z80").IODevice;
 
 const assert = std.testing.expect;
 
@@ -54,6 +55,21 @@ const Result = struct {
     successes: usize,
 };
 
+const TestDevice = struct {
+    in_test_data: u8 = 0,
+
+    fn in(self: *TestDevice, port: u16) u8 {
+        _ = port;
+        return self.in_test_data;
+    }
+
+    fn out(self: *TestDevice, port: u16, value: u8) void {
+        _ = self;
+        _ = port;
+        _ = value;
+    }
+};
+
 var has_failure = false;
 pub fn main() !void {
     // Memory allocation setup
@@ -79,7 +95,7 @@ pub fn main() !void {
         try processFile(single_test_file, allocator);
         std.process.exit(0);
     } else {
-        // Otherwise, iterate over all files in "tests" directory
+        // Otherwise, iterate over all files in "tests" directory, relative to this file
         var tests_dir = try cwd.openDir("tests", .{ .iterate = true });
         defer tests_dir.close();
 
@@ -112,19 +128,24 @@ fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
     defer opcodes.deinit();
 
     while (parts.next()) |part| {
-        try opcodes.append(part);
+        // Skip underscores as they represent displacement bytes
+        if (!std.mem.eql(u8, part, "__")) {
+            try opcodes.append(part);
+        }
     }
 
     // Print opcode info based on number of parts
     switch (opcodes.items.len) {
         1 => { // Single opcode like "00"
-            std.debug.print("0x{s} ========> ", .{opcodes.items[0]});
+            const arrow = if (opcodes.items[0].len == 3) "======>" else "=======>";
+            std.debug.print("0x{s} {s} ", .{ opcodes.items[0], arrow });
         },
         2 => { // Prefix + opcode like "dd 00"
-            std.debug.print("0x{s} {s} =====> ", .{ opcodes.items[0], opcodes.items[1] });
+            const arrow = if (opcodes.items[1].len == 3) "===>" else "====>";
+            std.debug.print("0x{s} {s} {s} ", .{ opcodes.items[0], opcodes.items[1], arrow });
         },
-        3 => { // Double prefix like "dd cb 00"
-            std.debug.print("0x{s} {s} {s} ==> ", .{ opcodes.items[0], opcodes.items[1], opcodes.items[2] });
+        3 => { // Double prefix like "dd cb 00" or "dd cb __ 00"
+            std.debug.print("0x{s} {s} {s} => ", .{ opcodes.items[0], opcodes.items[1], opcodes.items[2] });
         },
         else => {
             std.debug.print("Invalid opcode format in filename: {s}\n", .{name});
@@ -179,9 +200,24 @@ fn printResult(successes: usize, total: usize) void {
 fn runTest(al: std.mem.Allocator, t: TestCase, failures: *std.ArrayList([]const u8)) !bool {
     const memory = try al.alloc(u8, 0x10000);
     defer al.free(memory);
-    var z80 = Z80{ .memory = memory };
+
+    // Create bus and test device
+    var bus = Bus.init(al);
+    defer bus.deinit();
+
+    var test_device = TestDevice{
+        .in_test_data = t.in_test_data orelse 0,
+    };
+
+    try bus.addDevice(IODevice.init(
+        &test_device,
+        TestDevice.in,
+        TestDevice.out,
+    ));
+
+    var z80 = Z80{ .memory = memory, .bus = &bus };
     z80.zeroMemory();
-    z80.hardware.in_test_data = t.in_test_data orelse 0;
+    // z80.hardware.in_test_data = t.in_test_data orelse 0;
     loadState(&z80, t.initial);
 
     try z80.step();

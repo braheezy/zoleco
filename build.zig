@@ -19,7 +19,7 @@ pub fn build(b: *std.Build) !void {
 
     // Define our local modules
     const sn76489_mod = b.addModule("SN76489", .{ .root_source_file = b.path("src/SN76489.zig") });
-    const z80_mod = b.addModule("z80", .{ .root_source_file = b.path("src/cpu/Z80.zig") });
+    const z80_mod = b.addModule("z80", .{ .root_source_file = b.path("src/root.zig") });
     const tms9918_mod = b.addModule("tms9918", .{ .root_source_file = b.path("src/TMS9918.zig") });
 
     try modules.put("SN76489", sn76489_mod);
@@ -29,14 +29,14 @@ pub fn build(b: *std.Build) !void {
     try modules.put("raygui", raygui);
 
     // Create main executable
-    const exe = b.addExecutable(.{
-        .name = "colecovision",
-        .root_source_file = b.path("src/main.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    exe.linkLibrary(raylib_artifact);
-    b.installArtifact(exe);
+    // const exe = b.addExecutable(.{
+    //     .name = "colecovision",
+    //     .root_source_file = b.path("src/main.zig"),
+    //     .target = target,
+    //     .optimize = optimize,
+    // });
+    // exe.linkLibrary(raylib_artifact);
+    // b.installArtifact(exe);
 
     // Create non-install compile step for code editors to check
     const exe_check = b.addExecutable(.{
@@ -48,12 +48,12 @@ pub fn build(b: *std.Build) !void {
     exe_check.linkLibrary(raylib_artifact);
 
     addModulesToExe(exe_check, modules, &[_][]const u8{"tms9918"});
-    addModulesToExe(exe, modules, &[_][]const u8{ "SN76489", "z80", "tms9918" });
+    // addModulesToExe(exe, modules, &[_][]const u8{ "SN76489", "z80", "tms9918" });
 
     const check = b.step("check", "Check if it compiles");
     check.dependOn(&exe_check.step);
 
-    defineRun(b, exe);
+    // defineRun(b, exe);
     try defineCpuTest(b, target, optimize, modules);
     defineExamples(b, target, optimize, modules, raylib_artifact);
 }
@@ -75,28 +75,26 @@ fn defineCpuTest(
     modules: std.StringHashMap(*std.Build.Module),
 ) !void {
     _ = optimize;
-    const test_exe = b.addExecutable(.{
+    const cpu_test = b.addExecutable(.{
         .name = "cputest",
-        .root_source_file = b.path("test.zig"),
+        .root_source_file = b.path("examples/z80_tester/main.zig"),
         .target = target,
-        // to slow on debug to run all tests
         .optimize = .ReleaseSafe,
     });
 
-    addModulesToExe(test_exe, modules, &[_][]const u8{"z80"});
-
-    b.installArtifact(test_exe);
-
-    const test_cmd = b.addRunArtifact(test_exe);
-
-    // This allows the user to pass arguments to the application in the build
-    // command itself, like this: `zig build run -- arg1 arg2 etc`
-    if (b.args) |args| {
-        test_cmd.addArgs(args);
-    }
+    addModulesToExe(cpu_test, modules, &[_][]const u8{"z80"});
 
     const test_step = b.step("cputest", "Run cpu tests");
-    test_step.dependOn(&test_cmd.step);
+    const run_test = b.addRunArtifact(cpu_test);
+
+    // Set the working directory to the z80_tester directory
+    run_test.cwd = .{ .cwd_relative = b.pathFromRoot("examples/z80_tester") };
+
+    if (b.args) |args| {
+        run_test.addArgs(args);
+    }
+
+    test_step.dependOn(&run_test.step);
 }
 
 // Helper function for adding modules selectively
@@ -127,15 +125,6 @@ fn defineExamples(
     addModulesToExe(vgm_player_exe, modules, &[_][]const u8{ "SN76489", "raylib" });
     vgm_player_exe.linkLibrary(raylib_artifact);
     b.installArtifact(vgm_player_exe);
-
-    const z80_disassembler_exe = b.addExecutable(.{
-        .name = "z80_disassembler",
-        .root_source_file = b.path("examples/z80_disassembler/main.zig"),
-        .target = target,
-        .optimize = optimize,
-    });
-    addModulesToExe(z80_disassembler_exe, modules, &[_][]const u8{"z80"});
-    b.installArtifact(z80_disassembler_exe);
 
     const tms9918_viewer_exe = b.addExecutable(.{
         .name = "tms9918_viewer",

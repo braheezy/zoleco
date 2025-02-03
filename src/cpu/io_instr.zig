@@ -10,7 +10,7 @@ pub fn out(self: *Z80) !void {
 
     self.wz = (@as(u16, self.register.a) << 8) | (@as(u16, actual_port +% 1));
 
-    try self.hardware.out(actual_port, self.register.a);
+    try self.bus.out(actual_port, self.register.a);
     self.q = 0;
     self.cycle_count += 11;
 }
@@ -20,7 +20,7 @@ pub fn in(self: *Z80) !void {
     const port = Z80.toUint16(self.register.a, data[0]);
     const actual_port: u8 = @intCast(port & 0xFF);
 
-    const value = try self.hardware.in(actual_port);
+    const value = try self.bus.in(actual_port);
     self.register.a = value;
 
     self.wz = port +% 1;
@@ -34,7 +34,7 @@ fn in_reg(self: *Z80, reg: u8) u8 {
     const actual_port: u8 = @intCast(port & 0xFF);
     self.wz = Z80.toUint16(self.register.b, self.register.c) +% 1;
 
-    const value = try self.hardware.in(actual_port);
+    const value = try self.bus.in(actual_port);
 
     self.flag.half_carry = false;
     self.flag.add_subtract = false;
@@ -79,7 +79,7 @@ fn out_reg(self: *Z80, reg: u8) void {
     const port = Z80.toUint16(reg, data);
     const actual_port: u8 = @intCast(port & 0xFF);
 
-    try self.hardware.out(actual_port, reg);
+    try self.bus.out(actual_port, reg);
     self.wz = Z80.toUint16(self.register.b, self.register.c) +% 1;
     self.q = 0;
     self.cycle_count += 12;
@@ -110,7 +110,7 @@ pub fn out_A(self: *Z80) !void {
 
 pub fn out_BC(self: *Z80) !void {
     // For NMOS Z80 (used in ColecoVision), output 0
-    try self.hardware.out(@intCast(self.register.c), 0);
+    try self.bus.out(@intCast(self.register.c), 0);
 
     self.wz = Z80.toUint16(self.register.b, self.register.c) +% 1;
     self.cycle_count += 12;
