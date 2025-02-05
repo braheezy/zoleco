@@ -134,6 +134,8 @@ iff1: bool = false, // Main interrupt enable flag
 iff2: bool = false, // Backup interrupt enable flag
 i: u8 = 0, // interrupt vector
 halted: bool = false,
+rom_size: usize = 0,
+start_address: u16 = 0,
 bus: *Bus,
 scratch: [2]u8 = [_]u8{0} ** 2,
 displacement: i8 = 0,
@@ -172,6 +174,9 @@ pub fn step(self: *Z80) !void {
     }
     if (self.halted) {
         return error.Halted;
+    }
+    if (self.pc >= self.start_address + self.rom_size) {
+        return;
     }
 
     // Fetch the opcode
