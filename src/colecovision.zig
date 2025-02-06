@@ -11,17 +11,23 @@ const bios = @embedFile("roms/colecovision.rom");
 allocator: std.mem.Allocator,
 // Will be initialized when loading BIOS
 cpu: Z80 = undefined,
-vdp: *TMS9918,
 // psg: SN76489, // Sound chip
 bios_loaded: bool = false,
 rom_loaded: bool = false,
+vdp_device: *VDPDevice,
+
+const target_fps = 60;
+const cycles_per_second: u64 = 3_579_545; // ColecoVision Z80 clock speed
+const cycles_per_frame = cycles_per_second / target_fps;
 
 pub fn init(allocator: std.mem.Allocator) !Self {
     const vdp = try TMS9918.init(allocator);
+    const device = try allocator.create(VDPDevice);
+    device.* = VDPDevice.init(vdp);
 
     return Self{
         .allocator = allocator,
-        .vdp = vdp,
+        .vdp_device = device,
     };
 }
 
@@ -29,21 +35,17 @@ pub fn deinit(self: *Self) void {
     if (self.rom_loaded or self.bios_loaded) {
         self.cpu.free(self.allocator);
     }
-    self.vdp.free(self.allocator);
+    self.vdp_device.vdp.free(self.allocator);
 }
 
 pub fn loadBios(self: *Self) !void {
-    if (bios.len != 0x2000) { // BIOS should be 8KB
+    if (bios.len != 0x2000) {
         return error.InvalidRomSize;
     }
 
-    // Create and configure the bus with all devices
     var bus = Bus.init(self.allocator);
-    try bus.addDevice(toIODevice(self.vdp));
-    // Add other devices here as needed
-    // try bus.addDevice(self.psg.toIODevice());
+    try bus.addDevice(&self.vdp_device.io_device);
 
-    // Initialize CPU with BIOS at 0x0000 and configured bus
     self.cpu = try Z80.init(self.allocator, bios, 0x0000, &bus);
     self.bios_loaded = true;
 }
@@ -59,29 +61,44 @@ pub fn loadRom(self: *Self, data: []const u8) !void {
 
     // Copy the data into CPU memory at the specified address
     @memcpy(self.cpu.memory[0x8000 .. 0x8000 + data.len], data);
+    self.cpu.pc = 0x8020;
+    self.cpu.start_address = 0x8000;
+    self.cpu.rom_size = data.len;
     self.rom_loaded = true;
 }
 
-pub fn step(self: *Self) !void {
-    if (!self.bios_loaded) {
-        return error.BiosNotLoaded;
-    }
-    try self.cpu.step();
-}
-
 pub fn runFrame(self: *Self) !void {
-    // Run for one frame's worth of CPU cycles
-    // ColecoVision runs at ~3.58MHz, 60fps
-    // So one frame is roughly 59,667 cycles
-    try self.cpu.runCycles(59667);
+    const frame_start = std.time.nanoTimestamp();
+    var cycles_this_frame: usize = 0;
+
+    // Run CPU until we hit cycles_per_frame
+    while (cycles_this_frame < cycles_per_frame) {
+        const cycles_before = self.cpu.cycle_count;
+        try self.cpu.step(); // Will handle both executing and halted states
+        cycles_this_frame += self.cpu.cycle_count - cycles_before;
+
+        // Check if we should generate VBlank interrupt
+        if (cycles_this_frame >= cycles_per_frame) {
+            self.cpu.interrupt_pending = true;
+        }
+    }
 
     // Update video
-    try self.vdp.updateFrame();
+    try self.vdp_device.vdp.updateFrame();
+
+    // Frame timing
+    const frame_end = std.time.nanoTimestamp();
+    const frame_duration_ns = frame_end - frame_start;
+    const target_duration_ns = std.time.ns_per_s / target_fps;
+
+    if (frame_duration_ns < target_duration_ns) {
+        std.time.sleep(@intCast(target_duration_ns - frame_duration_ns));
+    }
 }
 
 // Add methods for getting screen buffer, handling input, etc.
 pub fn getScreenBuffer(self: *Self) []const u8 {
-    return self.vdp.getScreenBuffer();
+    return self.vdp_device.vdp.getScreenBuffer();
 }
 
 // ************************************
@@ -93,26 +110,34 @@ const IODevice = @import("z80").IODevice;
 const vdp_data_port = 0x98; // Port for reading/writing VRAM data
 const vdp_control_port = 0x99; // Port for reading status / writing address/register
 
-pub fn toIODevice(self: *TMS9918) IODevice {
-    return IODevice.init(
-        self,
-        portIn,
-        portOut,
-    );
-}
+const VDPDevice = struct {
+    vdp: *TMS9918,
+    io_device: IODevice,
 
-fn portIn(self: *TMS9918, port: u16) u8 {
-    return switch (port) {
-        vdp_data_port => self.readData(),
-        vdp_control_port => self.readStatus(),
-        else => 0xFF,
-    };
-}
-
-fn portOut(self: *TMS9918, port: u16, value: u8) void {
-    switch (port) {
-        vdp_data_port => self.writeData(value),
-        vdp_control_port => self.writeAddress(value),
-        else => {},
+    pub fn init(vdp: *TMS9918) VDPDevice {
+        return .{
+            .vdp = vdp,
+            .io_device = .{ .inFn = in, .outFn = out },
+        };
     }
-}
+
+    // Make these static functions of the struct
+    fn in(ptr: *IODevice, port: u16) u8 {
+        const self: *VDPDevice = @fieldParentPtr("io_device", ptr);
+        return switch (port) {
+            vdp_data_port => self.vdp.readData(),
+            vdp_control_port => self.vdp.readStatus(),
+            else => 0xFF,
+        };
+    }
+
+    fn out(ptr: *IODevice, port: u16, value: u8) void {
+        std.debug.print("out: fieldParentPtr: {d}\n", .{port});
+        const self: *VDPDevice = @fieldParentPtr("io_device", ptr);
+        switch (port) {
+            vdp_data_port => self.vdp.writeData(value),
+            vdp_control_port => self.vdp.writeAddress(value),
+            else => {},
+        }
+    }
+};

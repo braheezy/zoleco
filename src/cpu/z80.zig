@@ -1,6 +1,8 @@
 const std = @import("std");
 const OpcodeTable = @import("opcode.zig").OpcodeTable;
+const handleInterrupt = @import("opcode.zig").handleInterrupt;
 const Bus = @import("bus.zig").Bus;
+const OpcodeCycles = @import("cycles.zig").OpcodeCycles;
 
 const Z80 = @This();
 
@@ -116,7 +118,7 @@ shadow_flag: Flag = Flag{},
 // program counter
 pc: u16 = 0,
 // stack pointer
-sp: u16 = 0,
+sp: u16 = 0x7FFF,
 // index registers
 ix: u16 = 0,
 iy: u16 = 0,
@@ -133,6 +135,7 @@ interrupt_mode: InterruptMode = .{ .zero = {} },
 iff1: bool = false, // Main interrupt enable flag
 iff2: bool = false, // Backup interrupt enable flag
 i: u8 = 0, // interrupt vector
+interrupt_pending: bool = false,
 halted: bool = false,
 rom_size: usize = 0,
 start_address: u16 = 0,
@@ -168,27 +171,29 @@ pub fn free(self: *Z80, al: std.mem.Allocator) void {
 }
 
 pub fn step(self: *Z80) !void {
-    // Ensure we are within memory bounds
     if (self.pc >= self.memory.len) {
         return error.OutOfBoundsPC;
     }
+
+    // Handle pending interrupts
+    try handleInterrupt(self);
+
+    // If halted, count cycles but don't execute
     if (self.halted) {
-        return error.Halted;
-    }
-    if (self.pc >= self.start_address + self.rom_size) {
+        self.cycle_count += 4;
         return;
     }
 
     // Fetch the opcode
     const opcode = self.memory[self.pc];
-    std.debug.print("opcode: {X}\n", .{opcode});
-    // Move PC to the next byte
+    std.debug.print("opcode: {X}, pc: {X}\n", .{ opcode, self.pc });
     self.pc +%= 1;
     self.increment_r();
 
     // Execute the instruction
     if (OpcodeTable[opcode]) |handler| {
         try handler(self);
+        self.cycle_count += OpcodeCycles[opcode];
     } else {
         std.debug.print("Cannot step: unknown opcode: {X}\n", .{opcode});
         std.process.exit(1);

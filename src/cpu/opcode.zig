@@ -17,6 +17,8 @@ const si = @import("instructions/shift_instr.zig");
 const io = @import("instructions/io_instr.zig");
 const bl = @import("instructions/block_instr.zig");
 
+const OpcodeCycles = @import("cycles.zig").OpcodeCycles;
+
 const bitTest = @import("instructions/bit_test_instr.zig").bitTest;
 const bitSetReset = @import("instructions/bit_test_instr.zig").bitSetReset;
 
@@ -148,6 +150,7 @@ pub fn lookupIndexedOpcode(self: *Z80) OpError!void {
 
 pub fn lookupMiscOpcode(self: *Z80) OpError!void {
     const opcode = self.memory[self.pc];
+    std.debug.print("misc opcode: {X}\n", .{opcode});
     self.pc +%= 1;
     self.increment_r();
 
@@ -160,27 +163,24 @@ pub fn lookupMiscOpcode(self: *Z80) OpError!void {
 }
 
 fn nop(self: *Z80) !void {
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 fn di(self: *Z80) !void {
     self.iff1 = false;
     self.iff2 = false;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 fn ei(self: *Z80) !void {
     self.iff1 = true;
     self.iff2 = true;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 fn halt(self: *Z80) !void {
     self.halted = true;
-    self.cycle_count += 4;
+
     self.q = 0;
 }
 
@@ -190,7 +190,7 @@ fn rst38(self: *Z80) !void {
     self.memory[self.sp + 1] = @intCast(return_addr >> 8);
     self.memory[self.sp] = @intCast(return_addr & 0xFF);
     self.pc = 0x38;
-    self.cycle_count += 11;
+
     self.q = 0;
     self.wz = 0x38;
 }
@@ -201,7 +201,6 @@ fn rst30(self: *Z80) !void {
     self.memory[self.sp + 1] = @intCast(return_addr >> 8);
     self.memory[self.sp] = @intCast(return_addr & 0xFF);
     self.pc = 0x30;
-    self.cycle_count += 11;
     self.q = 0;
     self.wz = 0x30;
 }
@@ -212,7 +211,7 @@ fn rst28(self: *Z80) !void {
     self.memory[self.sp + 1] = @intCast(return_addr >> 8);
     self.memory[self.sp] = @intCast(return_addr & 0xFF);
     self.pc = 0x28;
-    self.cycle_count += 11;
+
     self.q = 0;
     self.wz = 0x28;
 }
@@ -223,7 +222,7 @@ fn rst20(self: *Z80) !void {
     self.memory[self.sp + 1] = @intCast(return_addr >> 8);
     self.memory[self.sp] = @intCast(return_addr & 0xFF);
     self.pc = 0x20;
-    self.cycle_count += 11;
+
     self.q = 0;
     self.wz = 0x20;
 }
@@ -234,7 +233,6 @@ fn rst18(self: *Z80) !void {
     self.memory[self.sp + 1] = @intCast(return_addr >> 8);
     self.memory[self.sp] = @intCast(return_addr & 0xFF);
     self.pc = 0x18;
-    self.cycle_count += 11;
     self.q = 0;
     self.wz = 0x18;
 }
@@ -245,7 +243,7 @@ fn rst10(self: *Z80) !void {
     self.memory[self.sp + 1] = @intCast(return_addr >> 8);
     self.memory[self.sp] = @intCast(return_addr & 0xFF);
     self.pc = 0x10;
-    self.cycle_count += 11;
+
     self.q = 0;
     self.wz = 0x10;
 }
@@ -256,7 +254,7 @@ fn rst8(self: *Z80) !void {
     self.memory[self.sp + 1] = @intCast(return_addr >> 8);
     self.memory[self.sp] = @intCast(return_addr & 0xFF);
     self.pc = 0x08;
-    self.cycle_count += 11;
+
     self.q = 0;
     self.wz = 0x08;
 }
@@ -267,7 +265,7 @@ fn rst0(self: *Z80) !void {
     self.memory[self.sp + 1] = @intCast(return_addr >> 8);
     self.memory[self.sp] = @intCast(return_addr & 0xFF);
     self.pc = 0;
-    self.cycle_count += 11;
+
     self.q = 0;
     self.wz = 0;
 }
@@ -277,7 +275,7 @@ fn retn(self: *Z80) !void {
     self.pc = Z80.toUint16(self.memory[self.sp + 1], self.memory[self.sp]);
     self.sp += 2;
     self.iff1 = self.iff2;
-    self.cycle_count += 14;
+
     self.q = 0;
     self.wz = self.pc;
 }
@@ -287,33 +285,33 @@ fn reti(self: *Z80) !void {
     self.pc = Z80.toUint16(self.memory[self.sp + 1], self.memory[self.sp]);
     self.sp += 2;
     self.iff1 = self.iff2;
-    self.cycle_count += 14;
+
     self.q = 0;
     self.wz = self.pc;
 }
 
 fn im0(self: *Z80) !void {
     self.interrupt_mode = .{ .zero = {} };
-    self.cycle_count += 8;
+
     self.q = 0;
 }
 
 fn im1(self: *Z80) !void {
     self.interrupt_mode = .{ .one = {} };
-    self.cycle_count += 8;
+
     self.q = 0;
 }
 
 fn im2(self: *Z80) !void {
     self.interrupt_mode = .{ .two = {} };
-    self.cycle_count += 8;
+
     self.q = 0;
 }
 
 // Stores the value of A into register I.
 fn load_I_A(self: *Z80) !void {
     self.i = self.register.a;
-    self.cycle_count += 9;
+
     self.q = 0;
 }
 
@@ -328,6 +326,16 @@ fn load_A_I(self: *Z80) !void {
 
     self.flag.parity_overflow = self.iff2;
 
-    self.cycle_count += 9;
     self.q = self.flag.toByte();
+}
+
+pub fn handleInterrupt(self: *Z80) !void {
+    if (self.interrupt_pending and self.iff1) {
+        self.interrupt_pending = false;
+        self.iff1 = false;
+        self.iff2 = false;
+
+        try rst38(self);
+        self.cycle_count += OpcodeCycles[0xFF];
+    }
 }

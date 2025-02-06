@@ -7,7 +7,6 @@ pub fn jump(self: *Z80) !void {
 
     self.pc = jump_address;
     self.wz = jump_address;
-    self.cycle_count += 10;
     self.q = 0;
 }
 
@@ -20,7 +19,6 @@ pub fn jump_NZ(self: *Z80) !void {
         self.pc = address;
     }
     self.wz = address;
-    self.cycle_count += 10;
     self.q = 0;
 }
 
@@ -32,7 +30,6 @@ pub fn jump_Z(self: *Z80) !void {
         self.pc = address;
     }
     self.wz = address;
-    self.cycle_count += 10;
     self.q = 0;
 }
 
@@ -45,7 +42,6 @@ pub fn jump_NC(self: *Z80) !void {
         self.pc = address;
     }
     self.wz = address;
-    self.cycle_count += 10;
     self.q = 0;
 }
 
@@ -57,7 +53,6 @@ pub fn jump_C(self: *Z80) !void {
         self.pc = address;
     }
     self.wz = address;
-    self.cycle_count += 10;
     self.q = 0;
 }
 
@@ -69,7 +64,6 @@ pub fn jump_M(self: *Z80) !void {
         self.pc = address;
     }
     self.wz = address;
-    self.cycle_count += 10;
     self.q = 0;
 }
 
@@ -81,7 +75,6 @@ pub fn jump_PE(self: *Z80) !void {
         self.pc = address;
     }
     self.wz = address;
-    self.cycle_count += 10;
     self.q = 0;
 }
 
@@ -93,7 +86,6 @@ pub fn jump_PO(self: *Z80) !void {
         self.pc = address;
     }
     self.wz = address;
-    self.cycle_count += 10;
     self.q = 0;
 }
 
@@ -105,7 +97,6 @@ pub fn jump_P(self: *Z80) !void {
         self.pc = address;
     }
     self.wz = address;
-    self.cycle_count += 10;
     self.q = 0;
 }
 
@@ -120,9 +111,7 @@ pub fn djnz(self: *Z80) !void {
         self.wz = new_pc +% 1;
         self.pc = new_pc;
 
-        self.cycle_count += 13;
-    } else {
-        self.cycle_count += 8;
+        self.cycle_count += 5;
     }
     self.pc += 1;
     self.q = 0;
@@ -135,7 +124,7 @@ fn jump_relative(self: *Z80, displacement: u8) void {
     self.wz = self.pc;
     self.q = 0;
 
-    self.cycle_count += 12;
+    self.cycle_count += 5;
 }
 // JR d: Jump relative by signed displacement d.
 pub fn jr(self: *Z80) !void {
@@ -148,7 +137,6 @@ pub fn jr_NZ(self: *Z80) !void {
         jump_relative(self, self.memory[self.pc]);
     } else {
         self.pc += 1;
-        self.cycle_count += 7;
     }
     self.q = 0;
 }
@@ -159,7 +147,6 @@ pub fn jr_Z(self: *Z80) !void {
         jump_relative(self, self.memory[self.pc]);
     } else {
         self.pc += 1;
-        self.cycle_count += 7;
     }
     self.q = 0;
 }
@@ -170,7 +157,6 @@ pub fn jr_NC(self: *Z80) !void {
         jump_relative(self, self.memory[self.pc]);
     } else {
         self.pc += 1;
-        self.cycle_count += 7;
     }
     self.q = 0;
 }
@@ -181,7 +167,6 @@ pub fn jr_C(self: *Z80) !void {
         jump_relative(self, self.memory[self.pc]);
     } else {
         self.pc += 1;
-        self.cycle_count += 7;
     }
     self.q = 0;
 }
@@ -190,13 +175,11 @@ pub fn jr_C(self: *Z80) !void {
 pub fn jp_HL(self: *Z80) !void {
     const hl = self.getHL();
     self.pc = hl;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // Loads the value of IX into PC.
 pub fn jp_IX(self: *Z80) !void {
     self.pc = self.curr_index_reg.?.*;
-    self.cycle_count += 4;
     self.q = 0;
 }

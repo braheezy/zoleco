@@ -6,7 +6,7 @@ pub fn _ret(self: *Z80) void {
     const address = Z80.toUint16(self.memory[self.sp + 1], self.memory[self.sp]);
     self.pc = address;
     self.sp += 2;
-    self.cycle_count += 11;
+    self.cycle_count += 6;
     self.wz = address;
     self.q = 0;
 }
@@ -15,15 +15,14 @@ pub fn _ret(self: *Z80) void {
 pub fn ret(self: *Z80) !void {
     _ret(self);
 
-    self.cycle_count += 10;
+    self.cycle_count += 5;
 }
 
 // RZ: Return from subroutine if Z flag is set.
 pub fn ret_Z(self: *Z80) !void {
     if (self.flag.zero) {
+        self.cycle_count += 1;
         _ret(self);
-    } else {
-        self.cycle_count += 5;
     }
     self.q = 0;
 }
@@ -31,9 +30,8 @@ pub fn ret_Z(self: *Z80) !void {
 // RNZ: Return from subroutine if Z flag is not set.
 pub fn ret_NZ(self: *Z80) !void {
     if (!self.flag.zero) {
+        self.cycle_count += 1;
         _ret(self);
-    } else {
-        self.cycle_count += 5;
     }
     self.q = 0;
 }
@@ -41,9 +39,8 @@ pub fn ret_NZ(self: *Z80) !void {
 // RC: Return from subroutine if C flag is set.
 pub fn ret_C(self: *Z80) !void {
     if (self.flag.carry) {
+        self.cycle_count += 1;
         _ret(self);
-    } else {
-        self.cycle_count += 5;
     }
     self.q = 0;
 }
@@ -51,9 +48,8 @@ pub fn ret_C(self: *Z80) !void {
 // RNC: Return from subroutine if C flag is not set.
 pub fn ret_NC(self: *Z80) !void {
     if (!self.flag.carry) {
+        self.cycle_count += 1;
         _ret(self);
-    } else {
-        self.cycle_count += 5;
     }
     self.q = 0;
 }
@@ -61,9 +57,8 @@ pub fn ret_NC(self: *Z80) !void {
 // RPE: Return from subroutine if parity even (is set)
 pub fn ret_PE(self: *Z80) !void {
     if (self.flag.parity_overflow) {
+        self.cycle_count += 1;
         _ret(self);
-    } else {
-        self.cycle_count += 5;
     }
     self.q = 0;
 }
@@ -71,9 +66,8 @@ pub fn ret_PE(self: *Z80) !void {
 // RPO: Return from subroutine if parity odd (is not set)
 pub fn ret_PO(self: *Z80) !void {
     if (!self.flag.parity_overflow) {
+        self.cycle_count += 1;
         _ret(self);
-    } else {
-        self.cycle_count += 5;
     }
     self.q = 0;
 }
@@ -81,9 +75,8 @@ pub fn ret_PO(self: *Z80) !void {
 // RP: Return from subroutine if plus (sign is not set)
 pub fn ret_P(self: *Z80) !void {
     if (!self.flag.sign) {
+        self.cycle_count += 1;
         _ret(self);
-    } else {
-        self.cycle_count += 5;
     }
     self.q = 0;
 }
@@ -91,9 +84,8 @@ pub fn ret_P(self: *Z80) !void {
 // RP: Return from subroutine if minus (sign is set)
 pub fn ret_M(self: *Z80) !void {
     if (self.flag.sign) {
+        self.cycle_count += 1;
         _ret(self);
-    } else {
-        self.cycle_count += 5;
     }
     self.q = 0;
 }
