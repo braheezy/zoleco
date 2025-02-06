@@ -43,10 +43,10 @@ pub fn loadBios(self: *Self) !void {
         return error.InvalidRomSize;
     }
 
-    var bus = Bus.init(self.allocator);
+    var bus = try Bus.init(self.allocator);
     try bus.addDevice(&self.vdp_device.io_device);
 
-    self.cpu = try Z80.init(self.allocator, bios, 0x0000, &bus);
+    self.cpu = try Z80.init(self.allocator, bios, 0x0000, bus);
     self.bios_loaded = true;
 }
 
@@ -117,7 +117,10 @@ const VDPDevice = struct {
     pub fn init(vdp: *TMS9918) VDPDevice {
         return .{
             .vdp = vdp,
-            .io_device = .{ .inFn = in, .outFn = out },
+            .io_device = .{
+                .inFn = in,
+                .outFn = out,
+            },
         };
     }
 

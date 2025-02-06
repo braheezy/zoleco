@@ -55,21 +55,6 @@ const Result = struct {
     successes: usize,
 };
 
-const TestDevice = struct {
-    in_test_data: u8 = 0,
-
-    fn in(self: *TestDevice, port: u16) u8 {
-        _ = port;
-        return self.in_test_data;
-    }
-
-    fn out(self: *TestDevice, port: u16, value: u8) void {
-        _ = self;
-        _ = port;
-        _ = value;
-    }
-};
-
 var has_failure = false;
 pub fn main() !void {
     // Memory allocation setup
@@ -197,27 +182,45 @@ fn printResult(successes: usize, total: usize) void {
     }
 }
 
+const TestDevice = struct {
+    io_device: IODevice,
+    value: u8,
+
+    pub fn in(self: *TestDevice, port: u16) u8 {
+        _ = port;
+        return self.value;
+    }
+
+    pub fn out(self: *TestDevice, port: u16, value: u8) void {
+        _ = self;
+        _ = port;
+        _ = value;
+    }
+};
+
 fn runTest(al: std.mem.Allocator, t: TestCase, failures: *std.ArrayList([]const u8)) !bool {
     const memory = try al.alloc(u8, 0x10000);
     defer al.free(memory);
 
     // Create bus and test device
-    var bus = Bus.init(al);
+    var bus = try Bus.init(al);
     defer bus.deinit();
 
-    var test_device = TestDevice{
-        .in_test_data = t.in_test_data orelse 0,
+    // Allocate test device on heap
+    const test_device = try al.create(TestDevice);
+    defer al.destroy(test_device);
+    test_device.*.value = t.in_test_data orelse 0;
+
+    // Initialize IODevice directly
+    test_device.*.io_device = IODevice{
+        .inFn = @ptrCast(&TestDevice.in),
+        .outFn = @ptrCast(&TestDevice.out),
     };
 
-    try bus.addDevice(IODevice.init(
-        &test_device,
-        TestDevice.in,
-        TestDevice.out,
-    ));
+    try bus.addDevice(&test_device.io_device);
 
-    var z80 = Z80{ .memory = memory, .bus = &bus };
+    var z80 = Z80{ .memory = memory, .bus = bus };
     z80.zeroMemory();
-    // z80.hardware.in_test_data = t.in_test_data orelse 0;
     loadState(&z80, t.initial);
 
     try z80.step();

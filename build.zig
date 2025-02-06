@@ -79,13 +79,14 @@ fn defineCpuTest(
         .name = "cputest",
         .root_source_file = b.path("examples/z80_tester/main.zig"),
         .target = target,
-        .optimize = .ReleaseSafe,
+        .optimize = .Debug,
     });
 
     addModulesToExe(cpu_test, modules, &[_][]const u8{"z80"});
 
     const test_step = b.step("cputest", "Run cpu tests");
     const run_test = b.addRunArtifact(cpu_test);
+    b.installArtifact(cpu_test);
 
     // Set the working directory to the z80_tester directory
     run_test.cwd = .{ .cwd_relative = b.pathFromRoot("examples/z80_tester") };
