@@ -1,4 +1,6 @@
 const std = @import("std");
+const rl = @import("raylib");
+
 const Z80 = @import("z80").Z80;
 const Bus = @import("z80").Bus;
 const TMS9918 = @import("tms9918");
@@ -8,6 +10,22 @@ const Self = @This();
 // Embed the BIOS ROM
 const bios = @embedFile("roms/colecovision.rom");
 
+// Constants for timing
+const target_fps = 60;
+const cycles_per_second: u32 = 3_579_545; // Z80 at 3.58MHz
+const cycles_per_frame = cycles_per_second / target_fps; // ~59,659 cycles per frame
+const cycles_per_line = cycles_per_frame / 262; // NTSC has 262 lines per frame
+const vdp_interrupt_line = 192; // Line where VDP triggers interrupt
+const vdp_interrupt_cycles = cycles_per_line * vdp_interrupt_line; // When to trigger interrupt
+
+// Memory map constants
+const bios_start: usize = 0x0000;
+const bios_size: usize = 0x2000;
+const ram_start: usize = 0x6000;
+const ram_size: usize = 0x0400;
+const cart_start: usize = 0x800;
+const cart_size: usize = 0x8000;
+
 allocator: std.mem.Allocator,
 // Will be initialized when loading BIOS
 cpu: Z80 = undefined,
@@ -15,10 +33,10 @@ cpu: Z80 = undefined,
 bios_loaded: bool = false,
 rom_loaded: bool = false,
 vdp_device: *VDPDevice,
-
-const target_fps = 60;
-const cycles_per_second: u64 = 3_579_545; // ColecoVision Z80 clock speed
-const cycles_per_frame = cycles_per_second / target_fps;
+screen_texture: rl.RenderTexture = undefined,
+window_width: u32 = 800,
+window_height: u32 = 600,
+frame_count: u64 = 0,
 
 pub fn init(allocator: std.mem.Allocator) !Self {
     const vdp = try TMS9918.init(allocator);
@@ -144,3 +162,68 @@ const VDPDevice = struct {
         }
     }
 };
+
+pub fn draw(self: *Self) !void {
+    // Get RGB pixels from VDP
+    const pixels = try getScreen(self.vdp_device.vdp, self.allocator);
+    defer self.allocator.free(pixels);
+
+    // Convert RGB to RGBA for raylib
+    var rgba_pixels = try self.allocator.alloc(u8, 256 * 192 * 4);
+    defer self.allocator.free(rgba_pixels);
+
+    for (0..(256 * 192)) |i| {
+        rgba_pixels[i * 4 + 0] = pixels[i * 3 + 0]; // R
+        rgba_pixels[i * 4 + 1] = pixels[i * 3 + 1]; // G
+        rgba_pixels[i * 4 + 2] = pixels[i * 3 + 2]; // B
+        rgba_pixels[i * 4 + 3] = 255; // A
+    }
+
+    // Update texture with new pixel data
+    rl.updateTexture(self.screen_texture.texture, rgba_pixels.ptr);
+
+    // Draw scaled texture to window
+    rl.drawTexturePro(
+        self.screen_texture.texture,
+        .{
+            .x = 0,
+            .y = 0,
+            .width = 256,
+            .height = 192,
+        },
+        .{
+            .x = 0,
+            .y = 0,
+            .width = @floatFromInt(self.window_width),
+            .height = @floatFromInt(self.window_height),
+        },
+        .{ .x = 0, .y = 0 },
+        0.0,
+        rl.Color.white,
+    );
+}
+
+fn getScreen(self: *TMS9918, allocator: std.mem.Allocator) ![]u8 {
+    // scanline buffer
+    var scanline = [_]u8{0} ** TMS9918.pixels_x;
+
+    // framebuffer
+    var framebuffer = try allocator.alloc(u8, TMS9918.pixels_x * TMS9918.pixels_y * 3);
+
+    // generate all scanlines and render to framebuffer
+    var c: usize = 0;
+    for (0..TMS9918.pixels_y) |y| {
+        // get the scanline pixels
+        self.scanLine(@intCast(y), &scanline);
+        for (0..TMS9918.pixels_x) |x| {
+            // values returned from scanLine() are palette indexes
+            // use the Palette array to convert to an RGBA value
+            const color = TMS9918.palette[scanline[x]];
+            framebuffer[c] = @intCast((color >> 24) & 0xFF);
+            framebuffer[c + 1] = @intCast((color >> 16) & 0xFF);
+            framebuffer[c + 2] = @intCast((color >> 8) & 0xFF);
+            c += 3;
+        }
+    }
+    return framebuffer;
+}

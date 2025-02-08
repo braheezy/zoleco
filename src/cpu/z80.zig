@@ -132,8 +132,8 @@ cycle_count: usize = 0,
 total_cycle_count: usize = 0,
 // interrupts
 interrupt_mode: InterruptMode = .{ .zero = {} },
-iff1: bool = false, // Main interrupt enable flag
-iff2: bool = false, // Backup interrupt enable flag
+iff1: bool = true, // Main interrupt enable flag
+iff2: bool = true, // Backup interrupt enable flag
 i: u8 = 0, // interrupt vector
 interrupt_pending: bool = false,
 halted: bool = false,

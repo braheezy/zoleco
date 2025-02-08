@@ -1,5 +1,6 @@
 const std = @import("std");
 const ColecoVisionEmulator = @import("colecovision.zig");
+const rl = @import("raylib");
 
 // Embed the default ROM
 const default_rom = @embedFile("roms/hello.rom");
@@ -56,9 +57,27 @@ pub fn main() !void {
         try emu.loadRom(default_rom);
     }
 
+    const window_width = 800;
+    const window_height = 600;
+
+    rl.initWindow(window_width, window_height, "zoleco");
+    defer rl.closeWindow();
+    rl.setWindowSize(window_width, window_height);
+    rl.setTargetFPS(60);
+
+    emu.screen_texture = try rl.loadRenderTexture(window_width, window_height);
+    defer rl.unloadRenderTexture(emu.screen_texture);
+
     // Main emulation loop
-    while (true) {
+    while (!rl.windowShouldClose()) {
         try emu.runFrame();
-        // TODO: Add display/input handling
+
+        rl.beginDrawing();
+        defer rl.endDrawing();
+
+        rl.clearBackground(rl.Color.blank);
+
+        try emu.draw();
+        // TODO: Add input handling
     }
 }

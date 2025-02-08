@@ -331,6 +331,7 @@ fn load_A_I(self: *Z80) !void {
 
 pub fn handleInterrupt(self: *Z80) !void {
     if (self.interrupt_pending and self.iff1) {
+        std.debug.print("handleInterrupt\n", .{});
         self.interrupt_pending = false;
         self.iff1 = false;
         self.iff2 = false;

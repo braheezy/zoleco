@@ -8,7 +8,8 @@
       "type": "lldb",
       "request": "launch",
       "name": "Debug",
-      "program": "${workspaceFolder}/zig-out/bin/colecovision",
+      "program": "${workspaceFolder}/zig-out/bin/cputest",
+      "args": ["d3"],
       "cwd": "${workspaceFolder}",
       "preLaunchTask": "build",
       "terminal": "console"

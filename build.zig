@@ -47,8 +47,8 @@ pub fn build(b: *std.Build) !void {
     });
     exe_check.linkLibrary(raylib_artifact);
 
-    addModulesToExe(exe_check, modules, &[_][]const u8{ "SN76489", "z80", "tms9918" });
-    addModulesToExe(exe, modules, &[_][]const u8{ "SN76489", "z80", "tms9918" });
+    addModulesToExe(exe_check, modules, &[_][]const u8{ "SN76489", "z80", "tms9918", "raylib", "raygui" });
+    addModulesToExe(exe, modules, &[_][]const u8{ "SN76489", "z80", "tms9918", "raylib", "raygui" });
 
     const check = b.step("check", "Check if it compiles");
     check.dependOn(&exe_check.step);
