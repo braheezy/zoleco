@@ -43,7 +43,6 @@ pub fn ex_AF(self: *Z80) !void {
     self.flag = self.shadow_flag;
     self.shadow_flag = temp_f;
 
-    self.cycle_count += 4;
     self.q = 0;
 }
 

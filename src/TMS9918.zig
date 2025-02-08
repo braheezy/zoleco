@@ -185,7 +185,7 @@ pub fn writeAddress(self: *TMS9918, address: u8) void {
             self.mode = self.updateDisplayMode();
         } else {
             // address write
-            const n: u8 = @intCast(@as(u16, address & 0x3F) << @intCast(8));
+            const n: u8 = @truncate(@as(u16, address & 0x3f) << @intCast(8));
             self.current_address = self.reg_write_stage0_value | n;
             if ((address & 0x40) == 0) {
                 self.read_ahead_buffer = self.vram[self.current_address & vram_mask];
@@ -234,6 +234,7 @@ pub fn writeBytes(self: *TMS9918, data: []u8) void {
 
 // write data (mode = 0) to the tms9918
 pub fn writeData(self: *TMS9918, data: u8) void {
+    std.debug.print("TMS9918 writeData: {d}\n", .{data});
     self.reg_write_stage = 0;
     self.read_ahead_buffer = data;
     self.vram[self.current_address & vram_mask] = data;
@@ -361,7 +362,7 @@ pub fn outputSprites(self: *TMS9918, y: u8, pixels: *[pixels_x]u8) void {
 
         // sprite is visible on this line
         const pattern_index = sprite_attr[sprite_attr_name];
-        const pattern_offset = sprite_patt_table_addr + pattern_index * pattern_bytes + @as(u16, @bitCast(pattern_row));
+        const pattern_offset = sprite_patt_table_addr + pattern_index *% pattern_bytes + @as(u16, @bitCast(pattern_row));
 
         const early_clock_offset: i16 = if (sprite_attr[sprite_attr_color] & 0x80 != 0) -32 else 0;
         const x_pos: i16 = sprite_attr[sprite_attr_x] + early_clock_offset;
@@ -471,6 +472,7 @@ pub fn readStatus(self: *TMS9918) u8 {
 }
 
 pub fn updateFrame(self: *TMS9918) !void {
+    std.debug.print("TMS9918 updateFrame\n", .{});
     var scanline = [_]u8{0} ** pixels_x;
     var c: usize = 0;
 

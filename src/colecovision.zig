@@ -23,8 +23,10 @@ const bios_start: usize = 0x0000;
 const bios_size: usize = 0x2000;
 const ram_start: usize = 0x6000;
 const ram_size: usize = 0x0400;
-const cart_start: usize = 0x800;
+const cart_start: usize = 0x8000;
 const cart_size: usize = 0x8000;
+const window_width: u32 = 800;
+const window_height: u32 = 600;
 
 allocator: std.mem.Allocator,
 // Will be initialized when loading BIOS
@@ -33,19 +35,73 @@ cpu: Z80 = undefined,
 bios_loaded: bool = false,
 rom_loaded: bool = false,
 vdp_device: *VDPDevice,
-screen_texture: rl.RenderTexture = undefined,
-window_width: u32 = 800,
-window_height: u32 = 600,
+screen_texture: rl.RenderTexture2D = undefined,
 frame_count: u64 = 0,
+showTitle: bool = false,
+romHeader: ?RomHeader = null,
+
+pub const RomHeader = struct {
+    signature: [2]u8,
+    spriteTable1: u16,
+    spriteTable2: u16,
+    workspacePointer: u16,
+    joystickPointer: u16,
+    startAddress: u16,
+    jumpVectors: [8]u16, // 7 RST vectors + 1 NMI vector
+    titleString: []const u8,
+};
+
+/// Parse the ROM header from a slice that represents the cartridge region
+fn parseRomHeader(cart: []const u8) !RomHeader {
+    // Ensure we have at least header data (header occupies through 0x0024, relative offsets)
+    if (cart.len < 0x24) {
+        return error.InvalidRom;
+    }
+    var header: RomHeader = undefined;
+    header.signature = [2]u8{ cart[0], cart[1] };
+    header.spriteTable1 = @as(u16, cart[2]) | (@as(u16, cart[3]) << 8);
+    header.spriteTable2 = @as(u16, cart[4]) | (@as(u16, cart[5]) << 8);
+    header.workspacePointer = @as(u16, cart[6]) | (@as(u16, cart[7]) << 8);
+    header.joystickPointer = @as(u16, cart[8]) | (@as(u16, cart[9]) << 8);
+    header.startAddress = @as(u16, cart[10]) | (@as(u16, cart[11]) << 8);
+
+    // Parse eight jump vectors (0x800C ... 0x8023). Each vector is 3 bytes:
+    // byte0 is the jump opcode (usually 0xC3), then the low and high bytes of the address.
+    for (header.jumpVectors, 0..) |_, i| {
+        const offset = 0xC + (i * 3);
+        if (offset + 2 >= cart.len) return error.InvalidRom;
+        // We ignore the opcode byte (assumed to be 0xC3) and construct the vector:
+        header.jumpVectors[i] = @as(u16, cart[offset + 1]) | (@as(u16, cart[offset + 2]) << 8);
+    }
+
+    // Title screen data starts at offset 0x24.
+    const titleStart = 0x24;
+    // We'll scan until a zero is found (or up to 64 bytes as a safeguard).
+    var titleEnd: usize = titleStart;
+    while (titleEnd < cart.len and titleEnd - titleStart < 64 and cart[titleEnd] != 0) : (titleEnd += 1) {}
+    header.titleString = cart[titleStart..titleEnd];
+
+    return header;
+}
+
+// Extend your emulator state to hold ROM header info and a flag to show the title.
 
 pub fn init(allocator: std.mem.Allocator) !Self {
     const vdp = try TMS9918.init(allocator);
-    const device = try allocator.create(VDPDevice);
-    device.* = VDPDevice.init(vdp);
+    const vdp_device = try VDPDevice.init(allocator, vdp);
+    var bus = try Bus.init(allocator);
+
+    // Use the VDPDevice's built-in io_device
+    try bus.addDevice(&vdp_device.io_device);
 
     return Self{
         .allocator = allocator,
-        .vdp_device = device,
+        .vdp_device = vdp_device,
+        .cpu = undefined, // Will be set when loading BIOS
+        .bios_loaded = false,
+        .rom_loaded = false,
+        .showTitle = false,
+        .romHeader = null,
     };
 }
 
@@ -54,6 +110,7 @@ pub fn deinit(self: *Self) void {
         self.cpu.free(self.allocator);
     }
     self.vdp_device.vdp.free(self.allocator);
+    self.allocator.destroy(self.vdp_device);
 }
 
 pub fn loadBios(self: *Self) !void {
@@ -68,50 +125,123 @@ pub fn loadBios(self: *Self) !void {
     self.bios_loaded = true;
 }
 
+/// Updated loadRom: copies the cartridge data, parses the header,
+/// and sets a flag if the header signature requests a title screen.
 pub fn loadRom(self: *Self, data: []const u8) !void {
     if (!self.bios_loaded) {
         return error.BiosNotLoaded;
     }
-
-    if (data.len > 0x8000) {
+    if (data.len > cart_size) {
         return error.RomTooLarge;
     }
 
-    // Copy the data into CPU memory at the specified address
-    @memcpy(self.cpu.memory[0x8000 .. 0x8000 + data.len], data);
-    self.cpu.pc = 0x8020;
-    self.cpu.start_address = 0x8000;
-    self.cpu.rom_size = data.len;
+    // Clear cartridge area first (fill with 0xFF for safety)
+    @memset(self.cpu.memory[cart_start .. cart_start + cart_size], 0xFF);
+
+    // Copy ROM data into cartridge space
+    @memcpy(self.cpu.memory[cart_start .. cart_start + data.len], data);
+
+    // Parse the cartridge header
+    const header = try parseRomHeader(self.cpu.memory[cart_start .. cart_start + data.len]);
+    self.romHeader = header;
+    std.debug.print("Cartridge header:\n", .{});
+    std.debug.print("  Signature: {X} {X}\n", .{ header.signature[0], header.signature[1] });
+    std.debug.print("  Start Address: {X}\n", .{header.startAddress});
+    std.debug.print("  Title: \"{s}\"\n", .{header.titleString});
+    std.debug.print("  Sprite Table 1 Pointer: {X}\n", .{header.spriteTable1});
+    std.debug.print("  Sprite Table 2 Pointer: {X}\n", .{header.spriteTable2});
+
+    // Determine if we should show the title screen.
+    // Per documentation: if the header is AA 55 then show the title screen.
+    if (header.signature[0] == 0xAA and header.signature[1] == 0x55) {
+        self.showTitle = true;
+    } else {
+        self.showTitle = false;
+    }
+
+    // Reset CPU state. Start with BIOS.
+    self.cpu.pc = 0x0000;
+    self.cpu.sp = 0x7FFF;
+    self.cpu.interrupt_mode = .{ .one = {} };
+    self.cpu.iff1 = false;
+    self.cpu.iff2 = false;
+    self.cpu.interrupt_pending = false;
     self.rom_loaded = true;
 }
 
+/// Uses Raylib to draw the title screen by converting the slash-delimited title string
+/// into separate lines. Waits for an ENTER press to continue.
+fn displayTitleScreen(self: *Self, header: RomHeader) !void {
+    // Allocate a buffer for the title text with '/' replaced by newline.
+    var titleBuffer = try self.allocator.alloc(u8, header.titleString.len);
+    for (header.titleString, 0..) |byte, i| {
+        titleBuffer[i] = if (byte == 0x2F) '\n' else byte;
+    }
+    // Create a null-terminated string (allocate one extra byte)
+    const titleString = try self.allocator.allocSentinel(u8, titleBuffer.len, 0);
+    @memcpy(titleString, titleBuffer);
+
+    std.debug.print("Showing Title Screen:\n{s}\n", .{titleString.ptr});
+    // Draw the title using Raylib until an ENTER key is pressed.
+    while (true) {
+        rl.beginDrawing();
+        rl.clearBackground(rl.Color.black);
+        // Draw the text at position (50, 50) with font size 20 in white.
+        rl.drawText(titleString.ptr, 50, 50, 20, rl.Color.white);
+        rl.endDrawing();
+
+        if (rl.isKeyPressed(.enter)) break;
+    }
+
+    self.allocator.free(titleString);
+    self.allocator.free(titleBuffer);
+}
+
+/// Updated runFrame: if showTitle flag is true then display the title screen
+/// (and, upon key press, set PC to the game start address from the header).
 pub fn runFrame(self: *Self) !void {
+    // On the very first frame, if a title screen is required, display it.
+    if (self.showTitle) {
+        if (self.romHeader) |hdr| {
+            try displayTitleScreen(self, hdr);
+            // After the title, set the CPU PC to the game start address from the header.
+            self.cpu.pc = hdr.startAddress;
+            std.debug.print("Jumping to game start at {X}\n", .{hdr.startAddress});
+        }
+        self.showTitle = false;
+    }
+
     const frame_start = std.time.nanoTimestamp();
-    var cycles_this_frame: usize = 0;
-
-    // Run CPU until we hit cycles_per_frame
-    while (cycles_this_frame < cycles_per_frame) {
-        const cycles_before = self.cpu.cycle_count;
-        try self.cpu.step(); // Will handle both executing and halted states
-        cycles_this_frame += self.cpu.cycle_count - cycles_before;
-
-        // Check if we should generate VBlank interrupt
-        if (cycles_this_frame >= cycles_per_frame) {
+    var interrupt_triggered = false;
+    // Reset cycle count for this frame
+    self.cpu.cycle_count = 0;
+    var instruction_count: usize = 0;
+    const max_instructions_per_frame = 10000;
+    while (self.cpu.cycle_count < cycles_per_frame) {
+        instruction_count += 1;
+        if (instruction_count > max_instructions_per_frame) {
+            std.debug.print("Hit instruction limit. PC: {X:0>4}, Last opcode: {X:0>2}\n", .{ self.cpu.pc, self.cpu.memory[self.cpu.pc] });
+            break;
+        }
+        try self.cpu.step();
+        if (!interrupt_triggered and self.cpu.cycle_count >= vdp_interrupt_cycles) {
+            std.debug.print("Triggering VDP interrupt at PC {X:0>4}\n", .{self.cpu.pc});
             self.cpu.interrupt_pending = true;
+            self.cpu.iff1 = true;
+            interrupt_triggered = true;
         }
     }
 
-    // Update video
     try self.vdp_device.vdp.updateFrame();
+    std.debug.print("updateFrame end\n", .{});
 
-    // Frame timing
     const frame_end = std.time.nanoTimestamp();
     const frame_duration_ns = frame_end - frame_start;
     const target_duration_ns = std.time.ns_per_s / target_fps;
-
     if (frame_duration_ns < target_duration_ns) {
         std.time.sleep(@intCast(target_duration_ns - frame_duration_ns));
     }
+    std.debug.print("runFrame end\n", .{});
 }
 
 // Add methods for getting screen buffer, handling input, etc.
@@ -132,42 +262,48 @@ const VDPDevice = struct {
     vdp: *TMS9918,
     io_device: IODevice,
 
-    pub fn init(vdp: *TMS9918) VDPDevice {
-        return .{
+    pub fn init(al: std.mem.Allocator, vdp: *TMS9918) !*VDPDevice {
+        const device = try al.create(VDPDevice);
+        device.* = .{
             .vdp = vdp,
             .io_device = .{
                 .inFn = in,
                 .outFn = out,
+                .fieldParentPtr = vdp,
             },
         };
+        return device;
     }
 
-    // Make these static functions of the struct
     fn in(ptr: *IODevice, port: u16) u8 {
-        const self: *VDPDevice = @fieldParentPtr("io_device", ptr);
+        const tms: *TMS9918 = @ptrCast(@alignCast(ptr.fieldParentPtr.?));
         return switch (port) {
-            vdp_data_port => self.vdp.readData(),
-            vdp_control_port => self.vdp.readStatus(),
+            190, vdp_data_port => tms.readData(),
+            191, vdp_control_port => tms.readStatus(),
             else => 0xFF,
         };
     }
 
     fn out(ptr: *IODevice, port: u16, value: u8) void {
-        std.debug.print("out: fieldParentPtr: {d}\n", .{port});
-        const self: *VDPDevice = @fieldParentPtr("io_device", ptr);
+        std.debug.print("VDPDevice out: port: {d}, value: {d}\n", .{ port, value });
+        const tms: *TMS9918 = @ptrCast(@alignCast(ptr.fieldParentPtr.?));
+        // std.debug.print("VDPDevice out: tms: {any}\n", .{tms});
         switch (port) {
-            vdp_data_port => self.vdp.writeData(value),
-            vdp_control_port => self.vdp.writeAddress(value),
+            190, vdp_data_port => tms.writeData(value),
+            191, vdp_control_port => tms.writeAddress(value),
             else => {},
         }
+        std.debug.print("leaving VDPDevice out\n", .{});
     }
 };
 
 pub fn draw(self: *Self) !void {
+    std.debug.print("draw start\n", .{});
     // Get RGB pixels from VDP
     const pixels = try getScreen(self.vdp_device.vdp, self.allocator);
     defer self.allocator.free(pixels);
 
+    std.debug.print("pixels len: {d}\n", .{pixels.len});
     // Convert RGB to RGBA for raylib
     var rgba_pixels = try self.allocator.alloc(u8, 256 * 192 * 4);
     defer self.allocator.free(rgba_pixels);
@@ -180,8 +316,10 @@ pub fn draw(self: *Self) !void {
     }
 
     // Update texture with new pixel data
+    std.debug.print("updating texture\n", .{});
     rl.updateTexture(self.screen_texture.texture, rgba_pixels.ptr);
 
+    std.debug.print("updated texture\n", .{});
     // Draw scaled texture to window
     rl.drawTexturePro(
         self.screen_texture.texture,
@@ -194,8 +332,8 @@ pub fn draw(self: *Self) !void {
         .{
             .x = 0,
             .y = 0,
-            .width = @floatFromInt(self.window_width),
-            .height = @floatFromInt(self.window_height),
+            .width = @floatFromInt(window_width),
+            .height = @floatFromInt(window_height),
         },
         .{ .x = 0, .y = 0 },
         0.0,

@@ -10,9 +10,11 @@ pub fn out(self: *Z80) !void {
 
     self.wz = (@as(u16, self.register.a) << 8) | (@as(u16, actual_port +% 1));
 
+    std.debug.print("io out start\n", .{});
     try self.bus.out(actual_port, self.register.a);
+    std.debug.print("io out end\n", .{});
+
     self.q = 0;
-    self.cycle_count += 11;
 }
 
 pub fn in(self: *Z80) !void {
@@ -25,7 +27,6 @@ pub fn in(self: *Z80) !void {
 
     self.wz = port +% 1;
     self.q = 0;
-    self.cycle_count += 11;
 }
 
 fn in_reg(self: *Z80, reg: u8) u8 {

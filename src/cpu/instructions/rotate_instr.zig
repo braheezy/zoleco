@@ -102,7 +102,6 @@ pub fn rrca(self: *Z80) !void {
     self.flag.half_carry = false;
     self.flag.add_subtract = false;
 
-    self.cycle_count += 4;
     self.flag.setUndocumentedFlags(self.register.a);
     self.q = self.flag.toByte();
 }
@@ -144,8 +143,6 @@ fn rrc(self: *Z80, data: u8) u8 {
         self.memory[addr] = result;
         self.cycle_count += 4;
     }
-
-    self.cycle_count += 8;
 
     return result;
 }

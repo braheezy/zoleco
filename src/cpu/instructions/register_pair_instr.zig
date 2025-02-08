@@ -62,8 +62,6 @@ fn dad(self: *Z80, reg1: u8, reg2: u8) void {
 
     // Update Q with new flags
     self.q = self.flag.toByte();
-
-    self.cycle_count += 11;
 }
 
 // DAD B: Add register pair B to register pair H.

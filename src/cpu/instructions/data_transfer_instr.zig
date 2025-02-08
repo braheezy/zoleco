@@ -10,7 +10,6 @@ pub fn stax_B(self: *Z80) !void {
     // Set WZ: high byte = A, low byte = (C + 1)
     self.wz = (@as(u16, self.register.a) << 8) | (@as(u16, self.register.c +% 1));
 
-    self.cycle_count += 7;
     self.q = 0;
 }
 
@@ -119,7 +118,6 @@ pub fn load_nn_SP(self: *Z80) !void {
 pub fn loadAddr_B(self: *Z80) !void {
     const addr = Z80.toUint16(self.register.b, self.register.c);
     self.register.a = self.memory[addr];
-    self.cycle_count += 7;
     self.wz = addr +% 1;
     self.q = 0;
 }

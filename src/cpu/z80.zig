@@ -118,8 +118,8 @@ shadow_flag: Flag = Flag{},
 // program counter
 pc: u16 = 0,
 // stack pointer
-sp: u16 = 0x7FFF,
-// index registers
+sp: u16 = 0x7fff,
+// index registefs
 ix: u16 = 0,
 iy: u16 = 0,
 curr_index_reg: ?*u16 = null,

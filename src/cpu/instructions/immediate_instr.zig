@@ -6,7 +6,6 @@ pub fn moveImm_A(self: *Z80) !void {
     const data = try self.fetchData(1);
 
     self.register.a = data[0];
-    self.cycle_count += 7;
     self.q = 0;
 }
 
@@ -15,7 +14,6 @@ pub fn moveImm_B(self: *Z80) !void {
     const data = try self.fetchData(1);
 
     self.register.b = data[0];
-    self.cycle_count += 7;
     self.q = 0;
 }
 
@@ -24,7 +22,6 @@ pub fn moveImm_C(self: *Z80) !void {
     const data = try self.fetchData(1);
 
     self.register.c = data[0];
-    self.cycle_count += 7;
     self.q = 0;
 }
 
@@ -33,7 +30,6 @@ pub fn moveImm_D(self: *Z80) !void {
     const data = try self.fetchData(1);
 
     self.register.d = data[0];
-    self.cycle_count += 7;
     self.q = 0;
 }
 
@@ -42,7 +38,6 @@ pub fn moveImm_E(self: *Z80) !void {
     const data = try self.fetchData(1);
 
     self.register.e = data[0];
-    self.cycle_count += 7;
     self.q = 0;
 }
 
@@ -51,7 +46,6 @@ pub fn moveImm_H(self: *Z80) !void {
     const data = try self.fetchData(1);
 
     self.register.h = data[0];
-    self.cycle_count += 7;
     self.q = 0;
 }
 
@@ -60,7 +54,6 @@ pub fn moveImm_L(self: *Z80) !void {
     const data = try self.fetchData(1);
 
     self.register.l = data[0];
-    self.cycle_count += 7;
     self.q = 0;
 }
 
@@ -70,7 +63,6 @@ pub fn moveImm_M(self: *Z80) !void {
 
     const address = self.getHL();
     self.memory[address] = data[0];
-    self.cycle_count += 10;
     self.q = 0;
 }
 
@@ -80,7 +72,6 @@ pub fn load_BC(self: *Z80) !void {
 
     self.register.c = data[0];
     self.register.b = data[1];
-    self.cycle_count += 10;
     self.q = 0;
 }
 
@@ -90,7 +81,6 @@ pub fn load_DE(self: *Z80) !void {
 
     self.register.e = data[0];
     self.register.d = data[1];
-    self.cycle_count += 10;
     self.q = 0;
 }
 
@@ -100,7 +90,6 @@ pub fn load_HL(self: *Z80) !void {
 
     self.register.l = data[0];
     self.register.h = data[1];
-    self.cycle_count += 10;
     self.q = 0;
 }
 

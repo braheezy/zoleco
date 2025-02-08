@@ -65,7 +65,8 @@ pub fn main() !void {
     rl.setWindowSize(window_width, window_height);
     rl.setTargetFPS(60);
 
-    emu.screen_texture = try rl.loadRenderTexture(window_width, window_height);
+    // Create texture at VDP's native resolution (256x192)
+    emu.screen_texture = try rl.loadRenderTexture(256, 192);
     defer rl.unloadRenderTexture(emu.screen_texture);
 
     // Main emulation loop

@@ -2,6 +2,7 @@ const std = @import("std");
 
 /// Represents a device that can handle I/O operations
 pub const IODevice = struct {
+    fieldParentPtr: ?*anyopaque = null,
     inFn: *const fn (ptr: *IODevice, port: u16) u8,
     outFn: *const fn (ptr: *IODevice, port: u16, value: u8) void,
 
@@ -18,6 +19,7 @@ pub const IODevice = struct {
 
         const device = try al.create(IODevice);
         device.* = .{
+            .fieldParentPtr = @ptrCast(context),
             .inFn = @ptrCast(&in_fn),
             .outFn = @ptrCast(&out_fn),
         };
