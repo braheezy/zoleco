@@ -168,6 +168,8 @@ pub fn zeroMemory(self: Z80) void {
 
 pub fn free(self: *Z80, al: std.mem.Allocator) void {
     al.free(self.memory);
+    self.bus.deinit();
+    al.destroy(self.bus);
 }
 
 pub fn step(self: *Z80) !void {
@@ -186,7 +188,7 @@ pub fn step(self: *Z80) !void {
 
     // Fetch the opcode
     const opcode = self.memory[self.pc];
-    std.debug.print("opcode: {X}, pc: {X}\n", .{ opcode, self.pc });
+    // std.debug.print("opcode: {X}, pc: {X}\n", .{ opcode, self.pc });
     self.pc +%= 1;
     self.increment_r();
 

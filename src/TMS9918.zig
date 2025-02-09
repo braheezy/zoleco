@@ -149,6 +149,15 @@ pub fn init(al: std.mem.Allocator) !*TMS9918 {
     const emu = try al.create(TMS9918);
     emu.vram = try al.alloc(u8, vram_size);
     try emu.reset(al);
+
+    emu.writeRegisterValue(Register.reg_0, 0x00);
+    emu.writeRegisterValue(Register.reg_1, 0xC0);
+    emu.writeRegisterValue(Register.name_table, 0x0E);
+    emu.writeRegisterValue(Register.color_table, 0x00);
+    emu.writeRegisterValue(Register.pattern_table, 0x01);
+    emu.writeRegisterValue(Register.sprite_attribute_table, 0x36);
+    emu.writeRegisterValue(Register.sprite_pattern_table, 0x07);
+    emu.writeRegisterValue(Register.fg_bg_color, 0x00);
     return emu;
 }
 
@@ -234,7 +243,6 @@ pub fn writeBytes(self: *TMS9918, data: []u8) void {
 
 // write data (mode = 0) to the tms9918
 pub fn writeData(self: *TMS9918, data: u8) void {
-    std.debug.print("TMS9918 writeData: {d}\n", .{data});
     self.reg_write_stage = 0;
     self.read_ahead_buffer = data;
     self.vram[self.current_address & vram_mask] = data;
@@ -472,7 +480,6 @@ pub fn readStatus(self: *TMS9918) u8 {
 }
 
 pub fn updateFrame(self: *TMS9918) !void {
-    std.debug.print("TMS9918 updateFrame\n", .{});
     var scanline = [_]u8{0} ** pixels_x;
     var c: usize = 0;
 
@@ -486,4 +493,7 @@ pub fn updateFrame(self: *TMS9918) !void {
             c += 3;
         }
     }
+}
+pub fn setStatusFlag(self: *TMS9918, flag: u8) void {
+    self.status |= flag;
 }

@@ -89,10 +89,6 @@ fn parseRomHeader(cart: []const u8) !RomHeader {
 pub fn init(allocator: std.mem.Allocator) !Self {
     const vdp = try TMS9918.init(allocator);
     const vdp_device = try VDPDevice.init(allocator, vdp);
-    var bus = try Bus.init(allocator);
-
-    // Use the VDPDevice's built-in io_device
-    try bus.addDevice(&vdp_device.io_device);
 
     return Self{
         .allocator = allocator,
@@ -200,48 +196,25 @@ fn displayTitleScreen(self: *Self, header: RomHeader) !void {
 /// Updated runFrame: if showTitle flag is true then display the title screen
 /// (and, upon key press, set PC to the game start address from the header).
 pub fn runFrame(self: *Self) !void {
-    // On the very first frame, if a title screen is required, display it.
-    if (self.showTitle) {
-        if (self.romHeader) |hdr| {
-            try displayTitleScreen(self, hdr);
-            // After the title, set the CPU PC to the game start address from the header.
-            self.cpu.pc = hdr.startAddress;
-            std.debug.print("Jumping to game start at {X}\n", .{hdr.startAddress});
-        }
-        self.showTitle = false;
+    if (!self.bios_loaded) {
+        return error.BiosNotLoaded;
     }
 
-    const frame_start = std.time.nanoTimestamp();
     var interrupt_triggered = false;
-    // Reset cycle count for this frame
     self.cpu.cycle_count = 0;
-    var instruction_count: usize = 0;
-    const max_instructions_per_frame = 10000;
+    const interrupt_cycles = cycles_per_line * vdp_interrupt_line;
+
     while (self.cpu.cycle_count < cycles_per_frame) {
-        instruction_count += 1;
-        if (instruction_count > max_instructions_per_frame) {
-            std.debug.print("Hit instruction limit. PC: {X:0>4}, Last opcode: {X:0>2}\n", .{ self.cpu.pc, self.cpu.memory[self.cpu.pc] });
-            break;
-        }
         try self.cpu.step();
-        if (!interrupt_triggered and self.cpu.cycle_count >= vdp_interrupt_cycles) {
-            std.debug.print("Triggering VDP interrupt at PC {X:0>4}\n", .{self.cpu.pc});
+
+        if (!interrupt_triggered and self.cpu.cycle_count >= interrupt_cycles) {
+            std.debug.print("Triggering interrupt at cycle {d}, IFF1={}\n", .{ self.cpu.cycle_count, self.cpu.iff1 });
             self.cpu.interrupt_pending = true;
-            self.cpu.iff1 = true;
             interrupt_triggered = true;
         }
     }
 
     try self.vdp_device.vdp.updateFrame();
-    std.debug.print("updateFrame end\n", .{});
-
-    const frame_end = std.time.nanoTimestamp();
-    const frame_duration_ns = frame_end - frame_start;
-    const target_duration_ns = std.time.ns_per_s / target_fps;
-    if (frame_duration_ns < target_duration_ns) {
-        std.time.sleep(@intCast(target_duration_ns - frame_duration_ns));
-    }
-    std.debug.print("runFrame end\n", .{});
 }
 
 // Add methods for getting screen buffer, handling input, etc.
@@ -267,8 +240,8 @@ const VDPDevice = struct {
         device.* = .{
             .vdp = vdp,
             .io_device = .{
-                .inFn = in,
-                .outFn = out,
+                .inFn = safeIn,
+                .outFn = safeOut,
                 .fieldParentPtr = vdp,
             },
         };
@@ -289,21 +262,24 @@ const VDPDevice = struct {
         const tms: *TMS9918 = @ptrCast(@alignCast(ptr.fieldParentPtr.?));
         // std.debug.print("VDPDevice out: tms: {any}\n", .{tms});
         switch (port) {
-            190, vdp_data_port => tms.writeData(value),
-            191, vdp_control_port => tms.writeAddress(value),
+            190, vdp_data_port => {
+                std.debug.print("VDP Data Write: {X:0>2}\n", .{value});
+                tms.writeData(value);
+            },
+            191, vdp_control_port => {
+                std.debug.print("VDP Addr/Reg Write: {X:0>2}\n", .{value});
+                tms.writeAddress(value);
+            },
             else => {},
         }
-        std.debug.print("leaving VDPDevice out\n", .{});
     }
 };
 
 pub fn draw(self: *Self) !void {
-    std.debug.print("draw start\n", .{});
     // Get RGB pixels from VDP
     const pixels = try getScreen(self.vdp_device.vdp, self.allocator);
     defer self.allocator.free(pixels);
 
-    std.debug.print("pixels len: {d}\n", .{pixels.len});
     // Convert RGB to RGBA for raylib
     var rgba_pixels = try self.allocator.alloc(u8, 256 * 192 * 4);
     defer self.allocator.free(rgba_pixels);
@@ -316,10 +292,8 @@ pub fn draw(self: *Self) !void {
     }
 
     // Update texture with new pixel data
-    std.debug.print("updating texture\n", .{});
     rl.updateTexture(self.screen_texture.texture, rgba_pixels.ptr);
 
-    std.debug.print("updated texture\n", .{});
     // Draw scaled texture to window
     rl.drawTexturePro(
         self.screen_texture.texture,
@@ -342,26 +316,68 @@ pub fn draw(self: *Self) !void {
 }
 
 fn getScreen(self: *TMS9918, allocator: std.mem.Allocator) ![]u8 {
-    // scanline buffer
     var scanline = [_]u8{0} ** TMS9918.pixels_x;
-
-    // framebuffer
     var framebuffer = try allocator.alloc(u8, TMS9918.pixels_x * TMS9918.pixels_y * 3);
 
-    // generate all scanlines and render to framebuffer
     var c: usize = 0;
     for (0..TMS9918.pixels_y) |y| {
-        // get the scanline pixels
         self.scanLine(@intCast(y), &scanline);
         for (0..TMS9918.pixels_x) |x| {
-            // values returned from scanLine() are palette indexes
-            // use the Palette array to convert to an RGBA value
             const color = TMS9918.palette[scanline[x]];
-            framebuffer[c] = @intCast((color >> 24) & 0xFF);
-            framebuffer[c + 1] = @intCast((color >> 16) & 0xFF);
-            framebuffer[c + 2] = @intCast((color >> 8) & 0xFF);
+            // Fix color component order - palette is in RGBA format (0xRRGGBBAA)
+            framebuffer[c] = @intCast((color >> 0) & 0xFF); // R
+            framebuffer[c + 1] = @intCast((color >> 8) & 0xFF); // G
+            framebuffer[c + 2] = @intCast((color >> 16) & 0xFF); // B
             c += 3;
         }
     }
     return framebuffer;
+}
+
+pub fn safeOut(device: *IODevice, port: u16, data: u8) void {
+    const vdp: *TMS9918 = @ptrCast(@alignCast(device.fieldParentPtr.?));
+
+    switch (port) {
+        0xBE, 0x98 => {
+            // Log writes to important VDP memory regions
+            const addr = vdp.current_address;
+            if (addr < 0x800) {
+                if (data != 0) std.debug.print("Pattern Table Write: addr={X:0>4} data={X:0>2}\n", .{ addr, data });
+            } else if (addr >= 0x3800) {
+                if (data != 0) std.debug.print("Name Table Write: addr={X:0>4} data={X:0>2}\n", .{ addr, data });
+            } else if (addr >= 0x2000) {
+                if (data != 0) std.debug.print("Color Table Write: addr={X:0>4} data={X:0>2}\n", .{ addr, data });
+            }
+            vdp.writeData(data);
+        },
+        0xBF, 0x99 => {
+            if (vdp.reg_write_stage == 1 and data & 0xC0 == 0x80) {
+                const reg = data & 0x07;
+                const val = vdp.reg_write_stage0_value;
+                std.debug.print("VDP Register {d} = {X:0>2} (was {X:0>2})\n", .{ reg, val, vdp.registers[reg] });
+            } else {
+                std.debug.print("VDP Address/Mode: {X:0>2} stage={d}\n", .{ data, vdp.reg_write_stage });
+            }
+            vdp.writeAddress(data);
+        },
+        else => {},
+    }
+}
+
+pub fn safeIn(device: *IODevice, port: u16) u8 {
+    const vdp: *TMS9918 = @ptrCast(@alignCast(device.fieldParentPtr.?));
+
+    return switch (port) {
+        190, 0x98 => {
+            const data = vdp.readData();
+            std.debug.print("VDP Data Read: port={X:0>2} data={X:0>2}\n", .{ port, data });
+            return data;
+        },
+        191, 0x99 => {
+            const status = vdp.readStatus();
+            std.debug.print("VDP Status Read: port={X:0>2} status={X:0>2}\n", .{ port, status });
+            return status;
+        },
+        else => 0xFF,
+    };
 }

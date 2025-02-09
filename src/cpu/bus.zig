@@ -33,7 +33,6 @@ pub const IODevice = struct {
 
     /// Performs an output operation on the device
     pub fn out(self: *IODevice, port: u16, value: u8) void {
-        std.debug.print("calling outFn\n", .{});
         self.outFn(self, port, value);
     }
 };
@@ -78,9 +77,7 @@ pub const Bus = struct {
     pub fn out(self: *Bus, port: u16, value: u8) !void {
         // For now, broadcast to all devices
         // TODO: Implement proper port mapping/routing
-        std.debug.print("bus out: {d} {d}\n", .{ port, value });
         for (self.devices.items) |device| {
-            std.debug.print("bus device: {any}\n", .{device});
             device.out(port, value);
         }
     }

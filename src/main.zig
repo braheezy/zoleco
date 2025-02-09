@@ -60,6 +60,7 @@ pub fn main() !void {
     const window_width = 800;
     const window_height = 600;
 
+    rl.setTraceLogLevel(.err);
     rl.initWindow(window_width, window_height, "zoleco");
     defer rl.closeWindow();
     rl.setWindowSize(window_width, window_height);
