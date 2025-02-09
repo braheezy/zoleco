@@ -17,25 +17,21 @@ pub fn inx(self: *Z80, reg1: u8, reg2: u8) struct { u8, u8 } {
 // INX B: Increment register pair B.
 pub fn inx_B(self: *Z80) !void {
     self.register.b, self.register.c = inx(self, self.register.b, self.register.c);
-    self.cycle_count += 6;
 }
 
 // INX D: Increment register pair D.
 pub fn inx_D(self: *Z80) !void {
     self.register.d, self.register.e = inx(self, self.register.d, self.register.e);
-    self.cycle_count += 6;
 }
 
 // INX H: Increment register pair H.
 pub fn inx_H(self: *Z80) !void {
     self.register.h, self.register.l = inx(self, self.register.h, self.register.l);
-    self.cycle_count += 6;
 }
 
 // INX SP: Increment stack pointer.
 pub fn inx_SP(self: *Z80) !void {
     self.sp += 1;
-    self.cycle_count += 6;
     self.q = 0;
 }
 
@@ -94,7 +90,6 @@ pub fn push(self: *Z80, lower: u8, upper: u8) void {
     self.memory[self.sp - 1] = upper;
     self.memory[self.sp - 2] = lower;
     self.sp -= 2;
-    self.cycle_count += 11;
     self.q = 0;
 }
 
@@ -123,7 +118,6 @@ pub fn pop(self: *Z80) struct { u8, u8 } {
     const lower = self.memory[self.sp];
     const upper = self.memory[self.sp + 1];
     self.sp += 2;
-    self.cycle_count += 10;
     self.q = 0;
 
     return .{ lower, upper };
@@ -154,7 +148,6 @@ pub fn pop_AF(self: *Z80) !void {
 pub fn pop_IX(self: *Z80) !void {
     const ixl, const ixh = pop(self);
     self.curr_index_reg.?.* = Z80.toUint16(ixh, ixl);
-    self.cycle_count += 10;
     self.q = 0;
 }
 // Exchanges (SP) with IXL, and (SP+1) with IXH.
@@ -175,7 +168,6 @@ pub fn ex_SP_IX(self: *Z80) !void {
 
     self.wz = self.curr_index_reg.?.*;
 
-    self.cycle_count += 23;
     self.q = 0;
 }
 
@@ -186,14 +178,12 @@ pub fn push_IX(self: *Z80) !void {
     self.memory[self.sp - 1] = ixh;
     self.memory[self.sp - 2] = ixl;
     self.sp -= 2;
-    self.cycle_count += 15;
     self.q = 0;
 }
 
 // Loads the value of IX into SP.
 pub fn load_IX_SP(self: *Z80) !void {
     self.sp = self.curr_index_reg.?.*;
-    self.cycle_count += 10;
     self.q = 0;
 }
 
@@ -211,8 +201,6 @@ fn sbc_HL(self: *Z80, pair: u16) void {
 
     // Set WZ
     self.wz = hl +% 1;
-
-    self.cycle_count += 15;
 }
 
 // Subtracts BC and the carry flag from HL.
@@ -283,8 +271,6 @@ fn adc_HL(self: *Z80, pair: u16) void {
 
     // Set WZ
     self.wz = hl +% 1;
-
-    self.cycle_count += 15;
 }
 
 // Adds BC and the carry flag to HL.

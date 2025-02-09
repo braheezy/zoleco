@@ -33,10 +33,8 @@ fn shiftLeftArithmetic(self: *Z80, val: u8) u8 {
     if (self.curr_index_reg != null) {
         const addr = self.getDisplacedAddress(self.displacement);
         self.memory[addr] = result;
-        self.cycle_count += 4;
     }
 
-    self.cycle_count += 8;
     self.q = self.flag.toByte();
     return result;
 }
@@ -61,10 +59,8 @@ fn shiftLeft(self: *Z80, val: u8) u8 {
     if (self.curr_index_reg != null) {
         const addr = self.getDisplacedAddress(self.displacement);
         self.memory[addr] = result;
-        self.cycle_count += 4;
     }
 
-    self.cycle_count += 8;
     self.q = self.flag.toByte();
     return result;
 }
@@ -90,10 +86,8 @@ fn shiftRight(self: *Z80, val: u8) u8 {
     if (self.curr_index_reg != null) {
         const addr = self.getDisplacedAddress(self.displacement);
         self.memory[addr] = result;
-        self.cycle_count += 4;
     }
 
-    self.cycle_count += 8;
     self.q = self.flag.toByte();
     return result;
 }
@@ -120,10 +114,8 @@ fn shiftRightArithmetic(self: *Z80, val: u8) u8 {
     if (self.curr_index_reg != null) {
         const addr = self.getDisplacedAddress(self.displacement);
         self.memory[addr] = result;
-        self.cycle_count += 4;
     }
 
-    self.cycle_count += 8;
     self.q = self.flag.toByte();
     return result;
 }
@@ -156,7 +148,6 @@ pub fn sla_M(self: *Z80) !void {
     const addr = Z80.getHL(self);
     const val = self.memory[addr];
     self.memory[addr] = shiftLeftArithmetic(self, val);
-    self.cycle_count += 7;
 }
 
 pub fn sla_A(self: *Z80) !void {
@@ -191,7 +182,6 @@ pub fn sra_M(self: *Z80) !void {
     const addr = Z80.getHL(self);
     const val = self.memory[addr];
     self.memory[addr] = shiftRightArithmetic(self, val);
-    self.cycle_count += 7;
 }
 
 pub fn sra_A(self: *Z80) !void {
@@ -229,7 +219,6 @@ pub fn sll_M(self: *Z80) !void {
         self.getHL();
     const val = self.memory[address];
     self.memory[address] = shiftLeft(self, val);
-    self.cycle_count += 7;
 }
 
 pub fn sll_A(self: *Z80) !void {
@@ -264,7 +253,6 @@ pub fn srl_M(self: *Z80) !void {
     const addr = Z80.getHL(self);
     const val = self.memory[addr];
     self.memory[addr] = shiftRight(self, val);
-    self.cycle_count += 7;
 }
 
 pub fn srl_A(self: *Z80) !void {

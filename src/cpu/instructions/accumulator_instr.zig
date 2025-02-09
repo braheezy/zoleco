@@ -24,8 +24,6 @@ pub fn add(self: *Z80, data: u8) u8 {
     self.flag.setUndocumentedFlags(result);
     self.q = self.flag.toByte();
 
-    self.cycle_count += 4;
-
     return result;
 }
 
@@ -106,8 +104,6 @@ pub fn adc(self: *Z80, data: u8) u8 {
     self.flag.setUndocumentedFlags(result);
     self.q = self.flag.toByte();
 
-    self.cycle_count += 4;
-
     return @intCast(result);
 }
 
@@ -169,7 +165,6 @@ pub fn adc_N(self: *Z80) !void {
     self.flag.setUndocumentedFlags(result);
     self.q = self.flag.toByte();
     self.register.a = result;
-    self.cycle_count += 7;
 }
 
 fn detectOverflowSub(a: u8, b: u8, result: u8) bool {
@@ -194,8 +189,6 @@ pub fn sub(self: *Z80, data: u8) u8 {
     self.flag.add_subtract = true;
     self.flag.setUndocumentedFlags(result);
     self.q = self.flag.toByte();
-
-    self.cycle_count += 4;
 
     return @truncate(result);
 }
@@ -283,7 +276,6 @@ pub fn sbb(self: *Z80, data: u8) u8 {
     self.flag.setUndocumentedFlags(result);
     self.q = self.flag.toByte();
 
-    self.cycle_count += 4;
     self.register.a = result;
     return result;
 }
@@ -334,7 +326,6 @@ pub fn sbb_N(self: *Z80) !void {
     const n = data[0];
 
     self.register.a = sbb(self, n);
-    self.cycle_count += 3;
 }
 // ana performs AND with data and accumulator, storing in accumulator.
 pub fn ana(self: *Z80, data: u8) void {
@@ -414,8 +405,6 @@ pub fn xra(self: *Z80, data: u8) void {
     self.flag.setUndocumentedFlags(result);
     self.q = self.flag.toByte();
 
-    self.cycle_count += 4;
-
     self.register.a = @intCast(result);
 }
 
@@ -464,7 +453,6 @@ pub fn xra_N(self: *Z80) !void {
     const n = data[0];
 
     xra(self, n);
-    self.cycle_count += 3;
 }
 
 // ora performs OR with accumulator
@@ -530,7 +518,6 @@ pub fn ora_N(self: *Z80) !void {
     const n = data[0];
 
     ora(self, n);
-    self.cycle_count += 3;
 }
 
 // compare helper
@@ -617,5 +604,4 @@ pub fn neg(self: *Z80) !void {
 
     self.register.a = result;
     self.q = self.flag.toByte();
-    self.cycle_count += 8;
 }

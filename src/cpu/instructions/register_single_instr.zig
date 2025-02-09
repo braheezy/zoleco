@@ -20,49 +20,41 @@ pub fn inc(self: *Z80, data: u8) u8 {
 // INR A: Increment register A.
 pub fn inr_A(self: *Z80) !void {
     self.register.a = inc(self, self.register.a);
-    self.cycle_count += 4;
 }
 
 // INR B: Increment register B.
 pub fn inr_B(self: *Z80) !void {
     self.register.b = inc(self, self.register.b);
-    self.cycle_count += 4;
 }
 
 // INR C: Increment register C.
 pub fn inr_C(self: *Z80) !void {
     self.register.c = inc(self, self.register.c);
-    self.cycle_count += 4;
 }
 
 // INR D: Increment register D.
 pub fn inr_D(self: *Z80) !void {
     self.register.d = inc(self, self.register.d);
-    self.cycle_count += 4;
 }
 
 // INR E: Increment register E.
 pub fn inr_E(self: *Z80) !void {
     self.register.e = inc(self, self.register.e);
-    self.cycle_count += 4;
 }
 
 // INR H: Increment register H.
 pub fn inr_H(self: *Z80) !void {
     self.register.h = inc(self, self.register.h);
-    self.cycle_count += 4;
 }
 
 // INR L: Increment register L.
 pub fn inr_L(self: *Z80) !void {
     self.register.l = inc(self, self.register.l);
-    self.cycle_count += 4;
 }
 
 // INR M: Increment memory address pointed to by register pair HL.
 pub fn inr_M(self: *Z80) !void {
     self.memory[self.getHL()] = inc(self, self.memory[self.getHL()]);
-    self.cycle_count += 11;
 }
 
 // decrement helper
@@ -84,50 +76,42 @@ pub fn dcr(self: *Z80, data: u8) u8 {
 // DCR A: Decrement register A.
 pub fn dcr_A(self: *Z80) !void {
     self.register.a = dcr(self, self.register.a);
-    self.cycle_count += 4;
 }
 
 // DCR B: Decrement register B.
 pub fn dcr_B(self: *Z80) !void {
     self.register.b = dcr(self, self.register.b);
-    self.cycle_count += 4;
 }
 
 // DCR C: Decrement register C.
 pub fn dcr_C(self: *Z80) !void {
     self.register.c = dcr(self, self.register.c);
-    self.cycle_count += 4;
 }
 
 // DCR D: Decrement register D.
 pub fn dcr_D(self: *Z80) !void {
     self.register.d = dcr(self, self.register.d);
-    self.cycle_count += 4;
 }
 
 // DCR E: Decrement register E.
 pub fn dcr_E(self: *Z80) !void {
     self.register.e = dcr(self, self.register.e);
-    self.cycle_count += 4;
 }
 
 // DCR H: Decrement register H.
 pub fn dcr_H(self: *Z80) !void {
     self.register.h = dcr(self, self.register.h);
-    self.cycle_count += 4;
 }
 
 // DCR L: Decrement register L.
 pub fn dcr_L(self: *Z80) !void {
     self.register.l = dcr(self, self.register.l);
-    self.cycle_count += 4;
 }
 
 // DCR M: Decrement memory location pointed to by register pair HL.
 pub fn dcr_M(self: *Z80) !void {
     const memory_address = self.getHL();
     self.memory[memory_address] = dcr(self, self.memory[memory_address]);
-    self.cycle_count += 11;
 }
 
 // decrement pair helper
@@ -142,26 +126,22 @@ fn decPair(self: *Z80, reg1: u8, reg2: u8) struct { u8, u8 } {
 // DCX B: Decrement register pair B.
 pub fn dcx_B(self: *Z80) !void {
     self.register.b, self.register.c = decPair(self, self.register.b, self.register.c);
-    self.cycle_count += 6;
 }
 
 // DCX D: Decrement register pair D.
 pub fn dcx_D(self: *Z80) !void {
     self.register.d, self.register.e = decPair(self, self.register.d, self.register.e);
-    self.cycle_count += 6;
 }
 
 // DCX H: Decrement register pair H.
 pub fn dcx_H(self: *Z80) !void {
     self.register.h, self.register.l = decPair(self, self.register.h, self.register.l);
-    self.cycle_count += 6;
 }
 
 // DCX SP: Decrement stack pointer
 pub fn dcx_SP(self: *Z80) !void {
     self.sp -= 1;
     // WZ is not affected by DCX SP
-    self.cycle_count += 6;
     self.q = 0;
 }
 
@@ -195,7 +175,6 @@ pub fn daa(self: *Z80) !void {
     self.flag.parity_overflow = Z80.parity(u8, self.register.a);
     self.flag.setUndocumentedFlags(self.register.a);
     self.q = self.flag.toByte();
-    self.cycle_count += 4;
 }
 
 // CMA: Complement accumulator.
@@ -205,7 +184,6 @@ pub fn cma(self: *Z80) !void {
     self.flag.half_carry = true;
     self.flag.setUndocumentedFlags(self.register.a);
     self.q = self.flag.toByte();
-    self.cycle_count += 4;
 }
 
 // CCF: Invert carry.
@@ -224,7 +202,6 @@ pub fn ccf(self: *Z80) !void {
 
     // Update Q to new flags state
     self.q = self.flag.toByte();
-    self.cycle_count += 4;
 }
 
 // SCF: Set carry.
@@ -243,5 +220,4 @@ pub fn scf(self: *Z80) !void {
 
     // Update Q to new flags state
     self.q = self.flag.toByte();
-    self.cycle_count += 4;
 }

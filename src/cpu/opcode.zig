@@ -18,6 +18,9 @@ const io = @import("instructions/io_instr.zig");
 const bl = @import("instructions/block_instr.zig");
 
 const OpcodeCycles = @import("cycles.zig").OpcodeCycles;
+const BitOpcodeCycles = @import("cycles.zig").BitOpcodeCycles;
+const IndexedOpcodeCycles = @import("cycles.zig").IndexedOpcodeCycles;
+const MiscOpcodeCycles = @import("cycles.zig").MiscOpcodeCycles;
 
 const bitTest = @import("instructions/bit_test_instr.zig").bitTest;
 const bitSetReset = @import("instructions/bit_test_instr.zig").bitSetReset;
@@ -109,6 +112,7 @@ pub fn lookupBitOpcode(self: *Z80) !void {
 
     if (BitOpcodeTable[next_opcode]) |handler| {
         try handler(self);
+        self.cycle_count += BitOpcodeCycles[next_opcode];
     } else {
         std.debug.print("unknown bit opcode: {x}\n", .{next_opcode});
         std.process.exit(1);
@@ -123,10 +127,12 @@ pub fn lookupIndexedOpcode(self: *Z80) OpError!void {
     const opcode = self.memory[self.pc];
     self.pc +%= 1;
     self.increment_r();
+    self.cycle_count += IndexedOpcodeCycles[opcode];
 
     if (opcode == 0xCB) {
         // Fetch displacement
         self.displacement = self.getDisplacement();
+        self.cycle_count += 8;
 
         // Fetch the actual bit opcode
         const bitOp = self.memory[self.pc];
@@ -136,6 +142,14 @@ pub fn lookupIndexedOpcode(self: *Z80) OpError!void {
         if (BitOpcodeTable[bitOp]) |handler| {
             // Pass displacement along
             try handler(self);
+            // Add 8 base cycles for indexed bit operations
+            self.cycle_count += 8;
+
+            // Add 3 more cycles for non-BIT operations
+            // BIT operations are in range 0x40-0x7F
+            if (bitOp < 0x40 or bitOp > 0x7F) {
+                self.cycle_count += 3;
+            }
         } else {
             std.debug.print("unknown bit opcode: {x}\n", .{bitOp});
             std.process.exit(1);
@@ -155,6 +169,7 @@ pub fn lookupMiscOpcode(self: *Z80) OpError!void {
 
     if (MiscOpcodeTable[opcode]) |handler| {
         try handler(self);
+        self.cycle_count += MiscOpcodeCycles[opcode];
     } else {
         std.debug.print("unknown misc opcode: {x}\n", .{opcode});
         std.process.exit(1);

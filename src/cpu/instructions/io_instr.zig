@@ -43,7 +43,6 @@ fn in_reg(self: *Z80, reg: u8) u8 {
     self.flag.setUndocumentedFlags(value);
     self.q = self.flag.toByte();
 
-    self.cycle_count += 12;
     return value;
 }
 
@@ -81,7 +80,6 @@ fn out_reg(self: *Z80, reg: u8) void {
     try self.bus.out(actual_port, reg);
     self.wz = Z80.toUint16(self.register.b, self.register.c) +% 1;
     self.q = 0;
-    self.cycle_count += 12;
 }
 
 // The value of B is written to the port at the 16-bit address contained in the BC register pair.
@@ -112,6 +110,5 @@ pub fn out_BC(self: *Z80) !void {
     try self.bus.out(@intCast(self.register.c), 0);
 
     self.wz = Z80.toUint16(self.register.b, self.register.c) +% 1;
-    self.cycle_count += 12;
     self.q = 0;
 }

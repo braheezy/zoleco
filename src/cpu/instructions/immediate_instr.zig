@@ -99,6 +99,5 @@ pub fn load_SP(self: *Z80) !void {
     const operand = Z80.toUint16(data[1], data[0]);
 
     self.sp = operand;
-    self.cycle_count += 10;
     self.q = 0;
 }

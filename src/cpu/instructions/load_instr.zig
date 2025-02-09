@@ -26,8 +26,6 @@ pub fn ex_M_HL(self: *Z80) !void {
 
     self.q = 0;
     self.wz = Z80.toUint16(self.register.h, self.register.l);
-
-    self.total_cycle_count += 19;
 }
 
 // The 2-byte contents of the register pairs AF and AF' are exchanged.
@@ -56,8 +54,6 @@ pub fn ex_DE_HL(self: *Z80) !void {
     self.register.e = self.register.l;
     self.register.l = temp_e;
     self.q = 0;
-
-    self.cycle_count += 4;
 }
 
 // Swap all register pairs with their shadow counterparts
@@ -88,16 +84,12 @@ pub fn exx(self: *Z80) !void {
     self.register.l = self.shadow_register.l;
     self.shadow_register.l = tempL;
 
-    // Add the T-cycle cost
-    self.cycle_count += 4;
-
     self.q = 0;
 }
 
 // Stores the value of A into register R.
 pub fn load_A_R(self: *Z80) !void {
     self.r = self.register.a;
-    self.cycle_count += 9;
     self.q = 0;
 }
 
@@ -114,8 +106,6 @@ pub fn load_R_A(self: *Z80) !void {
     self.flag.parity_overflow = self.iff2;
 
     self.q = self.flag.toByte();
-
-    self.cycle_count += 9;
 }
 
 pub fn load_A_I(self: *Z80) !void {
@@ -166,7 +156,6 @@ pub fn rrd(self: *Z80) !void {
     self.wz = hl_addr +% 1;
 
     self.q = self.flag.toByte();
-    self.cycle_count += 18;
 }
 // RLD - Rotate Left Decimal
 // The contents of the low-order nibble of (HL) are copied to the high-order nibble of (HL),
@@ -201,5 +190,4 @@ pub fn rld(self: *Z80) !void {
     self.wz = hl_addr +% 1;
 
     self.q = self.flag.toByte();
-    self.cycle_count += 18;
 }

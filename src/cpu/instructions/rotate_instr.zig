@@ -9,7 +9,6 @@ pub fn rlca(self: *Z80) !void {
     self.flag.carry = (self.register.a & 0x80) == 0x80;
     self.flag.half_carry = false;
     self.flag.add_subtract = false;
-    self.cycle_count += 4;
     self.register.a = std.math.rotl(u8, self.register.a, 1);
     self.flag.setUndocumentedFlags(self.register.a);
     self.q = self.flag.toByte();
@@ -47,10 +46,7 @@ pub fn rlc(self: *Z80, data: u8) u8 {
     if (self.curr_index_reg != null) {
         const addr = self.getDisplacedAddress(self.displacement);
         self.memory[addr] = result;
-        self.cycle_count += 4;
     }
-
-    self.cycle_count += 8;
 
     return result;
 }
@@ -141,7 +137,6 @@ fn rrc(self: *Z80, data: u8) u8 {
     if (self.curr_index_reg != null) {
         const addr = self.getDisplacedAddress(self.displacement);
         self.memory[addr] = result;
-        self.cycle_count += 4;
     }
 
     return result;
@@ -201,7 +196,6 @@ pub fn rla(self: *Z80) !void {
 
     self.flag.half_carry = false;
     self.flag.add_subtract = false;
-    self.cycle_count += 4;
     self.flag.setUndocumentedFlags(self.register.a);
     self.q = self.flag.toByte();
 }
@@ -241,10 +235,7 @@ pub fn rl(self: *Z80, data: u8) u8 {
     if (self.curr_index_reg != null) {
         const addr = self.getDisplacedAddress(self.displacement);
         self.memory[addr] = result;
-        self.cycle_count += 4;
     }
-
-    self.cycle_count += 8;
 
     return result;
 }
@@ -298,7 +289,6 @@ pub fn rra(self: *Z80) !void {
     self.flag.add_subtract = false;
     // Rotate accumulator right through carry
     self.register.a = (self.register.a >> 1) | (carry_rotate << (8 - 1));
-    self.cycle_count += 4;
     self.flag.setUndocumentedFlags(self.register.a);
     self.q = self.flag.toByte();
 }
@@ -339,10 +329,7 @@ fn rr(self: *Z80, data: u8) u8 {
     if (self.curr_index_reg != null) {
         const addr = self.getDisplacedAddress(self.displacement);
         self.memory[addr] = result;
-        self.cycle_count += 4;
     }
-
-    self.cycle_count += 8;
 
     return result;
 }

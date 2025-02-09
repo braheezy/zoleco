@@ -80,7 +80,6 @@ pub fn ldi(self: *Z80) !void {
     self.flag.x = (n & 0x08) != 0;
     self.flag.y = (n & 0x02) != 0;
 
-    self.cycle_count += 16;
     self.q = self.flag.toByte();
 }
 
@@ -122,7 +121,6 @@ pub fn cpi(self: *Z80) !void {
     // WZ is incremented after each operation
     self.wz = self.wz +% 1;
 
-    self.cycle_count += 16;
     self.q = self.flag.toByte();
 }
 
@@ -149,7 +147,6 @@ pub fn ini(self: *Z80) !void {
 
     setHL(self, self.getHL() +% 1);
 
-    self.cycle_count += 16;
     self.q = self.flag.toByte();
 }
 
@@ -175,7 +172,6 @@ pub fn outi(self: *Z80) !void {
     self.flag.y = (self.register.b & 0x20) != 0;
     self.flag.x = (self.register.b & 0x08) != 0;
 
-    self.cycle_count += 16;
     self.q = self.flag.toByte();
 }
 
@@ -203,7 +199,6 @@ pub fn ldd(self: *Z80) !void {
     self.flag.x = (n & 0x08) != 0;
     self.flag.y = (n & 0x02) != 0;
 
-    self.cycle_count += 16;
     self.q = self.flag.toByte();
 }
 
@@ -245,7 +240,6 @@ pub fn cpd(self: *Z80) !void {
     // WZ is decremented after each operation
     self.wz -= 1;
 
-    self.cycle_count += 16;
     self.q = self.flag.toByte();
 }
 
@@ -273,7 +267,6 @@ pub fn ind(self: *Z80) !void {
 
     setHL(self, self.getHL() -% 1);
 
-    self.cycle_count += 16;
     self.q = self.flag.toByte();
 }
 
@@ -298,7 +291,6 @@ pub fn outd(self: *Z80) !void {
     self.flag.y = (self.register.b & 0x20) != 0;
     self.flag.x = (self.register.b & 0x08) != 0;
 
-    self.cycle_count += 16;
     self.q = self.flag.toByte();
     self.wz -= 2;
 }
@@ -330,7 +322,7 @@ pub fn ldir(self: *Z80) !void {
         self.flag.x = (self.pc & 0x0800) != 0;
 
         self.wz = self.pc + 1; // MEMPTR = PC + 1
-        self.cycle_count += 21;
+        self.cycle_count += 5;
     } else {
         // If BC is zero, we're done
         self.flag.half_carry = false;
@@ -341,7 +333,6 @@ pub fn ldir(self: *Z80) !void {
         // XF comes from bit 3 of (A + value)
         self.flag.x = (t & @intFromBool(self.flag.x)) != 0;
         // self.wz = self.pc +% 1;
-        self.cycle_count += 16;
     }
 
     self.q = self.flag.toByte();
@@ -374,7 +365,7 @@ pub fn lddr(self: *Z80) !void {
         self.flag.x = (self.pc & 0x0800) != 0;
 
         self.wz = self.pc + 1; // MEMPTR = PC + 1
-        self.cycle_count += 21;
+        self.cycle_count += 5;
     } else {
         // If BC is zero, we're done
         self.flag.half_carry = false;
@@ -385,7 +376,6 @@ pub fn lddr(self: *Z80) !void {
         // XF comes from bit 3 of (A + value)
         self.flag.x = (t & @intFromBool(self.flag.x)) != 0;
         // self.wz = self.pc +% 1;
-        self.cycle_count += 16;
     }
 
     self.q = self.flag.toByte();
@@ -425,7 +415,7 @@ pub fn cpir(self: *Z80) !void {
         self.flag.x = ((self.pc >> 8) & 0x08) != 0;
 
         self.wz = self.pc + 1;
-        self.cycle_count += 21;
+        self.cycle_count += 5;
     } else {
         // Search complete (either match found or BC=0)
         // YF and XF come from (A - [HLi] - HFo)
@@ -433,7 +423,6 @@ pub fn cpir(self: *Z80) !void {
         self.flag.x = (t1 & 0x08) != 0;
 
         self.wz +%= 1;
-        self.cycle_count += 16;
     }
 
     self.q = self.flag.toByte();
@@ -473,7 +462,7 @@ pub fn cpdr(self: *Z80) !void {
         self.flag.x = ((self.pc >> 8) & 0x08) != 0;
 
         self.wz = self.pc + 1;
-        self.cycle_count += 21;
+        self.cycle_count += 5;
     } else {
         // Search complete (either match found or BC=0)
         // YF and XF come from (A - [HLi] - HFo)
@@ -481,7 +470,6 @@ pub fn cpdr(self: *Z80) !void {
         self.flag.x = (t1 & 0x08) != 0;
 
         self.wz -%= 1;
-        self.cycle_count += 16;
     }
 
     self.q = self.flag.toByte();
@@ -551,9 +539,7 @@ pub fn inir(self: *Z80) !void {
     if (self.register.b != 0) {
         self.pc -= 2; // Repeat instruction
         self.wz = self.pc + 1; // MEMPTR = PC + 1
-        self.cycle_count += 21;
-    } else {
-        self.cycle_count += 16;
+        self.cycle_count += 5;
     }
 
     // Set flags based on whether we're repeating
@@ -589,9 +575,7 @@ pub fn indr(self: *Z80) !void {
     if (self.register.b != 0) {
         self.pc -= 2; // Repeat instruction
         self.wz = self.pc + 1; // MEMPTR = PC + 1
-        self.cycle_count += 21;
-    } else {
-        self.cycle_count += 16;
+        self.cycle_count += 5;
     }
 
     // Set flags based on whether we're repeating
@@ -623,10 +607,9 @@ pub fn otir(self: *Z80) !void {
     if (self.register.b != 0) {
         self.pc -= 2; // Repeat instruction
         self.wz = self.pc + 1; // MEMPTR = PC + 1
-        self.cycle_count += 21;
+        self.cycle_count += 5;
     } else {
         self.wz = getBC(self) +% 1; // MEMPTR = BC + 1
-        self.cycle_count += 16;
     }
     // Set flags based on whether we're repeating
     setInOutFlags(self, self.register.b, nf, hcf, p, self.register.b != 0);
@@ -657,10 +640,9 @@ pub fn otdr(self: *Z80) !void {
     if (self.register.b != 0) {
         self.pc -= 2; // Repeat instruction
         self.wz = self.pc + 1; // MEMPTR = PC + 1
-        self.cycle_count += 21;
+        self.cycle_count += 5;
     } else {
         self.wz = getBC(self) -% 1; // MEMPTR = BC - 1
-        self.cycle_count += 16;
     }
     // Set flags based on whether we're repeating
     setInOutFlags(self, self.register.b, nf, hcf, p, self.register.b != 0);

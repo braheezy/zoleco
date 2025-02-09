@@ -21,7 +21,6 @@ fn store_pair_to_nn(self: *Z80, high: u8, low: u8) !void {
     self.memory[nn] = low;
 
     self.wz = nn +% 1;
-    self.cycle_count += 20;
     self.q = 0;
 }
 
@@ -50,7 +49,6 @@ pub fn load_SP_nn(self: *Z80) !void {
     self.memory[nn +% 1] = @truncate(self.sp >> 8); // High byte
 
     self.wz = nn +% 1;
-    self.cycle_count += 20;
     self.q = 0;
 }
 
@@ -66,7 +64,6 @@ pub fn load_nn_BC(self: *Z80) !void {
     // Set WZ to nn+1
     self.wz = nn +% 1;
 
-    self.cycle_count += 20;
     self.q = 0;
 }
 
@@ -81,7 +78,6 @@ pub fn load_nn_DE(self: *Z80) !void {
     // Set WZ to nn+1
     self.wz = nn +% 1;
 
-    self.cycle_count += 20;
     self.q = 0;
 }
 
@@ -96,7 +92,6 @@ pub fn load_nn_HL(self: *Z80) !void {
     // Set WZ to nn+1
     self.wz = nn +% 1;
 
-    self.cycle_count += 20;
     self.q = 0;
 }
 
@@ -110,7 +105,6 @@ pub fn load_nn_SP(self: *Z80) !void {
     self.sp = Z80.toUint16(high, low);
 
     self.wz = nn +% 1;
-    self.cycle_count += 20;
     self.q = 0;
 }
 
@@ -126,7 +120,6 @@ pub fn loadAddr_B(self: *Z80) !void {
 pub fn loadAddr_D(self: *Z80) !void {
     const addr = Z80.toUint16(self.register.d, self.register.e);
     self.register.a = self.memory[addr];
-    self.cycle_count += 7;
     self.wz = addr +% 1;
     self.q = 0;
 }
@@ -134,7 +127,6 @@ pub fn loadAddr_D(self: *Z80) !void {
 // Loads the value of HL into SP.
 pub fn load_HL_SP(self: *Z80) !void {
     self.sp = self.getHL();
-    self.cycle_count += 10;
     self.q = 0;
 }
 
@@ -143,441 +135,378 @@ pub fn move_MA(self: *Z80) !void {
     const address = self.getHL();
 
     self.memory[address] = self.register.a;
-    self.cycle_count += 7;
     self.q = 0;
 }
 
 // MOV L,A: Load value from accumulator into register L.
 pub fn move_LA(self: *Z80) !void {
     self.register.l = self.register.a;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV L,B: Load value from register B into register L.
 pub fn move_LB(self: *Z80) !void {
     self.register.l = self.register.b;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV L,M: Load value from register B into memory address from register pair HL
 pub fn move_LM(self: *Z80) !void {
     self.register.l = self.memory[self.getHL()];
-    self.cycle_count += 7;
     self.q = 0;
 }
 
 // MOV D,B: Load value from register B into register D.
 pub fn move_DB(self: *Z80) !void {
     self.register.d = self.register.b;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV D,E: Load value from register E into register D.
 pub fn move_DE(self: *Z80) !void {
     self.register.d = self.register.e;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV E,B: Load value from register B into register E.
 pub fn move_EB(self: *Z80) !void {
     self.register.e = self.register.b;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV E,L: Load value from register L into register E.
 pub fn move_EL(self: *Z80) !void {
     self.register.e = self.register.l;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV B,A: Load value from accumulator into register B.
 pub fn move_BA(self: *Z80) !void {
     self.register.b = self.register.a;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV B,D: Load value from register B into register D.
 pub fn move_BD(self: *Z80) !void {
     self.register.b = self.register.d;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV B,E: Load value from register B into register E.
 pub fn move_BE(self: *Z80) !void {
     self.register.b = self.register.e;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV C,A: Load value from accumulator into register C.
 pub fn move_CA(self: *Z80) !void {
     self.register.c = self.register.a;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV C,B: Load value from register B into register C.
 pub fn move_CB(self: *Z80) !void {
     self.register.c = self.register.b;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV C,D: Load value from register D into register C.
 pub fn move_CD(self: *Z80) !void {
     self.register.c = self.register.d;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV C,E: Load value from register E into register C.
 pub fn move_CE(self: *Z80) !void {
     self.register.c = self.register.e;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV C,H: Load value from register H into register C.
 pub fn move_CH(self: *Z80) !void {
     self.register.c = self.register.h;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV H,B: Load value from register B into register H.
 pub fn move_HB(self: *Z80) !void {
     self.register.h = self.register.b;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV H,L: Load value from register L into register H.
 pub fn move_HL(self: *Z80) !void {
     self.register.h = self.register.l;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV A,C: Load value from register C into accumulator.
 pub fn move_AC(self: *Z80) !void {
     self.register.a = self.register.c;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV D,C: Load value from register C into register D.
 pub fn move_DC(self: *Z80) !void {
     self.register.d = self.register.c;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV D,H: Load value from register H into register D.
 pub fn move_DH(self: *Z80) !void {
     self.register.d = self.register.h;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV D,L: Load value from register L into register D.
 pub fn move_DL(self: *Z80) !void {
     self.register.d = self.register.l;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV H,C: Load value from register C into register H.
 pub fn move_HC(self: *Z80) !void {
     self.register.h = self.register.c;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV E,M: Move memory location pointed to by register pair HL into register E.
 pub fn move_EM(self: *Z80) !void {
     self.register.e = self.memory[self.getHL()];
-    self.cycle_count += 7;
     self.q = 0;
 }
 
 // MOV B,M: Move memory location pointed to by register pair HL into register B.
 pub fn move_BM(self: *Z80) !void {
     self.register.b = self.memory[self.getHL()];
-    self.cycle_count += 7;
     self.q = 0;
 }
 
 // MOV C,M: Move memory location pointed to by register pair HL into register C.
 pub fn move_CM(self: *Z80) !void {
     self.register.c = self.memory[self.getHL()];
-    self.cycle_count += 7;
     self.q = 0;
 }
 
 // MOV D,M: Move memory location pointed to by register pair HL into register D.
 pub fn move_DM(self: *Z80) !void {
     self.register.d = self.memory[self.getHL()];
-    self.cycle_count += 7;
     self.q = 0;
 }
 
 // MOV A,M: Move memory location pointed to by register pair HL into register A.
 pub fn move_AM(self: *Z80) !void {
     self.register.a = self.memory[self.getHL()];
-    self.cycle_count += 7;
     self.q = 0;
 }
 
 // MOV H,M: Move memory location pointed to by register pair HL into register H.
 pub fn move_HM(self: *Z80) !void {
     self.register.h = self.memory[self.getHL()];
-    self.cycle_count += 7;
     self.q = 0;
 }
 
 // MOV M,B: Move register B into memory location pointed to by register pair HL.
 pub fn move_MB(self: *Z80) !void {
     self.memory[self.getHL()] = self.register.b;
-    self.cycle_count += 7;
     self.q = 0;
 }
 
 // MOV M,C: Move register C into memory location pointed to by register pair HL.
 pub fn move_MC(self: *Z80) !void {
     self.memory[self.getHL()] = self.register.c;
-    self.cycle_count += 7;
     self.q = 0;
 }
 
 // MOV M,D: Move register D into memory location pointed to by register pair HL.
 pub fn move_MD(self: *Z80) !void {
     self.memory[self.getHL()] = self.register.d;
-    self.cycle_count += 7;
     self.q = 0;
 }
 
 // MOV M,E: Move register E into memory location pointed to by register pair HL.
 pub fn move_ME(self: *Z80) !void {
     self.memory[self.getHL()] = self.register.e;
-    self.cycle_count += 7;
     self.q = 0;
 }
 
 // MOV M,H: Move register H into memory location pointed to by register pair HL.
 pub fn move_MH(self: *Z80) !void {
     self.memory[self.getHL()] = self.register.h;
-    self.cycle_count += 7;
     self.q = 0;
 }
 
 // MOV M,L: Move register L into memory location pointed to by register pair HL.
 pub fn move_ML(self: *Z80) !void {
     self.memory[self.getHL()] = self.register.l;
-    self.cycle_count += 7;
     self.q = 0;
 }
 
 // MOV A,H: Move value from register H into accumulator.
 pub fn move_AH(self: *Z80) !void {
     self.register.a = self.register.h;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV A,L: Move value from register L into accumulator.
 pub fn move_AL(self: *Z80) !void {
     self.register.a = self.register.l;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV B,B: Move value from register B into register B.
 pub fn move_BB(self: *Z80) !void {
     self.register.b = self.register.b;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV B,C: Move value from register C into register B.
 pub fn move_BC(self: *Z80) !void {
     self.register.b = self.register.c;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV B,L: Move value from register L into register B.
 pub fn move_BL(self: *Z80) !void {
     self.register.b = self.register.l;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV B,H: Move value from register H into register B.
 pub fn move_BH(self: *Z80) !void {
     self.register.b = self.register.h;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV C,C: Move value from register C into register C.
 pub fn move_CC(self: *Z80) !void {
     self.register.c = self.register.c;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV C,L: Move value from register C into register L.
 pub fn move_CL(self: *Z80) !void {
     self.register.c = self.register.l;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV A,D: Move value from register D into accumulator.
 pub fn move_AD(self: *Z80) !void {
     self.register.a = self.register.d;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV D,D: Move value from register D into register D.
 pub fn move_DD(self: *Z80) !void {
     self.register.d = self.register.d;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV E,D: Move value from register D into register E.
 pub fn move_ED(self: *Z80) !void {
     self.register.e = self.register.d;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV E,E: Move value from register E into register E.
 pub fn move_EE(self: *Z80) !void {
     self.register.e = self.register.e;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV E,H: Move value from register H into register E.
 pub fn move_EH(self: *Z80) !void {
     self.register.e = self.register.h;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV H,D: Move value from register D into register H.
 pub fn move_HD(self: *Z80) !void {
     self.register.h = self.register.d;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV H,H: Move value from register H into register H.
 pub fn move_HH(self: *Z80) !void {
     self.register.h = self.register.h;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV L,C: Move value from register C into register L.
 pub fn move_LC(self: *Z80) !void {
     self.register.l = self.register.c;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV L,D: Move value from register D into register L.
 pub fn move_LD(self: *Z80) !void {
     self.register.l = self.register.d;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV L,L: Move value from register L into register L.
 pub fn move_LL(self: *Z80) !void {
     self.register.l = self.register.l;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV A,E: Move value from register E into accumulator.
 pub fn move_AE(self: *Z80) !void {
     self.register.a = self.register.e;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV H,A: Move value from accumulator into register H.
 pub fn move_HA(self: *Z80) !void {
     self.register.h = self.register.a;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV H,E: Move value from register E into register H.
 pub fn move_HE(self: *Z80) !void {
     self.register.h = self.register.e;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV E,C: Move value from register C into register E.
 pub fn move_EC(self: *Z80) !void {
     self.register.e = self.register.c;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV L,E: Move value from register E into register L.
 pub fn move_LE(self: *Z80) !void {
     self.register.l = self.register.e;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV A,B: Move value from register B into accumulator.
 pub fn move_AB(self: *Z80) !void {
     self.register.a = self.register.b;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV A,A: Move value from register A into register A.
 pub fn move_AA(self: *Z80) !void {
     self.register.a = self.register.a;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV E,A: Move value from accumulator into register E.
 pub fn move_EA(self: *Z80) !void {
     self.register.e = self.register.a;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV L,H: Move value from register H into register L.
 pub fn move_LH(self: *Z80) !void {
     self.register.l = self.register.h;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
 // MOV D,A: Move value from accumulator into register D.
 pub fn move_DA(self: *Z80) !void {
     self.register.d = self.register.a;
-    self.cycle_count += 4;
     self.q = 0;
 }
 
@@ -586,7 +515,6 @@ pub fn stax_D(self: *Z80) !void {
     const address = Z80.toUint16(self.register.d, self.register.e);
 
     self.memory[address] = self.register.a;
-    self.cycle_count += 7;
     self.q = 0;
     self.wz = (@as(u16, self.register.a) << 8) | (@as(u16, address +% 1 & 0xFF));
 }

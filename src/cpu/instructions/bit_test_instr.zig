@@ -57,7 +57,6 @@ pub fn bitTest(self: *Z80) !void {
         val = self.memory[addr];
         // For indexed instructions, xy flags come from high byte of final address
         xy_src = @intCast(addr >> 8);
-        self.cycle_count +%= 4;
     } else {
         val = switch (reg_index) {
             0 => self.register.b,
@@ -67,7 +66,6 @@ pub fn bitTest(self: *Z80) !void {
             4 => self.register.h,
             5 => self.register.l,
             6 => blk: {
-                self.cycle_count +%= 4;
                 const addr = (@as(u16, self.register.h) << 8) | @as(u16, self.register.l);
                 // For non-indexed memory access (HL), WZ is not affected
                 break :blk self.memory[addr];
@@ -80,7 +78,6 @@ pub fn bitTest(self: *Z80) !void {
     }
 
     bitTestFlags(self, val, bit_index, xy_src, @intCast(reg_index));
-    self.cycle_count +%= 8;
 }
 
 pub fn bitSetReset(self: *Z80) !void {
@@ -99,7 +96,6 @@ pub fn bitSetReset(self: *Z80) !void {
         // Set WZ (MEMPTR) to IX+d/IY+d for indexed instructions
         self.wz = addr;
         val = self.memory[addr];
-        self.cycle_count +%= 4;
 
         if (is_set) {
             result = val | (@as(u8, 1) << bit_index);
@@ -133,7 +129,6 @@ pub fn bitSetReset(self: *Z80) !void {
             5 => self.register.l,
             6 => blk: {
                 const addr = (@as(u16, self.register.h) << 8) | @as(u16, self.register.l);
-                self.cycle_count +%= 4;
                 break :blk self.memory[addr];
             },
             7 => self.register.a,
@@ -156,12 +151,9 @@ pub fn bitSetReset(self: *Z80) !void {
             6 => {
                 const addr = (@as(u16, self.register.h) << 8) | @as(u16, self.register.l);
                 self.memory[addr] = result;
-                self.cycle_count +%= 7;
             },
             7 => self.register.a = result,
             else => unreachable,
         }
     }
-
-    self.cycle_count +%= 8;
 }
