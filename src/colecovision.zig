@@ -157,7 +157,6 @@ pub fn loadRom(self: *Self, data: []const u8) !void {
 
     // Reset CPU state. Start with BIOS.
     self.cpu.pc = 0x0000;
-    self.cpu.sp = 0x7FFF;
     self.cpu.interrupt_mode = .{ .one = {} };
     self.cpu.iff1 = false;
     self.cpu.iff2 = false;
@@ -200,21 +199,40 @@ pub fn runFrame(self: *Self) !void {
         return error.BiosNotLoaded;
     }
 
-    var interrupt_triggered = false;
-    self.cpu.cycle_count = 0;
-    const interrupt_cycles = cycles_per_line * vdp_interrupt_line;
+    var vblank = false;
+    var total_cycles: u32 = 0;
+    const max_cycles = 702240; // Safety limit from Gearcoleco
 
-    while (self.cpu.cycle_count < cycles_per_frame) {
+    const render_breakpoint = 22;
+    const cycle_breakpoint = 0;
+
+    // Run until we hit VBLANK or reach max cycles
+    while (!vblank) {
+        if (self.vdp_device.vdp.render_line == render_breakpoint and self.vdp_device.vdp.cycle_counter == cycle_breakpoint) {
+            std.debug.print("Render line: {d} Cycle counter: {d}\n", .{
+                self.vdp_device.vdp.render_line,
+                self.vdp_device.vdp.cycle_counter,
+            });
+        }
+        // Run CPU for a small number of cycles (using 1 like Gearcoleco's non-performance mode)
+        const prev_cycles = self.cpu.cycle_count;
         try self.cpu.step();
+        const cycles_elapsed: u32 = @intCast(self.cpu.cycle_count - prev_cycles);
 
-        if (!interrupt_triggered and self.cpu.cycle_count >= interrupt_cycles) {
-            std.debug.print("Triggering interrupt at cycle {d}, IFF1={}\n", .{ self.cpu.cycle_count, self.cpu.iff1 });
+        // Tick the VDP with the elapsed CPU cycles
+        vblank = self.vdp_device.vdp.tick(cycles_elapsed);
+
+        // Handle VDP interrupt request
+        if (vblank and (self.vdp_device.vdp.registers[1] & 0x20) != 0) {
             self.cpu.interrupt_pending = true;
-            interrupt_triggered = true;
+        }
+
+        // Update total cycles and check safety limit
+        total_cycles += cycles_elapsed;
+        if (total_cycles > max_cycles) {
+            vblank = true;
         }
     }
-
-    try self.vdp_device.vdp.updateFrame();
 }
 
 // Add methods for getting screen buffer, handling input, etc.
@@ -248,29 +266,32 @@ const VDPDevice = struct {
         return device;
     }
 
-    fn in(ptr: *IODevice, port: u16) u8 {
+    fn in(ptr: *IODevice, port: u8) u8 {
         const tms: *TMS9918 = @ptrCast(@alignCast(ptr.fieldParentPtr.?));
-        return switch (port) {
-            190, vdp_data_port => tms.readData(),
-            191, vdp_control_port => tms.readStatus(),
-            else => 0xFF,
-        };
+
+        // Only check lowest bit for data vs control
+        if (port & 0x01 != 0) {
+            const status = tms.readStatus();
+            std.debug.print("VDP Status Read: ${X:0>2}\n", .{status});
+            return status;
+        } else {
+            const data = tms.readData();
+            std.debug.print("VDP Data Read: ${X:0>2}\n", .{data});
+            return data;
+        }
     }
 
-    fn out(ptr: *IODevice, port: u16, value: u8) void {
+    fn out(ptr: *IODevice, port: u8, value: u8) void {
         std.debug.print("VDPDevice out: port: {d}, value: {d}\n", .{ port, value });
         const tms: *TMS9918 = @ptrCast(@alignCast(ptr.fieldParentPtr.?));
-        // std.debug.print("VDPDevice out: tms: {any}\n", .{tms});
-        switch (port) {
-            190, vdp_data_port => {
-                std.debug.print("VDP Data Write: {X:0>2}\n", .{value});
-                tms.writeData(value);
-            },
-            191, vdp_control_port => {
-                std.debug.print("VDP Addr/Reg Write: {X:0>2}\n", .{value});
-                tms.writeAddress(value);
-            },
-            else => {},
+
+        // Only check lowest bit for data vs control
+        if (port & 0x01 != 0) {
+            std.debug.print("VDP Control Write: {X:0>2}\n", .{value});
+            tms.writeAddress(value);
+        } else {
+            std.debug.print("VDP Data Write: {X:0>2}\n", .{value});
+            tms.writeData(value);
         }
     }
 };
@@ -334,50 +355,32 @@ fn getScreen(self: *TMS9918, allocator: std.mem.Allocator) ![]u8 {
     return framebuffer;
 }
 
-pub fn safeOut(device: *IODevice, port: u16, data: u8) void {
+pub fn safeOut(device: *IODevice, port: u8, data: u8) void {
     const vdp: *TMS9918 = @ptrCast(@alignCast(device.fieldParentPtr.?));
 
-    switch (port) {
-        0xBE, 0x98 => {
-            // Log writes to important VDP memory regions
-            const addr = vdp.current_address;
-            if (addr < 0x800) {
-                if (data != 0) std.debug.print("Pattern Table Write: addr={X:0>4} data={X:0>2}\n", .{ addr, data });
-            } else if (addr >= 0x3800) {
-                if (data != 0) std.debug.print("Name Table Write: addr={X:0>4} data={X:0>2}\n", .{ addr, data });
-            } else if (addr >= 0x2000) {
-                if (data != 0) std.debug.print("Color Table Write: addr={X:0>4} data={X:0>2}\n", .{ addr, data });
-            }
-            vdp.writeData(data);
-        },
-        0xBF, 0x99 => {
-            if (vdp.reg_write_stage == 1 and data & 0xC0 == 0x80) {
-                const reg = data & 0x07;
-                const val = vdp.reg_write_stage0_value;
-                std.debug.print("VDP Register {d} = {X:0>2} (was {X:0>2})\n", .{ reg, val, vdp.registers[reg] });
-            } else {
-                std.debug.print("VDP Address/Mode: {X:0>2} stage={d}\n", .{ data, vdp.reg_write_stage });
-            }
-            vdp.writeAddress(data);
-        },
-        else => {},
+    // Only check lowest bit for data vs control
+    if (port & 0x01 != 0) {
+        std.debug.print("VDP Control Write: {X:0>2}\n", .{data});
+        vdp.writeAddress(data);
+    } else {
+        std.debug.print("VDP Data Write: {X:0>2}\n", .{data});
+        vdp.writeData(data);
     }
 }
 
-pub fn safeIn(device: *IODevice, port: u16) u8 {
+pub fn safeIn(device: *IODevice, port: u8) u8 {
     const vdp: *TMS9918 = @ptrCast(@alignCast(device.fieldParentPtr.?));
 
-    return switch (port) {
-        190, 0x98 => {
-            const data = vdp.readData();
-            std.debug.print("VDP Data Read: port={X:0>2} data={X:0>2}\n", .{ port, data });
-            return data;
-        },
-        191, 0x99 => {
-            const status = vdp.readStatus();
-            std.debug.print("VDP Status Read: port={X:0>2} status={X:0>2}\n", .{ port, status });
-            return status;
-        },
-        else => 0xFF,
-    };
+    // Only check lowest bit for data vs control
+    if (port & 0x01 != 0) {
+        const status = vdp.readStatus();
+        std.debug.print("VDP Status Read: ${X:0>2}\n", .{status});
+        std.debug.print("VDP State - Buffer: ${X:0>2} Status: ${X:0>2} Address: ${X:0>4} Line: {d} Cycles: {d}\n", .{ vdp.read_ahead_buffer, vdp.status, vdp.current_address, vdp.render_line, vdp.cycle_counter });
+        return status;
+    } else {
+        const data = vdp.readData();
+        std.debug.print("VDP Data Read: ${X:0>2}\n", .{data});
+        std.debug.print("VDP State - Buffer: ${X:0>2} Status: ${X:0>2} Address: ${X:0>4} Line: {d} Cycles: {d}\n", .{ vdp.read_ahead_buffer, vdp.status, vdp.current_address, vdp.render_line, vdp.cycle_counter });
+        return data;
+    }
 }

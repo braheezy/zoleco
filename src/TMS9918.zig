@@ -123,6 +123,17 @@ pub const palette: [16]u32 = [_]u32{
     0xffffffff, // white
 };
 
+const cycles_per_line = 228;
+const timing_vint = 20; // Cycles until VINT occurs
+const timing_display = 40; // Cycles until display enabled check
+const timing_render = 60; // Cycles until scanline render
+
+const LineEvents = struct {
+    vint: bool = false,
+    display: bool = false,
+    render: bool = false,
+};
+
 // the eight write-only registers
 registers: []u8,
 // status register (read-only)
@@ -143,6 +154,14 @@ vram: []u8 = undefined,
 row_sprite_bits: [pixels_x]u8,
 // framebuffer
 framebuffer: [pixels_x * pixels_y * 3]u8,
+// current render line
+render_line: u16 = 0,
+// cycle counter for VDP timing
+cycle_counter: u32 = 0,
+// Line events tracking
+line_events: LineEvents = .{},
+// Display enabled cache
+display_enabled_cache: bool = false,
 
 // create a new TMS9918 instance. Call free() to clean up.
 pub fn init(al: std.mem.Allocator) !*TMS9918 {
@@ -170,13 +189,15 @@ pub fn free(self: *TMS9918, al: std.mem.Allocator) void {
 // reset the TMS9918 to its initial state
 pub fn reset(self: *TMS9918, al: std.mem.Allocator) !void {
     self.reg_write_stage0_value = 0;
-    self.current_address = 1;
+    self.current_address = 0;
     self.reg_write_stage = 0;
     self.read_ahead_buffer = 0;
+    self.render_line = 0;
+    self.cycle_counter = 0;
+    self.status = 0;
+    @memset(self.vram, 0);
     self.registers = try al.alloc(u8, @intFromEnum(Register.len));
-    for (self.registers) |*reg| {
-        reg.* = 0;
-    }
+    @memset(self.registers, 0);
     self.mode = self.updateDisplayMode();
 }
 
@@ -494,6 +515,37 @@ pub fn updateFrame(self: *TMS9918) !void {
         }
     }
 }
+
 pub fn setStatusFlag(self: *TMS9918, flag: u8) void {
     self.status |= flag;
+}
+
+// Add a new tick function that handles VDP timing
+pub fn tick(self: *TMS9918, cycles: u32) bool {
+    self.cycle_counter += cycles;
+    var vblank = false;
+
+    // Process complete lines
+    while (self.cycle_counter >= cycles_per_line) {
+        self.cycle_counter -= cycles_per_line;
+
+        // Reset line events at start of new line
+        self.line_events = .{};
+
+        // Check for VINT on line 192 (matches Gearcoleco behavior)
+        if (self.render_line == 192) {
+            self.status = status_int;
+            vblank = true;
+        }
+
+        // Handle display and render for visible lines
+        if (self.render_line < pixels_y) {
+            var scanline = [_]u8{0} ** pixels_x;
+            self.scanLine(@intCast(self.render_line), &scanline);
+        }
+
+        self.render_line = (self.render_line + 1) % 262;
+    }
+
+    return vblank;
 }

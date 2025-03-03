@@ -118,10 +118,10 @@ shadow_flag: Flag = Flag{},
 // program counter
 pc: u16 = 0,
 // stack pointer
-sp: u16 = 0x7fff,
+sp: u16 = 0xDFF0,
 // index registefs
-ix: u16 = 0,
-iy: u16 = 0,
+ix: u16 = 0xffff,
+iy: u16 = 0xffff,
 curr_index_reg: ?*u16 = null,
 // memory refresh register
 r: u8 = 0,
@@ -200,6 +200,9 @@ pub fn step(self: *Z80) !void {
         std.debug.print("Cannot step: unknown opcode: {X}\n", .{opcode});
         std.process.exit(1);
     }
+
+    // Add any I/O cycle penalties
+    self.cycle_count += self.bus.getCyclesPenalty();
 }
 
 pub fn fetchData(self: *Z80, count: u16) ![]const u8 {
@@ -209,7 +212,7 @@ pub fn fetchData(self: *Z80, count: u16) ![]const u8 {
 
     // If sum <= 0xFFFF, no wrapping is needed
     if (sum <= 0xFFFF) {
-        @memcpy(self.scratch[0..count], self.memory[self.pc .. self.pc + count]);
+        @memcpy(self.scratch[0..count], self.memory[self.pc..end_pc]);
     } else {
         // Handle wrap-around by splitting the copy
         const first_part_len = 0xFFFF - self.pc + 1;
