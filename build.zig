@@ -8,7 +8,7 @@ pub fn build(b: *std.Build) !void {
     defer modules.deinit();
 
     // Add sysaudio to play raw audio on the host
-    const raylib_dep = b.dependency("raylib-zig", .{
+    const raylib_dep = b.dependency("raylib_zig", .{
         .target = target,
         .optimize = optimize,
     });

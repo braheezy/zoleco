@@ -108,7 +108,7 @@ fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
 
     // Split the filename (without .json) into parts
     const base_name = name[0 .. name.len - 5]; // Remove .json
-    var parts = std.mem.split(u8, base_name, " ");
+    var parts = std.mem.splitScalar(u8, base_name, ' ');
     var opcodes = std.ArrayList([]const u8).init(allocator);
     defer opcodes.deinit();
 
