@@ -3,6 +3,7 @@ const rl = @import("raylib");
 
 const TMS9918 = @import("tms9918");
 const Device = @import("device.zig");
+const emu = @import("emulator.zig");
 
 const display_width = 256;
 const display_height = 192;
@@ -24,9 +25,8 @@ const TMS9918Device = struct {
     unused_time: f32,
     current_frame_pixels: u32,
     scanline_buffer: [display_width]u8,
-    irq: u8,
 
-    pub fn init(allocator: std.mem.Allocator, data_addr: u16, register_addr: u16, irq: u8) !Device {
+    pub fn init(allocator: std.mem.Allocator, data_addr: u16, register_addr: u16) !Device {
         const device = Device.init("TMS9918");
 
         const tms9918 = try TMS9918.init(allocator);
@@ -46,13 +46,15 @@ const TMS9918Device = struct {
             .unused_time = 0.0,
             .current_frame_pixels = 0,
             .scanline_buffer = scanline_buffer,
-            .irq = irq,
         };
 
         device.data = self;
         device.reset_fn = resetTms9918;
         device.destroy_fn = destroyTms9918;
         device.render_fn = renderTms9918;
+        device.tick_fn = tickTms9918;
+        device.read_fn = readTms9918;
+        device.write_fn = writeTms9918;
 
         device.output = rl.loadRenderTexture(display_width, display_height);
 
@@ -84,6 +86,8 @@ pub fn renderTms9918(self: *Device) anyerror!void {
 // how much of the screen to render. this style of rendering allows mid-frame changes to be
 // shown in the display if called frequently enough. you can achieve beam racing effects.
 pub fn tickTms9918(self: *Device, delta_ticks: u32, delta_time: f32) void {
+    _ = delta_ticks;
+
     const tms = getTms9918Device(self);
 
     var dt = delta_time;
@@ -115,7 +119,7 @@ pub fn tickTms9918(self: *Device, delta_ticks: u32, delta_time: f32) void {
     var tms_row: i32 = 0;
 
     // iterate over the pixels we need to update in this call
-    for (0..pixels_to_render) |p| {
+    for (0..pixels_to_render) |_| {
         const current_row = tms.current_frame_pixels / display_width;
         const curren_col = tms.current_frame_pixels % display_width;
 
@@ -137,7 +141,7 @@ pub fn tickTms9918(self: *Device, delta_ticks: u32, delta_time: f32) void {
         // if we're at the end of the main tms9918 frame, trigger an interrupt
         if (tms.current_frame_pixels == display_width * (display_height - border_y)) {
             if ((tms.tms9918.readRegisterValue(.reg_1) & 0x20) != 0) {
-                emuInterrupt(tms.irq, INTERRUPT_RAISE);
+                emu.interrupt(.raise);
             }
         }
     }
@@ -145,5 +149,29 @@ pub fn tickTms9918(self: *Device, delta_ticks: u32, delta_time: f32) void {
     // reset pixel count if frame finished
     if (tms.current_frame_pixels >= display_pixels) {
         tms.current_frame_pixels = 0;
+    }
+}
+
+// read from the tms. address determines status or data
+pub fn readTms9918(self: *Device, address: u16) u8 {
+    const tms = getTms9918Device(self);
+    if (address == tms.register_address) {
+        const val = tms.tms9918.readStatus();
+        emu.interrupt(.release);
+        return val;
+    } else if (address == tms.data_address) {
+        const val = tms.tms9918.readData();
+        return val;
+    }
+    return 0;
+}
+
+// write to the tms. address determines address/register or data
+pub fn writeTms9918(self: *Device, address: u16, value: u8) void {
+    const tms = getTms9918Device(self);
+    if (address == tms.register_address) {
+        tms.tms9918.writeAddress(value);
+    } else if (address == tms.data_address) {
+        tms.tms9918.writeData(value);
     }
 }

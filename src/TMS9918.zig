@@ -192,10 +192,10 @@ pub fn reset(self: *TMS9918, al: std.mem.Allocator) !void {
     self.current_address = 0;
     self.reg_write_stage = 0;
     self.read_ahead_buffer = 0;
-    self.render_line = 0;
-    self.cycle_counter = 0;
+    // self.render_line = 0;
+    // self.cycle_counter = 0;
     self.status = 0;
-    @memset(self.vram, 0);
+    // @memset(self.vram, 0);
     self.registers = try al.alloc(u8, @intFromEnum(Register.len));
     @memset(self.registers, 0);
     self.mode = self.updateDisplayMode();
@@ -498,10 +498,10 @@ pub fn readData(self: *TMS9918) u8 {
 
 // Read status register
 pub fn readStatus(self: *TMS9918) u8 {
-    self.reg_write_stage = 0;
     const value = self.status;
     // Reading status register clears interrupt flag
-    self.status &= ~status_int;
+    self.status = 0;
+    self.reg_write_stage = 0;
     return value;
 }
 

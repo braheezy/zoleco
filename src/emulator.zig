@@ -1,5 +1,15 @@
 const Device = @import("device.zig");
 
+const InterruptSignal = enum {
+    release,
+    raise,
+    trigger,
+};
+
+pub fn interrupt(signal: InterruptSignal) void {
+    _ = signal;
+}
+
 const max_devices = 3;
 const devices: [max_devices]Device = undefined;
 
