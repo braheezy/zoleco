@@ -169,14 +169,14 @@ pub fn init(al: std.mem.Allocator) !*TMS9918 {
     emu.vram = try al.alloc(u8, vram_size);
     try emu.reset(al);
 
-    emu.writeRegisterValue(Register.reg_0, 0x00);
-    emu.writeRegisterValue(Register.reg_1, 0xC0);
-    emu.writeRegisterValue(Register.name_table, 0x0E);
-    emu.writeRegisterValue(Register.color_table, 0x00);
-    emu.writeRegisterValue(Register.pattern_table, 0x01);
-    emu.writeRegisterValue(Register.sprite_attribute_table, 0x36);
-    emu.writeRegisterValue(Register.sprite_pattern_table, 0x07);
-    emu.writeRegisterValue(Register.fg_bg_color, 0x00);
+    // emu.writeRegisterValue(Register.reg_0, 0x00);
+    // emu.writeRegisterValue(Register.reg_1, 0xC0);
+    // emu.writeRegisterValue(Register.name_table, 0x0E);
+    // emu.writeRegisterValue(Register.color_table, 0x00);
+    // emu.writeRegisterValue(Register.pattern_table, 0x01);
+    // emu.writeRegisterValue(Register.sprite_attribute_table, 0x36);
+    // emu.writeRegisterValue(Register.sprite_pattern_table, 0x07);
+    // emu.writeRegisterValue(Register.fg_bg_color, 0x00);
     return emu;
 }
 
@@ -240,10 +240,15 @@ pub fn updateDisplayMode(self: *TMS9918) Mode {
     };
 }
 
-// write a reigister value
+// write a register value
 pub fn writeRegisterValue(self: *TMS9918, reg: Register, value: u8) void {
     self.registers[@intFromEnum(reg) & 0x07] = value;
     self.mode = self.updateDisplayMode();
+}
+
+// return a register value
+pub fn readRegisterValue(self: *TMS9918, reg: Register) u8 {
+    return self.registers[@intFromEnum(reg) & 0x07];
 }
 
 // Set current VRAM address for writing
