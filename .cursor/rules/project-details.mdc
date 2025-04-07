@@ -1,0 +1,10 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+I am trying to develop a Colecovision emulator in Zig. It uses Raylib bindings as the framework. I developed three independent modules for the emulator. Each has example program that proves it works to some capacity.
+
+- TMS9918: This was ported from an existing C program. It is able to draw static images and other shapes that I command it. The original C program integrates the video emulator into an HBC emulator, which uses a 6502 CPU. This is source code I will reference as HBC and it's important because it has a working example of the vide emulator
+- SN76489: Sound chip emulator. I was able to create a music player for vgm files so I know this works. but it's not the concern right now
+- Z80: Full z80 emulator. Verified with json drive testing, 1000 test cases per opcode. The only opcodes that were perhaps not validated fully were IO opcodes

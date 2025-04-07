@@ -113,13 +113,13 @@ pub const InterruptMode = union(Interrupts) {
 
 register: Register = Register{},
 shadow_register: Register = Register{},
-flag: Flag = Flag{},
+flag: Flag = Flag{ .zero = true },
 shadow_flag: Flag = Flag{},
 // program counter
 pc: u16 = 0,
 // stack pointer
 sp: u16 = 0xDFF0,
-// index registefs
+// index registers
 ix: u16 = 0xffff,
 iy: u16 = 0xffff,
 curr_index_reg: ?*u16 = null,
@@ -134,6 +134,8 @@ total_cycle_count: usize = 0,
 interrupt_mode: InterruptMode = .{ .zero = {} },
 iff1: bool = true, // Main interrupt enable flag
 iff2: bool = true, // Backup interrupt enable flag
+nmi_requested: bool = false,
+int_requested: bool = false,
 i: u8 = 0, // interrupt vector
 interrupt_pending: bool = false,
 halted: bool = false,
@@ -147,7 +149,17 @@ displacement: i8 = 0,
 q: u8 = 0,
 wz: u16 = 0,
 
-pub fn init(al: std.mem.Allocator, rom_data: []const u8, start_address: u16, bus: *Bus) !Z80 {
+pub fn init(allocator: std.mem.Allocator) !Z80 {
+    const memory = try allocator.alloc(u8, 0x10000);
+    var z80 = Z80{
+        .memory = memory,
+    };
+    z80.zeroMemory();
+
+    return z80;
+}
+
+pub fn initWithRom(al: std.mem.Allocator, rom_data: []const u8, start_address: u16, bus: *Bus) !Z80 {
     const memory = try al.alloc(u8, 0x10000);
     var z80 = Z80{
         .memory = memory,
@@ -166,10 +178,33 @@ pub fn zeroMemory(self: Z80) void {
     }
 }
 
+pub fn reset(self: *Z80) void {
+    self.resetRegisters();
+
+    self.sp = 0xDFF0;
+    self.pc = 0;
+    self.iff1 = false;
+    self.iff2 = false;
+    self.halted = false;
+    self.wz = 0;
+    self.r = 0;
+    self.nmi_requested = false;
+    self.int = false;
+}
+
+fn resetRegisters(self: *Z80) void {
+    self.register = Register{};
+    self.shadow_register = Register{};
+    self.flag = Flag{ .zero = true };
+    self.shadow_flag = Flag{};
+    self.ix = 0xFFFF;
+    self.iy = 0xFFFF;
+}
+
 pub fn free(self: *Z80, al: std.mem.Allocator) void {
     al.free(self.memory);
-    self.bus.deinit();
-    al.destroy(self.bus);
+    // self.bus.deinit();
+    // al.destroy(self.bus);
 }
 
 pub fn step(self: *Z80) !void {

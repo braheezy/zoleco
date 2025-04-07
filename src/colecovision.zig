@@ -117,7 +117,7 @@ pub fn loadBios(self: *Self) !void {
     var bus = try Bus.init(self.allocator);
     try bus.addDevice(&self.vdp_device.io_device);
 
-    self.cpu = try Z80.init(self.allocator, bios, 0x0000, bus);
+    self.cpu = try Z80.initWithRom(self.allocator, bios, 0x0000, bus);
     self.bios_loaded = true;
 }
 
