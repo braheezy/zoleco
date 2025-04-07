@@ -207,19 +207,19 @@ pub fn free(self: *Z80, al: std.mem.Allocator) void {
     // al.destroy(self.bus);
 }
 
-pub fn step(self: *Z80) !void {
+pub fn step(self: *Z80) !usize {
     if (self.pc >= self.memory.len) {
         return error.OutOfBoundsPC;
     }
 
     // Handle pending interrupts
-    try handleInterrupt(self);
+    // try handleInterrupt(self);
 
     // If halted, count cycles but don't execute
-    if (self.halted) {
-        self.cycle_count += 4;
-        return;
-    }
+    // if (self.halted) {
+    //     self.cycle_count += 4;
+    //     return;
+    // }
 
     // Fetch the opcode
     const opcode = self.memory[self.pc];
@@ -231,13 +231,14 @@ pub fn step(self: *Z80) !void {
     if (OpcodeTable[opcode]) |handler| {
         try handler(self);
         self.cycle_count += OpcodeCycles[opcode];
+        return OpcodeCycles[opcode];
     } else {
         std.debug.print("Cannot step: unknown opcode: {X}\n", .{opcode});
         std.process.exit(1);
     }
 
     // Add any I/O cycle penalties
-    self.cycle_count += self.bus.getCyclesPenalty();
+    // self.cycle_count += self.bus.getCyclesPenalty();
 }
 
 pub fn fetchData(self: *Z80, count: u16) ![]const u8 {

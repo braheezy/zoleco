@@ -88,15 +88,13 @@ pub fn destroyZ80(self: *Device, allocator: std.mem.Allocator) void {
 }
 
 pub fn tickZ80(self: *Device, delta_ticks: u32, delta_time: f64) void {
-    _ = delta_time; // Acknowledge the parameter for future use
-
-    const z80 = getZ80Device(self);
+    const z80_device = getZ80Device(self);
 
     // introduce a limit to the amount of time we can process in a single step
     //  to prevent a runaway condition for slow processors
     var dt = delta_ticks;
-    dt += z80.extra_ticks;
-    if (dt > max_timestamp_steps) {
+    dt += z80_device.extra_ticks;
+    if (delta_time > max_timestamp_steps) {
         dt = max_timestamp_steps;
     }
 
@@ -104,142 +102,93 @@ pub fn tickZ80(self: *Device, delta_ticks: u32, delta_time: f64) void {
 
     while (dt > 0) {
         // Handle interrupts before execution using a similar pattern to HBC56
-        checkInterrupt(&z80.int_signal, &z80.z80.int_requested);
-        checkInterrupt(&z80.nmi_signal, &z80.z80.nmi_requested);
+        checkInterrupt(&z80_device.int_signal, &z80_device.z80.int_requested);
+        checkInterrupt(&z80_device.nmi_signal, &z80_device.z80.nmi_requested);
 
         // Z80-specific: Only process INT if IFF1 is enabled
-        if (!z80.z80.iff1) {
-            z80.z80.int_requested = false;
+        if (!z80_device.z80.iff1) {
+            z80_device.z80.int_requested = false;
         }
 
         // Execute a single instruction
-        const cycles = if (z80.z80.halted) 4 else blk: {
+        const cycle_ticks = if (z80_device.z80.halted) 4 else blk: {
             // If CPU is not halted, execute an instruction
-            if (z80.z80.nmi_requested) {
-                z80.z80.nmi_requested = false;
-                handleNMI(z80.z80);
+            if (z80_device.z80.nmi_requested) {
+                z80_device.z80.nmi_requested = false;
+                handleNMI(z80_device.z80);
                 break :blk 11; // NMI takes 11 cycles
-            } else if (z80.z80.int_requested and z80.z80.iff1) {
-                z80.z80.int_requested = false;
-                handleINT(z80.z80);
-
-                // Different interrupt modes take different cycles
-                break :blk switch (z80.z80.interrupt_mode) {
-                    .zero => 13,
-                    .one => 13,
-                    .two => 19,
-                };
+            } else if (z80_device.z80.int_requested and z80_device.z80.iff1) {
+                z80_device.z80.int_requested = false;
+                handleINT(z80_device.z80);
+                // Colecovision only uses IM1 which takes 13 cycles
+                break :blk 13;
             } else {
                 // Execute normal instruction
-                z80.z80.step() catch |err| {
+                break :blk z80_device.z80.step() catch |err| {
                     std.debug.print("Z80 execution error: {}\n", .{err});
                     break :blk 4; // Default to 4 cycles on error
                 };
-
-                // Get actual cycles from the instruction
-                break :blk 4; // This should actually come from z80.z80.cycle_count
             }
         };
 
         // Update timing
-        cycles_executed += cycles;
-        dt -= @min(dt, cycles);
-        z80.ticks += cycles;
-        z80.run_time_seconds += @as(f64, @floatFromInt(cycles)) * z80.secs_per_tick;
+        z80_device.run_time_seconds += @as(f64, @floatFromInt(cycle_ticks)) * z80_device.secs_per_tick;
+
+        cycles_executed += cycle_ticks;
+        dt -= cycle_ticks;
+        z80_device.ticks += cycle_ticks;
 
         // If we're halted, count cycles in halt
-        if (z80.z80.halted) {
-            z80.ticks_halt += cycles;
+        if (z80_device.z80.halted) {
+            z80_device.ticks_halt += cycle_ticks;
         }
     }
 
-    z80.extra_ticks = @intCast(dt);
+    z80_device.extra_ticks = @intCast(dt);
 }
 
 // Handler for Non-Maskable Interrupts
 fn handleNMI(z80: *Z80) void {
-    // Save PC on stack
-    z80.sp -%= 2;
-    z80.memory[z80.sp] = @truncate(z80.pc & 0xFF);
-    z80.memory[z80.sp + 1] = @truncate(z80.pc >> 8);
-
-    // Reset halt state
+    // Leave halt state if CPU was halted
     z80.halted = false;
 
     // Disable maskable interrupts (reset IFF1, preserve IFF2)
     z80.iff1 = false;
+    // IFF2 remains unchanged
+
+    // Push PC onto stack
+    z80.sp -%= 2;
+    z80.memory[z80.sp] = @truncate(z80.pc & 0xFF);
+    z80.memory[z80.sp + 1] = @truncate(z80.pc >> 8);
 
     // Jump to NMI vector (0x0066)
     z80.pc = 0x0066;
 
     // Update WZ register for accurate emulation
     z80.wz = 0x0066;
+
+    // Increment R register
+    z80.increment_r();
 }
 
-// Handler for Maskable Interrupts
+// Handler for Maskable Interrupts - Colecovision only uses IM1
 fn handleINT(z80: *Z80) void {
-    // Reset halt state
+    // Leave halt state if CPU was halted
     z80.halted = false;
 
     // Disable all interrupts
     z80.iff1 = false;
     z80.iff2 = false;
 
-    // Different behavior based on interrupt mode
-    switch (z80.interrupt_mode) {
-        .zero => {
-            // In IM 0, external device provides instruction (usually RST)
-            // Colecovision doesn't use IM0, but we'll implement a default RST 38h
-            handleIM0(z80);
-        },
-        .one => {
-            // In IM 1, fixed jump to 0x0038
-            handleIM1(z80);
-        },
-        .two => {
-            // In IM 2, vector from I register and data bus
-            handleIM2(z80);
-        },
-    }
-}
-
-fn handleIM0(z80: *Z80) void {
-    // Save PC on stack
+    // Push PC onto stack
     z80.sp -%= 2;
     z80.memory[z80.sp] = @truncate(z80.pc & 0xFF);
     z80.memory[z80.sp + 1] = @truncate(z80.pc >> 8);
 
-    // IM0 typically runs RST 38h on Colecovision
+    // In IM1 (which Colecovision uses), fixed jump to 0x0038
     z80.pc = 0x0038;
     z80.wz = 0x0038;
-}
 
-fn handleIM1(z80: *Z80) void {
-    // Save PC on stack
-    z80.sp -%= 2;
-    z80.memory[z80.sp] = @truncate(z80.pc & 0xFF);
-    z80.memory[z80.sp + 1] = @truncate(z80.pc >> 8);
-
-    // Standard RST 38h behavior
-    z80.pc = 0x0038;
-    z80.wz = 0x0038;
-}
-
-fn handleIM2(z80: *Z80) void {
-    // Save PC on stack
-    z80.sp -%= 2;
-    z80.memory[z80.sp] = @truncate(z80.pc & 0xFF);
-    z80.memory[z80.sp + 1] = @truncate(z80.pc >> 8);
-
-    // Create 16-bit address from I register and data bus (0xFF for Colecovision)
-    const vector_address: u16 = (@as(u16, z80.i) << 8) | 0xFF;
-
-    // Read jump address from vector table
-    const low_byte = z80.memory[vector_address];
-    const high_byte = z80.memory[vector_address + 1];
-    const jump_address: u16 = (@as(u16, high_byte) << 8) | low_byte;
-
-    // Jump to the address
-    z80.pc = jump_address;
-    z80.wz = jump_address;
+    // Increment R register
+    z80.increment_r();
 }
