@@ -79,7 +79,7 @@ fn defineCpuTest(
         .name = "cputest",
         .root_source_file = b.path("examples/z80_tester/main.zig"),
         .target = target,
-        .optimize = .Debug,
+        .optimize = .ReleaseFast,
     });
 
     addModulesToExe(cpu_test, modules, &[_][]const u8{"z80"});

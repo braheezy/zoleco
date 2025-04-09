@@ -216,7 +216,7 @@ pub fn runFrame(self: *Self) !void {
         }
         // Run CPU for a small number of cycles (using 1 like Gearcoleco's non-performance mode)
         const prev_cycles = self.cpu.cycle_count;
-        try self.cpu.step();
+        _ = try self.cpu.step();
         const cycles_elapsed: u32 = @intCast(self.cpu.cycle_count - prev_cycles);
 
         // Tick the VDP with the elapsed CPU cycles

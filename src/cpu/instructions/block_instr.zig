@@ -126,7 +126,7 @@ pub fn cpi(self: *Z80) !void {
 
 // INI - Input and Increment
 pub fn ini(self: *Z80) !void {
-    const value = try self.bus.in(self.register.c);
+    const value = self.read_fn(self.register.c);
     const temp = @as(u16, value) +% @as(u16, self.register.c +% 1);
 
     self.memory[self.getHL()] = value;
@@ -158,7 +158,7 @@ pub fn outi(self: *Z80) !void {
 
     self.register.b -%= 1;
     self.wz = Z80.toUint16(self.register.b, self.register.c) +% 1;
-    try self.bus.out(self.register.c, value);
+    try self.write_fn(self.register.c, value);
 
     // Set flags
     self.flag.sign = (self.register.b & 0x80) != 0;
@@ -246,7 +246,7 @@ pub fn cpd(self: *Z80) !void {
 // IND - Input and Decrement
 // A byte from the port at the 16-bit address contained in the BC register pair is written to the memory location pointed to by HL. Then HL and B are decremented.
 pub fn ind(self: *Z80) !void {
-    const value = try self.bus.in(self.register.c);
+    const value = self.read_fn(self.register.c);
     const temp = @as(u16, value) +% @as(u16, self.register.c -% 1);
 
     self.memory[self.getHL()] = value;
@@ -277,7 +277,7 @@ pub fn outd(self: *Z80) !void {
 
     self.register.b -%= 1;
     self.wz = Z80.toUint16(self.register.b, self.register.c) +% 1;
-    try self.bus.out(self.register.c, value);
+    try self.write_fn(self.register.c, value);
 
     // Set flags
     self.flag.sign = (self.register.b & 0x80) != 0;
@@ -514,7 +514,7 @@ fn setInOutFlags(self: *Z80, b: u8, nf: u8, hcf: bool, p: u8, repeating: bool) v
 
 pub fn inir(self: *Z80) !void {
     // Read from port BC
-    const io_value = try self.bus.in(self.register.c);
+    const io_value = self.read_fn(self.register.c);
 
     // Calculate NF from bits 7-6 of input
     const nf = (io_value >> 6) & 0x02; // NF is bit 1
@@ -550,7 +550,7 @@ pub fn inir(self: *Z80) !void {
 
 pub fn indr(self: *Z80) !void {
     // Read from port BC
-    const io_value = try self.bus.in(self.register.c);
+    const io_value = self.read_fn(self.register.c);
 
     // Calculate NF from bits 7-6 of input
     const nf = (io_value >> 6) & 0x02; // NF is bit 1
@@ -602,7 +602,7 @@ pub fn otir(self: *Z80) !void {
     const p = @as(u8, @truncate(t & 7)) ^ self.register.b;
 
     // Output the value
-    try self.bus.out(self.register.c, value);
+    try self.write_fn(self.register.c, value);
 
     if (self.register.b != 0) {
         self.pc -= 2; // Repeat instruction
@@ -635,7 +635,7 @@ pub fn otdr(self: *Z80) !void {
     const p = @as(u8, @truncate(t & 7)) ^ self.register.b;
 
     // Output the value
-    try self.bus.out(self.register.c, value);
+    try self.write_fn(self.register.c, value);
 
     if (self.register.b != 0) {
         self.pc -= 2; // Repeat instruction

@@ -10,6 +10,9 @@ const clock_frequency = 3579545.0;
 const max_timestemp_sec = 0.001;
 const max_timestamp_steps = 3600;
 
+const bios_start: usize = 0x0000;
+const bios_size: usize = 0x2000;
+
 // Z80 interrupt handling
 fn checkInterrupt(signal: *InterruptSignal, is_requested: *bool) void {
     if (signal.* == .raise) {
@@ -67,6 +70,11 @@ const Z80Device = struct {
         device.tick_fn = tickZ80;
 
         return device;
+    }
+
+    pub fn loadBios(self: *Z80Device) void {
+        const bios_data = @embedFile("roms/colecovision.rom");
+        @memcpy(self.z80.memory[bios_start..(bios_start + bios_size)], bios_data);
     }
 };
 

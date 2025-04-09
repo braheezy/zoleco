@@ -4,6 +4,9 @@ const handleInterrupt = @import("opcode.zig").handleInterrupt;
 const Bus = @import("bus.zig").Bus;
 const OpcodeCycles = @import("cycles.zig").OpcodeCycles;
 
+const ReadFn = *const fn (port: u16) u8;
+const WriteFn = *const fn (port: u16, value: u8) anyerror!void;
+
 const Z80 = @This();
 
 pub const Register = struct {
@@ -141,7 +144,9 @@ interrupt_pending: bool = false,
 halted: bool = false,
 rom_size: usize = 0,
 start_address: u16 = 0,
-bus: *Bus,
+read_fn: ReadFn,
+write_fn: WriteFn,
+bus: *Bus = undefined,
 scratch: [2]u8 = [_]u8{0} ** 2,
 displacement: i8 = 0,
 // Q is a special flag to track flag state. used in 2 opcodes
@@ -149,10 +154,12 @@ displacement: i8 = 0,
 q: u8 = 0,
 wz: u16 = 0,
 
-pub fn init(allocator: std.mem.Allocator) !Z80 {
+pub fn init(allocator: std.mem.Allocator, read_fn: ReadFn, write_fn: WriteFn) !Z80 {
     const memory = try allocator.alloc(u8, 0x10000);
     var z80 = Z80{
         .memory = memory,
+        .read_fn = read_fn,
+        .write_fn = write_fn,
     };
     z80.zeroMemory();
 
@@ -165,6 +172,8 @@ pub fn initWithRom(al: std.mem.Allocator, rom_data: []const u8, start_address: u
         .memory = memory,
         .pc = start_address,
         .bus = bus,
+        .read_fn = undefined,
+        .write_fn = undefined,
     };
     z80.zeroMemory();
 

@@ -27,7 +27,7 @@ const bitSetReset = @import("instructions/bit_test_instr.zig").bitSetReset;
 
 const OpError = error{OutOfBoundsMemory};
 
-pub const OpcodeHandler = *const fn (*Z80) OpError!void;
+pub const OpcodeHandler = *const fn (*Z80) anyerror!void;
 pub const OpcodeTable = [256]?OpcodeHandler{
     nop, immi.load_BC, dti.stax_B, rpi.inx_B, rsi.inr_B, rsi.dcr_B, immi.moveImm_B, rai.rlca, li.ex_AF, rpi.dad_B, dti.loadAddr_B, rsi.dcx_B, rsi.inr_C, rsi.dcr_C, immi.moveImm_C, rai.rrca, // 00 - 0F
     ji.djnz, immi.load_DE, dti.stax_D, rpi.inx_D, rsi.inr_D, rsi.dcr_D, immi.moveImm_D, rai.rla, ji.jr, rpi.dad_D, dti.loadAddr_D, rsi.dcx_D, rsi.inr_E, rsi.dcr_E, immi.moveImm_E, rai.rra, // 10 - 1F
@@ -119,7 +119,7 @@ pub fn lookupBitOpcode(self: *Z80) !void {
     }
 }
 
-pub fn lookupIndexedOpcode(self: *Z80) OpError!void {
+pub fn lookupIndexedOpcode(self: *Z80) !void {
     // was this called for IX or IY? check the previous opcode
     const prev_opcode = self.memory[self.pc -% 1];
     self.curr_index_reg = if (prev_opcode == 0xDD) &self.ix else &self.iy;
@@ -162,7 +162,7 @@ pub fn lookupIndexedOpcode(self: *Z80) OpError!void {
     }
 }
 
-pub fn lookupMiscOpcode(self: *Z80) OpError!void {
+pub fn lookupMiscOpcode(self: *Z80) !void {
     const opcode = self.memory[self.pc];
     self.pc +%= 1;
     self.increment_r();

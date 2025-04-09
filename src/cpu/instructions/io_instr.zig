@@ -6,7 +6,7 @@ pub fn out(self: *Z80) !void {
     const data = try self.fetchData(1);
     const port = data[0]; // Use immediate byte as port number
 
-    try self.bus.out(port, self.register.a);
+    try self.write_fn(port, self.register.a);
 
     // WZ = (A << 8) | ((n + 1) & 0xFF)
     self.wz = (@as(u16, self.register.a) << 8) | (@as(u16, (port +% 1) & 0xFF));
@@ -16,21 +16,23 @@ pub fn out(self: *Z80) !void {
 // IN A,(n): Input to A from port n
 pub fn in(self: *Z80) !void {
     const data = try self.fetchData(1);
-    const port = data[0]; // Use immediate byte as port number
+    const port = Z80.toUint16(self.register.a, data[0]);
+    const actual_port: u8 = @intCast(port & 0xFF);
 
-    const value = try self.bus.in(port);
+    const value = self.read_fn(actual_port);
     self.register.a = value;
 
-    // WZ = (A << 8) | ((n + 1) & 0xFF)
-    self.wz = (@as(u16, self.register.a) << 8) | (@as(u16, (port +% 1) & 0xFF));
+    self.wz = port +% 1;
     self.q = 0;
 }
 
-fn in_reg(self: *Z80) !u8 {
+fn in_reg(self: *Z80, reg: u8) u8 {
     const data = self.memory[self.pc];
-    const port: u8 = data;
+    const port = Z80.toUint16(reg, data);
+    const actual_port: u8 = @intCast(port & 0xFF);
+    self.wz = Z80.toUint16(self.register.b, self.register.c) +% 1;
 
-    const value = try self.bus.in(port);
+    const value = self.read_fn(actual_port);
 
     self.flag.half_carry = false;
     self.flag.add_subtract = false;
@@ -40,43 +42,41 @@ fn in_reg(self: *Z80) !u8 {
     self.flag.setUndocumentedFlags(value);
     self.q = self.flag.toByte();
 
-    // WZ = BC + 1
-    self.wz = Z80.toUint16(self.register.b, self.register.c) +% 1;
-
+    // self.cycle_count += 12;
     return value;
 }
 
-// A byte from the port whose address is formed by A in the high bits and n in the low bits is written to A.
+// A byte from the port at the 16-bit address contained in the BC register pair is written to B.
 pub fn in_B(self: *Z80) !void {
-    self.register.b = try in_reg(self);
+    self.register.b = in_reg(self, self.register.b);
 }
 pub fn in_C(self: *Z80) !void {
-    self.register.c = try in_reg(self);
+    self.register.c = in_reg(self, self.register.c);
 }
 pub fn in_D(self: *Z80) !void {
-    self.register.d = try in_reg(self);
+    self.register.d = in_reg(self, self.register.d);
 }
 pub fn in_E(self: *Z80) !void {
-    self.register.e = try in_reg(self);
+    self.register.e = in_reg(self, self.register.e);
 }
 pub fn in_H(self: *Z80) !void {
-    self.register.h = try in_reg(self);
+    self.register.h = in_reg(self, self.register.h);
 }
 pub fn in_L(self: *Z80) !void {
-    self.register.l = try in_reg(self);
+    self.register.l = in_reg(self, self.register.l);
 }
 pub fn in_A(self: *Z80) !void {
-    self.register.a = try in_reg(self);
+    self.register.a = in_reg(self, self.register.a);
 }
 // Inputs a byte from the port at the 16-bit address contained in the BC register pair and affects flags only.
 pub fn in_BC(self: *Z80) !void {
-    _ = try in_reg(self);
+    _ = in_reg(self, self.register.b);
 }
 fn out_reg(self: *Z80, reg: u8) !void {
     const data = self.memory[self.pc];
     const port: u8 = data;
 
-    try self.bus.out(port, reg);
+    try self.write_fn(port, reg);
     self.wz = Z80.toUint16(self.register.b, self.register.c) +% 1;
     self.q = 0;
 }
@@ -106,8 +106,7 @@ pub fn out_A(self: *Z80) !void {
 
 pub fn out_BC(self: *Z80) !void {
     // For NMOS Z80 (used in ColecoVision), output 0
-    try self.bus.out(@intCast(self.register.c), 0);
-
+    try self.write_fn(@intCast(self.register.c), 0);
     self.wz = Z80.toUint16(self.register.b, self.register.c) +% 1;
     self.q = 0;
 }

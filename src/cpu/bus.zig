@@ -92,46 +92,49 @@ pub const Bus = struct {
 
     /// Reads a value from a port
     pub fn in(self: *Bus, port: u8) !u8 {
-        const masked_port = port & PORT_MASK;
+        // const masked_port = port & PORT_MASK;
 
-        // Route to appropriate device based on port range
-        for (self.devices.items) |device| {
-            switch (masked_port) {
-                PORT_VDP => {
-                    // VDP ports (0xA0-0xBF)
-                    const value = device.in(port);
-                    self.cycles_penalty += device.getCyclesPenalty();
-                    return value;
-                },
-                PORT_AUDIO => {
-                    // Audio ports (0xE0-0xFF)
-                    self.cycles_penalty += AUDIO_PORT_PENALTY;
-                    return 0xFF; // TODO: Implement audio
-                },
-                PORT_INPUT_RIGHT => {
-                    // Input right ports (0x80-0x9F)
-                    return 0xFF; // TODO: Implement input
-                },
-                PORT_INPUT_LEFT => {
-                    // Input left ports (0xC0-0xDF)
-                    return 0xFF; // TODO: Implement input
-                },
-                else => {
-                    // Handle special ports
-                    switch (port) {
-                        0x50, 0x51, 0x53, 0x7F => {
-                            // SGM ports
-                            return 0xFF; // TODO: Implement SGM
-                        },
-                        else => {
-                            std.debug.print("--> ** Unhandled input port ${X:0>2}\n", .{port});
-                            return 0xFF;
-                        },
-                    }
-                },
-            }
-        }
-        return 0xFF;
+        // // Route to appropriate device based on port range
+        // for (self.devices.items) |device| {
+        //     switch (masked_port) {
+        //         PORT_VDP => {
+        //             // VDP ports (0xA0-0xBF)
+        //             const value = device.in(port);
+        //             self.cycles_penalty += device.getCyclesPenalty();
+        //             return value;
+        //         },
+        //         PORT_AUDIO => {
+        //             // Audio ports (0xE0-0xFF)
+        //             self.cycles_penalty += AUDIO_PORT_PENALTY;
+        //             return 0xFF; // TODO: Implement audio
+        //         },
+        //         PORT_INPUT_RIGHT => {
+        //             // Input right ports (0x80-0x9F)
+        //             return 0xFF; // TODO: Implement input
+        //         },
+        //         PORT_INPUT_LEFT => {
+        //             // Input left ports (0xC0-0xDF)
+        //             return 0xFF; // TODO: Implement input
+        //         },
+        //         else => {
+        //             // Handle special ports
+        //             switch (port) {
+        //                 0x50, 0x51, 0x53, 0x7F => {
+        //                     // SGM ports
+        //                     return 0xFF; // TODO: Implement SGM
+        //                 },
+        //                 else => {
+        //                     // std.debug.print("--> ** Unhandled input port ${X:0>2}\n", .{port});
+        //                     return 0xFF;
+        //                 },
+        //             }
+        //         },
+        //     }
+        // }
+        // return 0xFF;
+        _ = port;
+        _ = self;
+        return 0;
     }
 
     /// Writes a value to a port
@@ -183,7 +186,7 @@ pub const Bus = struct {
                             return;
                         },
                         else => {
-                            std.debug.print("--> ** Unhandled output port ${X:0>2}: {X:0>2}\n", .{ port, value });
+                            // std.debug.print("--> ** Unhandled output port ${X:0>2}: {X:0>2}\n", .{ port, value });
                             return;
                         },
                     }
@@ -194,20 +197,20 @@ pub const Bus = struct {
 };
 
 // Test device for verifying bus functionality
-// pub const TestDevice = struct {
-//     value: u8 = 0,
+pub const TestDevice = struct {
+    value: u8 = 0,
 
-//     pub fn in(self: *TestDevice, port: u16) u8 {
-//         _ = port;
-//         return self.value;
-//     }
+    pub fn in(self: *TestDevice, port: u16) u8 {
+        _ = port;
+        return self.value;
+    }
 
-//     pub fn out(self: *TestDevice, port: u16, value: u8) void {
-//         // _ = port;
-//         std.debug.print("test device out: {d} {d}\n", .{ port, value });
-//         self.value = value;
-//     }
-// };
+    pub fn out(self: *TestDevice, port: u16, value: u8) void {
+        // _ = port;
+        std.debug.print("test device out: {d} {d}\n", .{ port, value });
+        self.value = value;
+    }
+};
 
 // test "basic bus operations" {
 //     const allocator = std.testing.allocator;

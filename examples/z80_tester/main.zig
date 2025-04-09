@@ -1,8 +1,6 @@
 const std = @import("std");
 const Allocator = std.mem.Allocator;
 const Z80 = @import("z80").Z80;
-const Bus = @import("z80").Bus;
-const IODevice = @import("z80").IODevice;
 
 const assert = std.testing.expect;
 
@@ -183,47 +181,46 @@ fn printResult(successes: usize, total: usize) void {
 }
 
 const TestDevice = struct {
-    io_device: IODevice,
-    value: u8,
+    value: u8 = 0,
 
     pub fn in(self: *TestDevice, port: u16) u8 {
         _ = port;
         return self.value;
     }
 
-    pub fn out(self: *TestDevice, port: u16, value: u8) void {
-        _ = self;
+    pub fn out(self: *TestDevice, port: u16, value: u8) !void {
         _ = port;
-        _ = value;
+        // std.debug.print("test device out: {d} {d}\n", .{ port, value });
+        self.value = value;
     }
 };
+
+var test_device = TestDevice{};
+fn readFn(port: u16) u8 {
+    return test_device.in(port);
+}
+fn writeFn(port: u16, value: u8) !void {
+    return test_device.out(port, value);
+}
 
 fn runTest(al: std.mem.Allocator, t: TestCase, failures: *std.ArrayList([]const u8)) !bool {
     const memory = try al.alloc(u8, 0x10000);
     defer al.free(memory);
 
-    // Create bus and test device
-    var bus = try Bus.init(al);
-    defer bus.deinit();
-
     // Allocate test device on heap
-    const test_device = try al.create(TestDevice);
-    defer al.destroy(test_device);
-    test_device.*.value = t.in_test_data orelse 0;
-
-    // Initialize IODevice directly
-    test_device.*.io_device = IODevice{
-        .inFn = @ptrCast(&TestDevice.in),
-        .outFn = @ptrCast(&TestDevice.out),
+    // const test_device = try al.create(TestDevice);
+    // defer al.destroy(test_device);
+    // test_device.*.value = t.in_test_data orelse 0;
+    test_device.value = t.in_test_data orelse 0;
+    var z80 = Z80{
+        .memory = memory,
+        .read_fn = @ptrCast(&readFn),
+        .write_fn = @ptrCast(&writeFn),
     };
-
-    try bus.addDevice(&test_device.io_device);
-
-    var z80 = Z80{ .memory = memory, .bus = bus };
     z80.zeroMemory();
     loadState(&z80, t.initial);
 
-    try z80.step();
+    _ = try z80.step();
     try validateState(z80, t.final, al, failures);
     return failures.items.len == 0;
 }

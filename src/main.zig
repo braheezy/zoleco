@@ -1,6 +1,7 @@
 const std = @import("std");
 const ColecoVisionEmulator = @import("colecovision.zig");
 const rl = @import("raylib");
+const emulator = @import("emulator.zig");
 
 // Embed the default ROM
 const default_rom = @embedFile("roms/hello.rom");
