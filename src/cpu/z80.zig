@@ -3,12 +3,11 @@ const OpcodeTable = @import("opcode.zig").OpcodeTable;
 const handleInterrupt = @import("opcode.zig").handleInterrupt;
 const Bus = @import("bus.zig").Bus;
 const OpcodeCycles = @import("cycles.zig").OpcodeCycles;
-const Memory = @import("../Memory.zig").Memory;
 
-const IOReadFn = *const fn (port: u16) u8;
-const IOWriteFn = *const fn (port: u16, value: u8) anyerror!void;
-const MemoryReadFn = *const fn (address: u16) u8;
-const MemoryWriteFn = *const fn (address: u16, value: u8) void;
+pub const IOReadFn = *const fn (port: u16) u8;
+pub const IOWriteFn = *const fn (port: u16, value: u8) anyerror!void;
+pub const MemoryReadFn = *const fn (address: u16) u8;
+pub const MemoryWriteFn = *const fn (address: u16, value: u8) void;
 
 const total_memory_size = 0x10000;
 

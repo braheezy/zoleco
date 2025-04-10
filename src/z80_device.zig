@@ -4,6 +4,12 @@ const Device = @import("device.zig");
 const emu = @import("emulator.zig");
 const Z80 = @import("z80").Z80;
 const InterruptSignal = @import("emulator.zig").InterruptSignal;
+const mem_device = @import("memory_device.zig");
+const Memory = mem_device.Memory;
+const IOReadFn = @import("z80").IOReadFn;
+const IOWriteFn = @import("z80").IOWriteFn;
+const MemoryReadFn = @import("z80").MemoryReadFn;
+const MemoryWriteFn = @import("z80").MemoryWriteFn;
 
 // Colecovision Z80 runs at ~3.58MHz
 const clock_frequency = 3579545.0;
@@ -29,7 +35,7 @@ fn checkInterrupt(signal: *InterruptSignal, is_requested: *bool) void {
     }
 }
 
-const Z80Device = struct {
+pub const Z80Device = struct {
     z80: *Z80,
     // Interrupt signal
     int_signal: InterruptSignal = .release,
@@ -43,17 +49,23 @@ const Z80Device = struct {
     secs_per_tick: f64,
     run_time_seconds: f64,
 
-    // Device synchronization (optional if needed)
-    synced_device: ?*Device,
-
-    pub fn init(allocator: std.mem.Allocator) !Device {
-        const device = Device.init("Z80");
-
-        const z80 = try Z80.init(allocator);
+    pub fn init(
+        allocator: std.mem.Allocator,
+        read_fn: IOReadFn,
+        write_fn: IOWriteFn,
+        memory_read_fn: MemoryReadFn,
+        memory_write_fn: MemoryWriteFn,
+    ) !*Z80Device {
+        var z80 = try Z80.init(
+            read_fn,
+            write_fn,
+            memory_read_fn,
+            memory_write_fn,
+        );
 
         const self = try allocator.create(Z80Device);
         self.* = .{
-            .z80 = z80,
+            .z80 = &z80,
             .int_signal = .release,
             .nmi_signal = .release,
             .ticks = 0,
@@ -61,20 +73,73 @@ const Z80Device = struct {
             .extra_ticks = 0,
             .secs_per_tick = 1.0 / clock_frequency,
             .run_time_seconds = 0.0,
-            .synced_device = null,
         };
 
-        device.data = self;
-        device.reset_fn = resetZ80;
-        device.destroy_fn = destroyZ80;
-        device.tick_fn = tickZ80;
-
-        return device;
+        return self;
     }
 
     pub fn loadBios(self: *Z80Device) void {
         const bios_data = @embedFile("roms/colecovision.rom");
         @memcpy(self.z80.memory[bios_start..(bios_start + bios_size)], bios_data);
+    }
+
+    pub fn tick(self: *Z80Device, delta_ticks: u32, delta_time: f64) void {
+
+        // introduce a limit to the amount of time we can process in a single step
+        //  to prevent a runaway condition for slow processors
+        var dt = delta_ticks;
+        dt += @intCast(self.extra_ticks);
+        if (delta_time > max_timestamp_steps) {
+            dt = max_timestamp_steps;
+        }
+
+        var cycles_executed: u32 = 0;
+
+        while (dt > 0) {
+            // Handle interrupts before execution using a similar pattern to HBC56
+            checkInterrupt(&self.int_signal, &self.z80.int_requested);
+            checkInterrupt(&self.nmi_signal, &self.z80.nmi_requested);
+
+            // Z80-specific: Only process INT if IFF1 is enabled
+            if (!self.z80.iff1) {
+                self.z80.int_requested = false;
+            }
+
+            // Execute a single instruction
+            const cycle_ticks = if (self.z80.halted) 4 else blk: {
+                // If CPU is not halted, execute an instruction
+                if (self.z80.nmi_requested) {
+                    self.z80.nmi_requested = false;
+                    handleNMI(self.z80);
+                    break :blk 11; // NMI takes 11 cycles
+                } else if (self.z80.int_requested and self.z80.iff1) {
+                    self.z80.int_requested = false;
+                    handleINT(self.z80);
+                    // Colecovision only uses IM1 which takes 13 cycles
+                    break :blk 13;
+                } else {
+                    // Execute normal instruction
+                    break :blk self.z80.step() catch |err| {
+                        std.debug.print("Z80 execution error: {}\n", .{err});
+                        break :blk 4; // Default to 4 cycles on error
+                    };
+                }
+            };
+
+            // Update timing
+            self.run_time_seconds += @as(f64, @floatFromInt(cycle_ticks)) * self.secs_per_tick;
+
+            cycles_executed += @intCast(cycle_ticks);
+            dt -= @intCast(cycle_ticks);
+            self.ticks += cycle_ticks;
+
+            // If we're halted, count cycles in halt
+            if (self.z80.halted) {
+                self.ticks_halt += cycle_ticks;
+            }
+        }
+
+        self.extra_ticks = @intCast(dt);
     }
 };
 
@@ -93,66 +158,6 @@ pub fn destroyZ80(self: *Device, allocator: std.mem.Allocator) void {
     const z80 = getZ80Device(self);
     z80.z80.free(allocator);
     allocator.destroy(z80);
-}
-
-pub fn tickZ80(self: *Device, delta_ticks: u32, delta_time: f64) void {
-    const z80_device = getZ80Device(self);
-
-    // introduce a limit to the amount of time we can process in a single step
-    //  to prevent a runaway condition for slow processors
-    var dt = delta_ticks;
-    dt += z80_device.extra_ticks;
-    if (delta_time > max_timestamp_steps) {
-        dt = max_timestamp_steps;
-    }
-
-    var cycles_executed: u32 = 0;
-
-    while (dt > 0) {
-        // Handle interrupts before execution using a similar pattern to HBC56
-        checkInterrupt(&z80_device.int_signal, &z80_device.z80.int_requested);
-        checkInterrupt(&z80_device.nmi_signal, &z80_device.z80.nmi_requested);
-
-        // Z80-specific: Only process INT if IFF1 is enabled
-        if (!z80_device.z80.iff1) {
-            z80_device.z80.int_requested = false;
-        }
-
-        // Execute a single instruction
-        const cycle_ticks = if (z80_device.z80.halted) 4 else blk: {
-            // If CPU is not halted, execute an instruction
-            if (z80_device.z80.nmi_requested) {
-                z80_device.z80.nmi_requested = false;
-                handleNMI(z80_device.z80);
-                break :blk 11; // NMI takes 11 cycles
-            } else if (z80_device.z80.int_requested and z80_device.z80.iff1) {
-                z80_device.z80.int_requested = false;
-                handleINT(z80_device.z80);
-                // Colecovision only uses IM1 which takes 13 cycles
-                break :blk 13;
-            } else {
-                // Execute normal instruction
-                break :blk z80_device.z80.step() catch |err| {
-                    std.debug.print("Z80 execution error: {}\n", .{err});
-                    break :blk 4; // Default to 4 cycles on error
-                };
-            }
-        };
-
-        // Update timing
-        z80_device.run_time_seconds += @as(f64, @floatFromInt(cycle_ticks)) * z80_device.secs_per_tick;
-
-        cycles_executed += cycle_ticks;
-        dt -= cycle_ticks;
-        z80_device.ticks += cycle_ticks;
-
-        // If we're halted, count cycles in halt
-        if (z80_device.z80.halted) {
-            z80_device.ticks_halt += cycle_ticks;
-        }
-    }
-
-    z80_device.extra_ticks = @intCast(dt);
 }
 
 // Handler for Non-Maskable Interrupts

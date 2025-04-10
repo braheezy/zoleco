@@ -39,48 +39,50 @@ pub fn main() !void {
         }
     }
 
-    // Initialize emulator
-    var emu = try ColecoVisionEmulator.init(allocator);
-    defer emu.deinit();
+    try emulator.run(allocator);
 
-    // Load BIOS
-    try emu.loadBios();
+    // Initialize emulator
+    // var emu = try ColecoVisionEmulator.init(allocator);
+    // defer emu.deinit();
+
+    // // Load BIOS
+    // try emu.loadBios();
 
     // Load ROM (either from file or default)
-    if (args.len > 1) {
-        // Load ROM from file
-        const rom_path = args[1];
-        const rom_data = try std.fs.cwd().readFileAlloc(allocator, rom_path, 1024 * 1024); // 1MB max
-        defer allocator.free(rom_data);
-        try emu.loadRom(rom_data);
-    } else {
-        // Load default ROM
-        try emu.loadRom(default_rom);
-    }
+    // if (args.len > 1) {
+    //     // Load ROM from file
+    //     const rom_path = args[1];
+    //     const rom_data = try std.fs.cwd().readFileAlloc(allocator, rom_path, 1024 * 1024); // 1MB max
+    //     defer allocator.free(rom_data);
+    //     try emu.loadRom(rom_data);
+    // } else {
+    //     // Load default ROM
+    //     try emu.loadRom(default_rom);
+    // }
 
-    const window_width = 800;
-    const window_height = 600;
+    // const window_width = 800;
+    // const window_height = 600;
 
-    rl.setTraceLogLevel(.err);
-    rl.initWindow(window_width, window_height, "zoleco");
-    defer rl.closeWindow();
-    rl.setWindowSize(window_width, window_height);
-    rl.setTargetFPS(60);
+    // rl.setTraceLogLevel(.err);
+    // rl.initWindow(window_width, window_height, "zoleco");
+    // defer rl.closeWindow();
+    // rl.setWindowSize(window_width, window_height);
+    // rl.setTargetFPS(60);
 
-    // Create texture at VDP's native resolution (256x192)
-    emu.screen_texture = try rl.loadRenderTexture(256, 192);
-    defer rl.unloadRenderTexture(emu.screen_texture);
+    // // Create texture at VDP's native resolution (256x192)
+    // emu.screen_texture = try rl.loadRenderTexture(256, 192);
+    // defer rl.unloadRenderTexture(emu.screen_texture);
 
-    // Main emulation loop
-    while (!rl.windowShouldClose()) {
-        try emu.runFrame();
+    // // Main emulation loop
+    // while (!rl.windowShouldClose()) {
+    //     try emu.runFrame();
 
-        rl.beginDrawing();
-        defer rl.endDrawing();
+    //     rl.beginDrawing();
+    //     defer rl.endDrawing();
 
-        rl.clearBackground(rl.Color.blank);
+    //     rl.clearBackground(rl.Color.blank);
 
-        try emu.draw();
-        // TODO: Add input handling
-    }
+    //     try emu.draw();
+    //     // TODO: Add input handling
+    // }
 }
