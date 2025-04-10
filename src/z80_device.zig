@@ -56,7 +56,9 @@ pub const Z80Device = struct {
         memory_read_fn: MemoryReadFn,
         memory_write_fn: MemoryWriteFn,
     ) !*Z80Device {
-        var z80 = try Z80.init(
+        // Create the Z80 on the heap instead of the stack
+        const z80_ptr = try allocator.create(Z80);
+        z80_ptr.* = try Z80.init(
             read_fn,
             write_fn,
             memory_read_fn,
@@ -65,7 +67,7 @@ pub const Z80Device = struct {
 
         const self = try allocator.create(Z80Device);
         self.* = .{
-            .z80 = &z80,
+            .z80 = z80_ptr,
             .int_signal = .release,
             .nmi_signal = .release,
             .ticks = 0,
@@ -130,7 +132,11 @@ pub const Z80Device = struct {
             self.run_time_seconds += @as(f64, @floatFromInt(cycle_ticks)) * self.secs_per_tick;
 
             cycles_executed += @intCast(cycle_ticks);
-            dt -= @intCast(cycle_ticks);
+            if (cycle_ticks > dt) {
+                dt = 0;
+            } else {
+                dt -= @intCast(cycle_ticks);
+            }
             self.ticks += cycle_ticks;
 
             // If we're halted, count cycles in halt
@@ -156,7 +162,7 @@ pub fn resetZ80(self: *Device) void {
 
 pub fn destroyZ80(self: *Device, allocator: std.mem.Allocator) void {
     const z80 = getZ80Device(self);
-    z80.z80.free(allocator);
+    allocator.destroy(z80.z80); // Free the Z80 struct
     allocator.destroy(z80);
 }
 

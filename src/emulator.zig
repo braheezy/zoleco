@@ -3,8 +3,6 @@ const rl = @import("raylib");
 const Device = @import("device.zig");
 const Z80Device = @import("z80_device.zig").Z80Device;
 const Memory = @import("memory_device.zig").Memory;
-const readMemoryFn = @import("memory_device.zig").readMemoryFn;
-const writeMemoryFn = @import("memory_device.zig").writeMemoryFn;
 const TMS9918Device = @import("tms9918_device.zig").TMS9918Device;
 
 // Memory map constants
@@ -23,7 +21,7 @@ pub fn interrupt(signal: InterruptSignal) void {
 
 var video_device: *TMS9918Device = undefined;
 var cpu_device: *Z80Device = undefined;
-var memory_device: Memory = undefined;
+var memory_device: *Memory = undefined;
 
 pub fn ioRead(port: u16) u8 {
     const region = port & 0xE0;
@@ -73,7 +71,8 @@ pub fn run(allocator: std.mem.Allocator) !void {
     rl.setWindowSize(window_width, window_height);
     rl.setTargetFPS(60);
 
-    memory_device = Memory.init(@embedFile("roms/colecovision.rom"));
+    // Initialize devices
+    memory_device = try Memory.init(allocator, @embedFile("roms/colecovision.rom"));
     memory_device.loadRom(@embedFile("roms/hello.rom"));
     video_device = try TMS9918Device.init(allocator, 0xA0, 0xA1);
     cpu_device = try Z80Device.init(
@@ -84,7 +83,22 @@ pub fn run(allocator: std.mem.Allocator) !void {
         writeMemoryFn,
     );
 
-    rl.setTargetFPS(60);
+    // Set up cleanup when function exits
+    defer {
+        // Free Z80 emulator resources
+        const z80_cpu = cpu_device.z80;
+        allocator.destroy(z80_cpu);
+        allocator.destroy(cpu_device);
+
+        // Free TMS9918 resources
+        video_device.tms9918.free(allocator);
+        allocator.destroy(video_device);
+
+        // Free memory resources
+        allocator.free(memory_device.bios);
+        allocator.free(memory_device.ram);
+        allocator.destroy(memory_device);
+    }
 
     while (!rl.windowShouldClose()) {
         loop();
@@ -102,6 +116,12 @@ fn loop() void {
 
     tick_count += 1;
 
+    render();
+
+    // handleInput();
+}
+
+fn tick() void {
     const current_time = rl.getTime();
     delta_time = @floatCast(current_time - last_time);
     last_time = current_time;
@@ -109,12 +129,6 @@ fn loop() void {
     // Calculate delta ticks (simulating SDL ticks)
     delta_ticks = @intFromFloat(delta_time * 1000.0);
 
-    render();
-
-    // handleInput();
-}
-
-fn tick() void {
     cpu_device.tick(delta_ticks, delta_time);
     video_device.tick(delta_ticks, delta_time);
 }
@@ -125,4 +139,10 @@ fn render() void {
     rl.clearBackground(rl.Color.blank);
 
     video_device.render();
+}
+pub fn readMemoryFn(address: u16) u8 {
+    return memory_device.read(address);
+}
+pub fn writeMemoryFn(address: u16, value: u8) void {
+    return memory_device.write(address, value);
 }

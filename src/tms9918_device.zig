@@ -11,8 +11,8 @@ const fps = 60.0;
 const tick_min_pixels = 21.0;
 
 const frame_time = 1.0 / fps;
-const row_time = @divFloor(frame_time, display_height);
-const pixel_time = @divFloor(row_time, display_width);
+const row_time = frame_time / @as(f64, @floatFromInt(display_height));
+const pixel_time = row_time / @as(f64, @floatFromInt(display_width));
 const border_x = (display_width - TMS9918.pixels_x) / 2;
 const border_y = (display_height - TMS9918.pixels_y) / 2;
 const display_pixels = display_width * display_height;
@@ -62,27 +62,72 @@ pub const TMS9918Device = struct {
         var dt = delta_time;
         // determine portion of frame to render
         dt += self.unused_time;
+        var pixels_to_render_int: u32 = 0;
 
-        // how many pixels are we rendering?
-        const mod = std.math.modf(dt / pixel_time);
-        self.unused_time = mod.fpart * pixel_time;
-        var pixels_to_render = mod.ipart;
-
-        // if we haven't reached the minimum, accumulate time for the next call and return
-        if (pixels_to_render < tick_min_pixels) {
-            self.unused_time += pixels_to_render * pixel_time;
+        // Ensure dt is valid
+        if (std.math.isNan(dt) or std.math.isInf(dt)) {
+            std.debug.print("Warning: Invalid delta_time value, skipping tick\n", .{});
+            dt = 0.0;
+            self.unused_time = 0.0;
             return;
         }
 
-        var pixels_to_render_int: u32 = @intFromFloat(pixels_to_render);
-        const pixels_to_render_int_plus_current: u32 = self.current_frame_pixels + pixels_to_render_int;
+        // how many pixels are we rendering?
+        std.debug.print("dt: {d}, pixel_time: {d}\n", .{ dt, pixel_time });
 
-        // we only render the end end of a frame. if we need to go further, accumulate the time for the next call
-        if (pixels_to_render_int_plus_current >= display_pixels) {
-            self.unused_time += (@as(f32, @floatFromInt(pixels_to_render_int_plus_current)) - display_pixels) * pixel_time;
-            pixels_to_render = @floatFromInt(display_pixels - self.current_frame_pixels);
+        // Prevent division by zero
+        if (pixel_time <= 0.0) {
+            std.debug.print("Warning: pixel_time is zero or negative, using default\n", .{});
+            // Use a reasonable default value
+            var pixels_to_render: f64 = 1000.0;
+            self.unused_time = 0.0;
+
+            // Ensure the value is within a safe range for u32
+            if (pixels_to_render < 0) {
+                pixels_to_render = 0;
+            } else if (pixels_to_render > 1000000) {
+                pixels_to_render = 1000; // Use a conservative default
+            }
+
+            pixels_to_render_int = @intFromFloat(pixels_to_render);
+            const pixels_to_render_int_plus_current: u32 = self.current_frame_pixels + pixels_to_render_int;
+
+            // we only render the end end of a frame. if we need to go further, accumulate the time for the next call
+            if (pixels_to_render_int_plus_current >= display_pixels) {
+                self.unused_time += (@as(f32, @floatFromInt(pixels_to_render_int_plus_current)) - display_pixels) * pixel_time;
+                pixels_to_render = @floatFromInt(display_pixels - self.current_frame_pixels);
+            }
+            pixels_to_render_int = @intFromFloat(pixels_to_render);
+        } else {
+            const mod = std.math.modf(dt / pixel_time);
+            self.unused_time = mod.fpart * pixel_time;
+            var pixels_to_render = mod.ipart;
+
+            // if we haven't reached the minimum, accumulate time for the next call and return
+            if (pixels_to_render < tick_min_pixels) {
+                self.unused_time += pixels_to_render * pixel_time;
+                return;
+            }
+
+            // Ensure the value is within a safe range for u32
+            if (pixels_to_render < 0) {
+                pixels_to_render = 0;
+            } else if (pixels_to_render > 1000000) {
+                // Use a safe default if the value is extreme
+                pixels_to_render = 1000; // Reasonable default
+            }
+
+            std.debug.print("pixels_to_render: {d}\n", .{pixels_to_render});
+            pixels_to_render_int = @intFromFloat(pixels_to_render);
+            const pixels_to_render_int_plus_current: u32 = self.current_frame_pixels + pixels_to_render_int;
+
+            // we only render the end end of a frame. if we need to go further, accumulate the time for the next call
+            if (pixels_to_render_int_plus_current >= display_pixels) {
+                self.unused_time += (@as(f32, @floatFromInt(pixels_to_render_int_plus_current)) - display_pixels) * pixel_time;
+                pixels_to_render = @floatFromInt(display_pixels - self.current_frame_pixels);
+            }
+            pixels_to_render_int = @intFromFloat(pixels_to_render);
         }
-        pixels_to_render_int = @intFromFloat(pixels_to_render);
 
         // get the background color for this run of pixels
         const bg_color = self.tms9918.readRegisterValue(.fg_bg_color) & 0x0f;

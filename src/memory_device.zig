@@ -4,17 +4,26 @@ const assert = std.debug.assert;
 pub const Memory = struct {
 
     // 8KB BIOS at 0x0000–0x1FFF
-    bios: [0x2000]u8 = [_]u8{0xFF} ** 0x2000,
+    bios: []u8,
     // 1KB internal RAM at 0x6000–0x63FF
-    ram: [0x0400]u8 = [_]u8{0xFF} ** 0x0400,
+    ram: []u8,
     // Cartridge ROM (variable size)
     rom: ?[]const u8 = null,
 
-    pub fn init(bios_data: []const u8) Memory {
+    pub fn init(allocator: std.mem.Allocator, bios_data: []const u8) !*Memory {
         assert(bios_data.len == 0x2000);
 
-        var memory = Memory{};
-        @memcpy(&memory.bios, bios_data);
+        const bios = try allocator.alloc(u8, 0x2000);
+        @memcpy(bios, bios_data);
+
+        const ram = try allocator.alloc(u8, 0x0400);
+        @memset(ram, 0xFF);
+
+        const memory = try allocator.create(Memory);
+        memory.* = Memory{
+            .bios = bios,
+            .ram = ram,
+        };
         return memory;
     }
 
@@ -48,12 +57,3 @@ pub const Memory = struct {
         self.rom = rom_data;
     }
 };
-
-pub var memory_device = Memory.init(@embedFile("roms/colecovision.rom"));
-
-pub fn readMemoryFn(address: u16) u8 {
-    return memory_device.read(address);
-}
-pub fn writeMemoryFn(address: u16, value: u8) void {
-    return memory_device.write(address, value);
-}
