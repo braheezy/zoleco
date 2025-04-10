@@ -6,8 +6,8 @@ pub fn store_HL(self: *Z80) !void {
     const data = try self.fetchData(2);
     const address = Z80.toUint16(data[1], data[0]);
 
-    self.memory[address] = self.register.l;
-    self.memory[address + 1] = self.register.h;
+    self.memory_write_fn(address, self.register.l);
+    self.memory_write_fn(address + 1, self.register.h);
     self.q = 0;
     self.wz = address +% 1;
 }
@@ -17,8 +17,8 @@ pub fn loadImm_HL(self: *Z80) !void {
     const data = try self.fetchData(2);
     const address = Z80.toUint16(data[1], data[0]);
 
-    self.register.l = self.memory[address];
-    self.register.h = self.memory[address + 1];
+    self.register.l = self.memory_read_fn(address);
+    self.register.h = self.memory_read_fn(address + 1);
     self.q = 0;
     self.wz = address +% 1;
 }
@@ -28,7 +28,7 @@ pub fn store_A(self: *Z80) !void {
     const data = try self.fetchData(2);
     const address = Z80.toUint16(data[1], data[0]);
 
-    self.memory[address] = self.register.a;
+    self.memory_write_fn(address, self.register.a);
     self.q = 0;
     self.wz = (@as(u16, self.register.a) << 8) | (@as(u16, address +% 1 & 0xFF));
 }
@@ -38,7 +38,7 @@ pub fn load_A(self: *Z80) !void {
     const data = try self.fetchData(2);
     const address = Z80.toUint16(data[1], data[0]);
 
-    self.register.a = self.memory[address];
+    self.register.a = self.memory_read_fn(address);
     self.wz = address +% 1;
     self.q = 0;
 }

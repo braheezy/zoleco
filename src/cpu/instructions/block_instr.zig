@@ -54,10 +54,10 @@ fn updateCPFlags(self: *Z80, value: u8, n: u8) void {
 
 // LDI - Load and Increment
 pub fn ldi(self: *Z80) !void {
-    const value = self.memory[self.getHL()];
+    const value = self.memory_read_fn(self.getHL());
     const de = Z80.toUint16(self.register.d, self.register.e);
 
-    self.memory[de] = value;
+    self.memory_write_fn(de, value);
     const new_hl = self.getHL() +% 1;
     self.register.h = getHighByte(new_hl);
     self.register.l = getLowByte(new_hl);
@@ -86,7 +86,7 @@ pub fn ldi(self: *Z80) !void {
 // CPI - Compare and Increment
 pub fn cpi(self: *Z80) !void {
     const hl = self.getHL();
-    const value = self.memory[hl];
+    const value = self.memory_read_fn(hl);
     const old_a = self.register.a;
 
     // Calculate result before incrementing HL
@@ -129,7 +129,7 @@ pub fn ini(self: *Z80) !void {
     const value = self.read_fn(self.register.c);
     const temp = @as(u16, value) +% @as(u16, self.register.c +% 1);
 
-    self.memory[self.getHL()] = value;
+    self.memory_write_fn(self.getHL(), value);
     self.wz = Z80.toUint16(self.register.b, self.register.c) +% 1;
     self.register.b -%= 1;
 
@@ -153,7 +153,7 @@ pub fn ini(self: *Z80) !void {
 // OUTI - Output and Increment
 // B is decremented. A byte from the memory location pointed to by HL is written to the port at the 16-bit address contained in the BC register pair. Then HL is incremented.
 pub fn outi(self: *Z80) !void {
-    const value = self.memory[self.getHL()];
+    const value = self.memory_read_fn(self.getHL());
     setHL(self, self.getHL() +% 1);
 
     self.register.b -%= 1;
@@ -177,10 +177,10 @@ pub fn outi(self: *Z80) !void {
 
 // LDD - Load and Decrement
 pub fn ldd(self: *Z80) !void {
-    const value = self.memory[self.getHL()];
+    const value = self.memory_read_fn(self.getHL());
     const de = getDE(self);
 
-    self.memory[de] = value;
+    self.memory_write_fn(de, value);
     setHL(self, self.getHL() -% 1);
     setDE(self, de -% 1);
 
@@ -205,7 +205,7 @@ pub fn ldd(self: *Z80) !void {
 // CPD - Compare and Decrement
 pub fn cpd(self: *Z80) !void {
     const hl = self.getHL();
-    const value = self.memory[hl];
+    const value = self.memory_read_fn(hl);
     const old_a = self.register.a;
 
     // Calculate result before decrementing HL
@@ -249,7 +249,7 @@ pub fn ind(self: *Z80) !void {
     const value = self.read_fn(self.register.c);
     const temp = @as(u16, value) +% @as(u16, self.register.c -% 1);
 
-    self.memory[self.getHL()] = value;
+    self.memory_write_fn(self.getHL(), value);
     self.wz = Z80.toUint16(self.register.b, self.register.c) -% 1;
     self.register.b -%= 1;
 
@@ -272,7 +272,7 @@ pub fn ind(self: *Z80) !void {
 
 // OUTD - Output and Decrement
 pub fn outd(self: *Z80) !void {
-    const value = self.memory[self.getHL()];
+    const value = self.memory_read_fn(self.getHL());
     setHL(self, self.getHL() -% 1);
 
     self.register.b -%= 1;
@@ -296,11 +296,11 @@ pub fn outd(self: *Z80) !void {
 }
 
 pub fn ldir(self: *Z80) !void {
-    const value = self.memory[self.getHL()];
+    const value = self.memory_read_fn(self.getHL());
     setHL(self, self.getHL() +% 1);
     const de = getDE(self);
 
-    self.memory[de] = value;
+    self.memory_write_fn(de, value);
     setDE(self, de +% 1);
 
     // Decrement BC as 16-bit value
@@ -339,11 +339,11 @@ pub fn ldir(self: *Z80) !void {
 }
 
 pub fn lddr(self: *Z80) !void {
-    const value = self.memory[self.getHL()];
+    const value = self.memory_read_fn(self.getHL());
     setHL(self, self.getHL() -% 1);
     const de = getDE(self);
 
-    self.memory[de] = value;
+    self.memory_write_fn(de, value);
     setDE(self, de -% 1);
 
     // Decrement BC as 16-bit value
@@ -382,7 +382,7 @@ pub fn lddr(self: *Z80) !void {
 }
 
 pub fn cpir(self: *Z80) !void {
-    const value = self.memory[self.getHL()];
+    const value = self.memory_read_fn(self.getHL());
     setHL(self, self.getHL() +% 1);
 
     // Calculate initial subtraction
@@ -429,7 +429,7 @@ pub fn cpir(self: *Z80) !void {
 }
 
 pub fn cpdr(self: *Z80) !void {
-    const value = self.memory[self.getHL()];
+    const value = self.memory_read_fn(self.getHL());
     setHL(self, self.getHL() -% 1);
 
     // Calculate initial subtraction
@@ -520,7 +520,7 @@ pub fn inir(self: *Z80) !void {
     const nf = (io_value >> 6) & 0x02; // NF is bit 1
 
     // Write to (HL) and increment HL
-    self.memory[self.getHL()] = io_value;
+    self.memory_write_fn(self.getHL(), io_value);
     setHL(self, self.getHL() +% 1);
 
     // Calculate MEMPTR = BC + 1
@@ -556,7 +556,7 @@ pub fn indr(self: *Z80) !void {
     const nf = (io_value >> 6) & 0x02; // NF is bit 1
 
     // Write to (HL) and increment HL
-    self.memory[self.getHL()] = io_value;
+    self.memory_write_fn(self.getHL(), io_value);
     setHL(self, self.getHL() -% 1);
 
     // Calculate MEMPTR = BC + 1
@@ -585,7 +585,7 @@ pub fn indr(self: *Z80) !void {
 }
 
 pub fn otir(self: *Z80) !void {
-    const value = self.memory[self.getHL()];
+    const value = self.memory_read_fn(self.getHL());
     setHL(self, self.getHL() +% 1);
 
     // Calculate NF from bits 7-6 of output value
@@ -618,7 +618,7 @@ pub fn otir(self: *Z80) !void {
 }
 
 pub fn otdr(self: *Z80) !void {
-    const value = self.memory[self.getHL()];
+    const value = self.memory_read_fn(self.getHL());
     setHL(self, self.getHL() -% 1);
 
     // Calculate NF from bits 7-6 of output value

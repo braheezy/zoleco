@@ -2,6 +2,8 @@ const std = @import("std");
 const Allocator = std.mem.Allocator;
 const Z80 = @import("z80").Z80;
 
+const devices = @import("devices.zig");
+
 const assert = std.testing.expect;
 
 const TestCase = struct {
@@ -150,6 +152,13 @@ fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
         failures.deinit();
     }
 
+    var z80 = try Z80.init(
+        devices.readIOFn,
+        devices.writeIOFn,
+        devices.readMemoryFn,
+        devices.writeMemoryFn,
+    );
+
     for (test_cases) |*tc| {
         if (tc.ports) |ports| {
             const arr = ports.array.items[0].array;
@@ -158,7 +167,12 @@ fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
             _ = arr.items[2];
             tc.*.in_test_data = data;
         }
-        if (runTest(allocator, tc.*, &failures) catch false) {
+        if (runTest(
+            allocator,
+            tc.*,
+            &failures,
+            &z80,
+        ) catch false) {
             result.successes += 1;
         }
     }
@@ -180,48 +194,18 @@ fn printResult(successes: usize, total: usize) void {
     }
 }
 
-const TestDevice = struct {
-    value: u8 = 0,
+fn runTest(
+    al: std.mem.Allocator,
+    t: TestCase,
+    failures: *std.ArrayList([]const u8),
+    z80: *Z80,
+) !bool {
+    devices.test_io_device.value = t.in_test_data orelse 0;
 
-    pub fn in(self: *TestDevice, port: u16) u8 {
-        _ = port;
-        return self.value;
-    }
-
-    pub fn out(self: *TestDevice, port: u16, value: u8) !void {
-        _ = port;
-        // std.debug.print("test device out: {d} {d}\n", .{ port, value });
-        self.value = value;
-    }
-};
-
-var test_device = TestDevice{};
-fn readFn(port: u16) u8 {
-    return test_device.in(port);
-}
-fn writeFn(port: u16, value: u8) !void {
-    return test_device.out(port, value);
-}
-
-fn runTest(al: std.mem.Allocator, t: TestCase, failures: *std.ArrayList([]const u8)) !bool {
-    const memory = try al.alloc(u8, 0x10000);
-    defer al.free(memory);
-
-    // Allocate test device on heap
-    // const test_device = try al.create(TestDevice);
-    // defer al.destroy(test_device);
-    // test_device.*.value = t.in_test_data orelse 0;
-    test_device.value = t.in_test_data orelse 0;
-    var z80 = Z80{
-        .memory = memory,
-        .read_fn = @ptrCast(&readFn),
-        .write_fn = @ptrCast(&writeFn),
-    };
-    z80.zeroMemory();
-    loadState(&z80, t.initial);
+    loadState(z80, t.initial);
 
     _ = try z80.step();
-    try validateState(z80, t.final, al, failures);
+    try validateState(z80.*, t.final, al, failures);
     return failures.items.len == 0;
 }
 
@@ -283,7 +267,7 @@ fn loadState(z80: *Z80, state: State) void {
     };
 
     for (state.ram) |entry| {
-        z80.memory[entry[0]] = @intCast(entry[1]);
+        z80.memory_write_fn(entry[0], @intCast(entry[1]));
     }
 }
 
@@ -365,6 +349,6 @@ fn validateState(z80: Z80, state: State, al: std.mem.Allocator, failures: *std.A
         const value = entry[1];
         const str = try std.fmt.allocPrint(al, "memory[{d}]", .{addr});
         defer al.free(str);
-        try checkEquals(u8, al, failures, str, z80.memory[addr], @truncate(value));
+        try checkEquals(u8, al, failures, str, z80.memory_read_fn(addr), @truncate(value));
     }
 }

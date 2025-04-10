@@ -102,9 +102,6 @@ pub fn init(allocator: std.mem.Allocator) !Self {
 }
 
 pub fn deinit(self: *Self) void {
-    if (self.rom_loaded or self.bios_loaded) {
-        self.cpu.free(self.allocator);
-    }
     self.vdp_device.vdp.free(self.allocator);
     self.allocator.destroy(self.vdp_device);
 }
@@ -117,7 +114,7 @@ pub fn loadBios(self: *Self) !void {
     var bus = try Bus.init(self.allocator);
     try bus.addDevice(&self.vdp_device.io_device);
 
-    self.cpu = try Z80.initWithRom(self.allocator, bios, 0x0000, bus);
+    // self.cpu = try Z80.initWithRom(self.allocator, bios, 0x0000, bus);
     self.bios_loaded = true;
 }
 
@@ -132,28 +129,28 @@ pub fn loadRom(self: *Self, data: []const u8) !void {
     }
 
     // Clear cartridge area first (fill with 0xFF for safety)
-    @memset(self.cpu.memory[cart_start .. cart_start + cart_size], 0xFF);
+    // @memset(self.cpu.memory[cart_start .. cart_start + cart_size], 0xFF);
 
     // Copy ROM data into cartridge space
-    @memcpy(self.cpu.memory[cart_start .. cart_start + data.len], data);
+    // @memcpy(self.cpu.memory[cart_start .. cart_start + data.len], data);
 
     // Parse the cartridge header
-    const header = try parseRomHeader(self.cpu.memory[cart_start .. cart_start + data.len]);
-    self.romHeader = header;
-    std.debug.print("Cartridge header:\n", .{});
-    std.debug.print("  Signature: {X} {X}\n", .{ header.signature[0], header.signature[1] });
-    std.debug.print("  Start Address: {X}\n", .{header.startAddress});
-    std.debug.print("  Title: \"{s}\"\n", .{header.titleString});
-    std.debug.print("  Sprite Table 1 Pointer: {X}\n", .{header.spriteTable1});
-    std.debug.print("  Sprite Table 2 Pointer: {X}\n", .{header.spriteTable2});
+    // const header = try parseRomHeader(self.cpu.memory[cart_start .. cart_start + data.len]);
+    // self.romHeader = header;
+    // std.debug.print("Cartridge header:\n", .{});
+    // std.debug.print("  Signature: {X} {X}\n", .{ header.signature[0], header.signature[1] });
+    // std.debug.print("  Start Address: {X}\n", .{header.startAddress});
+    // std.debug.print("  Title: \"{s}\"\n", .{header.titleString});
+    // std.debug.print("  Sprite Table 1 Pointer: {X}\n", .{header.spriteTable1});
+    // std.debug.print("  Sprite Table 2 Pointer: {X}\n", .{header.spriteTable2});
 
     // Determine if we should show the title screen.
     // Per documentation: if the header is AA 55 then show the title screen.
-    if (header.signature[0] == 0xAA and header.signature[1] == 0x55) {
-        self.showTitle = true;
-    } else {
-        self.showTitle = false;
-    }
+    // if (header.signature[0] == 0xAA and header.signature[1] == 0x55) {
+    //     self.showTitle = true;
+    // } else {
+    //     self.showTitle = false;
+    // }
 
     // Reset CPU state. Start with BIOS.
     self.cpu.pc = 0x0000;

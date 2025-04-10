@@ -27,7 +27,7 @@ pub fn in(self: *Z80) !void {
 }
 
 fn in_reg(self: *Z80, reg: u8) u8 {
-    const data = self.memory[self.pc];
+    const data = self.memory_read_fn(self.pc);
     const port = Z80.toUint16(reg, data);
     const actual_port: u8 = @intCast(port & 0xFF);
     self.wz = Z80.toUint16(self.register.b, self.register.c) +% 1;
@@ -73,7 +73,7 @@ pub fn in_BC(self: *Z80) !void {
     _ = in_reg(self, self.register.b);
 }
 fn out_reg(self: *Z80, reg: u8) !void {
-    const data = self.memory[self.pc];
+    const data = self.memory_read_fn(self.pc);
     const port: u8 = data;
 
     try self.write_fn(port, reg);

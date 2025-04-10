@@ -5,7 +5,7 @@ const Z80 = @import("../Z80.zig");
 pub fn stax_B(self: *Z80) !void {
     const address = Z80.toUint16(self.register.b, self.register.c);
 
-    self.memory[address] = self.register.a;
+    self.memory_write_fn(address, self.register.a);
 
     // Set WZ: high byte = A, low byte = (C + 1)
     self.wz = (@as(u16, self.register.a) << 8) | (@as(u16, self.register.c +% 1));
@@ -17,8 +17,8 @@ fn store_pair_to_nn(self: *Z80, high: u8, low: u8) !void {
     const data = try self.fetchData(2);
     const nn = Z80.toUint16(data[1], data[0]);
 
-    self.memory[nn + 1] = high;
-    self.memory[nn] = low;
+    self.memory_write_fn(nn + 1, high);
+    self.memory_write_fn(nn, low);
 
     self.wz = nn +% 1;
     self.q = 0;
@@ -45,8 +45,8 @@ pub fn load_SP_nn(self: *Z80) !void {
     const nn = Z80.toUint16(data[1], data[0]);
 
     // Store SP into memory location nn (low byte) and nn+1 (high byte)
-    self.memory[nn] = @truncate(self.sp & 0xFF); // Low byte
-    self.memory[nn +% 1] = @truncate(self.sp >> 8); // High byte
+    self.memory_write_fn(nn, @truncate(self.sp & 0xFF)); // Low byte
+    self.memory_write_fn(nn +% 1, @truncate(self.sp >> 8)); // High byte
 
     self.wz = nn +% 1;
     self.q = 0;
@@ -58,8 +58,8 @@ pub fn load_nn_BC(self: *Z80) !void {
     const nn = Z80.toUint16(data[1], data[0]);
 
     // Load BC from memory location nn (low byte) and nn+1 (high byte)
-    self.register.c = self.memory[nn];
-    self.register.b = self.memory[nn +% 1];
+    self.register.c = self.memory_read_fn(nn);
+    self.register.b = self.memory_read_fn(nn +% 1);
 
     // Set WZ to nn+1
     self.wz = nn +% 1;
@@ -72,8 +72,8 @@ pub fn load_nn_DE(self: *Z80) !void {
     const nn = Z80.toUint16(data[1], data[0]);
 
     // Load DE from memory location nn (low byte) and nn+1 (high byte)
-    self.register.e = self.memory[nn];
-    self.register.d = self.memory[nn +% 1];
+    self.register.e = self.memory_read_fn(nn);
+    self.register.d = self.memory_read_fn(nn +% 1);
 
     // Set WZ to nn+1
     self.wz = nn +% 1;
@@ -86,8 +86,8 @@ pub fn load_nn_HL(self: *Z80) !void {
     const nn = Z80.toUint16(data[1], data[0]);
 
     // Load HL from memory location nn (low byte) and nn+1 (high byte)
-    self.register.l = self.memory[nn];
-    self.register.h = self.memory[nn +% 1];
+    self.register.l = self.memory_read_fn(nn);
+    self.register.h = self.memory_read_fn(nn +% 1);
 
     // Set WZ to nn+1
     self.wz = nn +% 1;
@@ -100,8 +100,8 @@ pub fn load_nn_SP(self: *Z80) !void {
     const nn = Z80.toUint16(data[1], data[0]);
 
     // Load SP from memory location nn (low byte) and nn+1 (high byte)
-    const low = self.memory[nn];
-    const high = self.memory[nn +% 1];
+    const low = self.memory_read_fn(nn);
+    const high = self.memory_read_fn(nn +% 1);
     self.sp = Z80.toUint16(high, low);
 
     self.wz = nn +% 1;
@@ -111,7 +111,7 @@ pub fn load_nn_SP(self: *Z80) !void {
 // LDAX B: Load value from address in register pair B into accumulator.
 pub fn loadAddr_B(self: *Z80) !void {
     const addr = Z80.toUint16(self.register.b, self.register.c);
-    self.register.a = self.memory[addr];
+    self.register.a = self.memory_read_fn(addr);
     self.wz = addr +% 1;
     self.q = 0;
 }
@@ -119,7 +119,7 @@ pub fn loadAddr_B(self: *Z80) !void {
 // LDAX D: Load value from address in register pair D into accumulator.
 pub fn loadAddr_D(self: *Z80) !void {
     const addr = Z80.toUint16(self.register.d, self.register.e);
-    self.register.a = self.memory[addr];
+    self.register.a = self.memory_read_fn(addr);
     self.wz = addr +% 1;
     self.q = 0;
 }
@@ -134,7 +134,7 @@ pub fn load_HL_SP(self: *Z80) !void {
 pub fn move_MA(self: *Z80) !void {
     const address = self.getHL();
 
-    self.memory[address] = self.register.a;
+    self.memory_write_fn(address, self.register.a);
     self.q = 0;
 }
 
@@ -152,7 +152,7 @@ pub fn move_LB(self: *Z80) !void {
 
 // MOV L,M: Load value from register B into memory address from register pair HL
 pub fn move_LM(self: *Z80) !void {
-    self.register.l = self.memory[self.getHL()];
+    self.register.l = self.memory_read_fn(self.getHL());
     self.q = 0;
 }
 
@@ -272,73 +272,73 @@ pub fn move_HC(self: *Z80) !void {
 
 // MOV E,M: Move memory location pointed to by register pair HL into register E.
 pub fn move_EM(self: *Z80) !void {
-    self.register.e = self.memory[self.getHL()];
+    self.register.e = self.memory_read_fn(self.getHL());
     self.q = 0;
 }
 
 // MOV B,M: Move memory location pointed to by register pair HL into register B.
 pub fn move_BM(self: *Z80) !void {
-    self.register.b = self.memory[self.getHL()];
+    self.register.b = self.memory_read_fn(self.getHL());
     self.q = 0;
 }
 
 // MOV C,M: Move memory location pointed to by register pair HL into register C.
 pub fn move_CM(self: *Z80) !void {
-    self.register.c = self.memory[self.getHL()];
+    self.register.c = self.memory_read_fn(self.getHL());
     self.q = 0;
 }
 
 // MOV D,M: Move memory location pointed to by register pair HL into register D.
 pub fn move_DM(self: *Z80) !void {
-    self.register.d = self.memory[self.getHL()];
+    self.register.d = self.memory_read_fn(self.getHL());
     self.q = 0;
 }
 
 // MOV A,M: Move memory location pointed to by register pair HL into register A.
 pub fn move_AM(self: *Z80) !void {
-    self.register.a = self.memory[self.getHL()];
+    self.register.a = self.memory_read_fn(self.getHL());
     self.q = 0;
 }
 
 // MOV H,M: Move memory location pointed to by register pair HL into register H.
 pub fn move_HM(self: *Z80) !void {
-    self.register.h = self.memory[self.getHL()];
+    self.register.h = self.memory_read_fn(self.getHL());
     self.q = 0;
 }
 
 // MOV M,B: Move register B into memory location pointed to by register pair HL.
 pub fn move_MB(self: *Z80) !void {
-    self.memory[self.getHL()] = self.register.b;
+    self.memory_write_fn(self.getHL(), self.register.b);
     self.q = 0;
 }
 
 // MOV M,C: Move register C into memory location pointed to by register pair HL.
 pub fn move_MC(self: *Z80) !void {
-    self.memory[self.getHL()] = self.register.c;
+    self.memory_write_fn(self.getHL(), self.register.c);
     self.q = 0;
 }
 
 // MOV M,D: Move register D into memory location pointed to by register pair HL.
 pub fn move_MD(self: *Z80) !void {
-    self.memory[self.getHL()] = self.register.d;
+    self.memory_write_fn(self.getHL(), self.register.d);
     self.q = 0;
 }
 
 // MOV M,E: Move register E into memory location pointed to by register pair HL.
 pub fn move_ME(self: *Z80) !void {
-    self.memory[self.getHL()] = self.register.e;
+    self.memory_write_fn(self.getHL(), self.register.e);
     self.q = 0;
 }
 
 // MOV M,H: Move register H into memory location pointed to by register pair HL.
 pub fn move_MH(self: *Z80) !void {
-    self.memory[self.getHL()] = self.register.h;
+    self.memory_write_fn(self.getHL(), self.register.h);
     self.q = 0;
 }
 
 // MOV M,L: Move register L into memory location pointed to by register pair HL.
 pub fn move_ML(self: *Z80) !void {
-    self.memory[self.getHL()] = self.register.l;
+    self.memory_write_fn(self.getHL(), self.register.l);
     self.q = 0;
 }
 
@@ -514,7 +514,7 @@ pub fn move_DA(self: *Z80) !void {
 pub fn stax_D(self: *Z80) !void {
     const address = Z80.toUint16(self.register.d, self.register.e);
 
-    self.memory[address] = self.register.a;
+    self.memory_write_fn(address, self.register.a);
     self.q = 0;
     self.wz = (@as(u16, self.register.a) << 8) | (@as(u16, address +% 1 & 0xFF));
 }

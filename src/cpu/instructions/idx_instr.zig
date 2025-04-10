@@ -75,7 +75,7 @@ pub fn load_NN(self: *Z80) !void {
 pub fn load_NNMem(self: *Z80) !void {
     const data = try self.fetchData(2);
     const address = Z80.toUint16(data[1], data[0]);
-    self.curr_index_reg.?.* = self.memory[address] | (@as(u16, self.memory[address + 1]) << 8);
+    self.curr_index_reg.?.* = self.memory_read_fn(address) | (@as(u16, self.memory_read_fn(address + 1)) << 8);
     self.wz = address +% 1;
     self.q = 0;
 }
@@ -85,8 +85,8 @@ pub fn store(self: *Z80) !void {
     const data = try self.fetchData(2);
     const address = Z80.toUint16(data[1], data[0]);
 
-    self.memory[address] = getLowByte(self.curr_index_reg.?.*);
-    self.memory[address + 1] = getHighByte(self.curr_index_reg.?.*);
+    self.memory_write_fn(address, getLowByte(self.curr_index_reg.?.*));
+    self.memory_write_fn(address + 1, getHighByte(self.curr_index_reg.?.*));
     self.q = 0;
     self.wz = address +% 1;
 }
@@ -145,13 +145,13 @@ pub fn inc_IXD(self: *Z80) !void {
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
-    const value: u8 = self.memory[address];
+    const value: u8 = self.memory_read_fn(address);
 
     // Step 4: Increment the value with wrapping
     const old_value: u8 = value;
     const new_value: u8 = value +% 1;
 
-    self.memory[address] = new_value;
+    self.memory_write_fn(address, new_value);
 
     // Step 6: Update Flags
     self.flag.setZ(new_value); // Zero Flag
@@ -168,12 +168,12 @@ pub fn dec_IXD(self: *Z80) !void {
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
-    const value: u8 = self.memory[address];
+    const value: u8 = self.memory_read_fn(address);
 
     // Step 4: Increment the value with wrapping
     const new_value: u8 = value -% 1;
 
-    self.memory[address] = new_value;
+    self.memory_write_fn(address, new_value);
 
     // Step 6: Update Flags
     self.flag.setZ(new_value); // Zero Flag
@@ -191,7 +191,7 @@ pub fn store_WithDisp(self: *Z80, n: u8) void {
     const address = self.getDisplacedAddress(displacement);
     self.q = 0;
 
-    self.memory[address] = n;
+    self.memory_write_fn(address, n);
 }
 
 pub fn store_NWithDisp(self: *Z80) !void {
@@ -201,7 +201,7 @@ pub fn store_NWithDisp(self: *Z80) !void {
     const data = try self.fetchData(1);
     const n: u8 = data[0];
 
-    self.memory[address] = n;
+    self.memory_write_fn(address, n);
     self.q = 0;
 }
 
@@ -316,7 +316,7 @@ fn load_Disp(self: *Z80) u8 {
     self.q = 0;
 
     const displacement = self.getDisplacement();
-    return self.memory[self.getDisplacedAddress(displacement)];
+    return self.memory_read_fn(self.getDisplacedAddress(displacement));
 }
 
 pub fn load_BDisp(self: *Z80) !void {
@@ -371,7 +371,7 @@ pub fn load_IXHDsp(self: *Z80) !void {
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
-    self.register.h = self.memory[address];
+    self.register.h = self.memory_read_fn(address);
     self.q = 0;
 }
 
@@ -419,7 +419,7 @@ pub fn loadDispL(self: *Z80) !void {
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
-    self.register.l = self.memory[address];
+    self.register.l = self.memory_read_fn(address);
     self.q = 0;
 }
 
@@ -428,7 +428,7 @@ pub fn loadDispA(self: *Z80) !void {
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
-    self.register.a = self.memory[address];
+    self.register.a = self.memory_read_fn(address);
     self.q = 0;
 }
 
@@ -454,7 +454,7 @@ pub fn add_IXD_A(self: *Z80) !void {
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
-    const value: u8 = self.memory[address];
+    const value: u8 = self.memory_read_fn(address);
     self.register.a = add(self, value);
 }
 
@@ -473,7 +473,7 @@ pub fn adc_IXD_A(self: *Z80) !void {
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
-    const value: u8 = self.memory[address];
+    const value: u8 = self.memory_read_fn(address);
     self.register.a = adc(self, value);
 }
 // Subtracts IXH from A.
@@ -492,7 +492,7 @@ pub fn sub_IXD_A(self: *Z80) !void {
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
-    const value: u8 = self.memory[address];
+    const value: u8 = self.memory_read_fn(address);
     self.register.a = sub(self, value);
 }
 
@@ -512,7 +512,7 @@ pub fn sbb_IXD_A(self: *Z80) !void {
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
-    const value: u8 = self.memory[address];
+    const value: u8 = self.memory_read_fn(address);
     self.register.a = sbb(self, value);
 }
 
@@ -532,7 +532,7 @@ pub fn ana_IDXDisp(self: *Z80) !void {
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
-    const value: u8 = self.memory[address];
+    const value: u8 = self.memory_read_fn(address);
     ana(self, value);
 }
 
@@ -551,7 +551,7 @@ pub fn xor_IDXDisp(self: *Z80) !void {
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
-    const value: u8 = self.memory[address];
+    const value: u8 = self.memory_read_fn(address);
     xra(self, value);
 }
 
@@ -568,7 +568,7 @@ pub fn ora_IDXDisp(self: *Z80) !void {
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
-    const value: u8 = self.memory[address];
+    const value: u8 = self.memory_read_fn(address);
     ora(self, value);
 }
 
@@ -585,7 +585,7 @@ pub fn cmp_IDXDisp(self: *Z80) !void {
     const displacement = self.getDisplacement();
     const address = self.getDisplacedAddress(displacement);
 
-    const value: u8 = self.memory[address];
+    const value: u8 = self.memory_read_fn(address);
     compare(self, value);
 }
 

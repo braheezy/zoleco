@@ -42,7 +42,7 @@ fn bitTestFlags(self: *Z80, value: u8, bit_index: u3, xy_src: u8, reg_index: u3)
 }
 
 pub fn bitTest(self: *Z80) !void {
-    const opcode = self.memory[self.pc -% 1];
+    const opcode = self.memory_read_fn(self.pc -% 1);
     const bit_index: u3 = @intCast((opcode >> 3) & 0x07);
     const reg_index = opcode & 0x07;
 
@@ -54,7 +54,7 @@ pub fn bitTest(self: *Z80) !void {
         const addr = self.getDisplacedAddress(self.displacement);
         // Set WZ (MEMPTR) to IX+d/IY+d for indexed instructions
         self.wz = addr;
-        val = self.memory[addr];
+        val = self.memory_read_fn(addr);
         // For indexed instructions, xy flags come from high byte of final address
         xy_src = @intCast(addr >> 8);
     } else {
@@ -68,7 +68,7 @@ pub fn bitTest(self: *Z80) !void {
             6 => blk: {
                 const addr = (@as(u16, self.register.h) << 8) | @as(u16, self.register.l);
                 // For non-indexed memory access (HL), WZ is not affected
-                break :blk self.memory[addr];
+                break :blk self.memory_read_fn(addr);
             },
             7 => self.register.a,
             else => unreachable,
@@ -81,7 +81,7 @@ pub fn bitTest(self: *Z80) !void {
 }
 
 pub fn bitSetReset(self: *Z80) !void {
-    const opcode = self.memory[self.pc -% 1];
+    const opcode = self.memory_read_fn(self.pc -% 1);
     const is_set = opcode >= 0xC0;
     const bit_index = @as(u3, @intCast((opcode >> 3) & 0x07));
     const reg_index = opcode & 0x07;
@@ -95,7 +95,7 @@ pub fn bitSetReset(self: *Z80) !void {
         const addr = self.getDisplacedAddress(self.displacement);
         // Set WZ (MEMPTR) to IX+d/IY+d for indexed instructions
         self.wz = addr;
-        val = self.memory[addr];
+        val = self.memory_read_fn(addr);
 
         if (is_set) {
             result = val | (@as(u8, 1) << bit_index);
@@ -104,7 +104,7 @@ pub fn bitSetReset(self: *Z80) !void {
         }
 
         // Always write result to memory for indexed operations
-        self.memory[addr] = result;
+        self.memory_write_fn(addr, result);
 
         // For DD/FD CB opcodes, also store result in target register
         switch (reg_index) {
@@ -129,7 +129,7 @@ pub fn bitSetReset(self: *Z80) !void {
             5 => self.register.l,
             6 => blk: {
                 const addr = (@as(u16, self.register.h) << 8) | @as(u16, self.register.l);
-                break :blk self.memory[addr];
+                break :blk self.memory_read_fn(addr);
             },
             7 => self.register.a,
             else => unreachable,
@@ -150,7 +150,7 @@ pub fn bitSetReset(self: *Z80) !void {
             5 => self.register.l = result,
             6 => {
                 const addr = (@as(u16, self.register.h) << 8) | @as(u16, self.register.l);
-                self.memory[addr] = result;
+                self.memory_write_fn(addr, result);
             },
             7 => self.register.a = result,
             else => unreachable,

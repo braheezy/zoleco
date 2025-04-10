@@ -87,8 +87,8 @@ pub fn dad_SP(self: *Z80) !void {
 
 pub fn push(self: *Z80, lower: u8, upper: u8) void {
     // Store value in stack, note: stack grows downwards
-    self.memory[self.sp - 1] = upper;
-    self.memory[self.sp - 2] = lower;
+    self.memory_write_fn(self.sp - 1, upper);
+    self.memory_write_fn(self.sp - 2, lower);
     self.sp -= 2;
     self.q = 0;
 }
@@ -115,8 +115,8 @@ pub fn push_AF(self: *Z80) !void {
 
 // pop returns two bytes from the stack.
 pub fn pop(self: *Z80) struct { u8, u8 } {
-    const lower = self.memory[self.sp];
-    const upper = self.memory[self.sp + 1];
+    const lower = self.memory_read_fn(self.sp);
+    const upper = self.memory_read_fn(self.sp + 1);
     self.sp += 2;
     self.q = 0;
 
@@ -154,16 +154,16 @@ pub fn pop_IX(self: *Z80) !void {
 pub fn ex_SP_IX(self: *Z80) !void {
     const curr_index_reg = self.curr_index_reg.?.*;
     // Read from memory using wrapping addition for SP+1
-    const sp_low = self.memory[self.sp];
-    const sp_high = self.memory[self.sp +% 1];
+    const sp_low = self.memory_read_fn(self.sp);
+    const sp_high = self.memory_read_fn(self.sp +% 1);
 
     // Get current IX values
     const ix_high = getHighByte(curr_index_reg);
     const ix_low = getLowByte(curr_index_reg);
 
     // Exchange values
-    self.memory[self.sp] = ix_low;
-    self.memory[self.sp +% 1] = ix_high;
+    self.memory_write_fn(self.sp, ix_low);
+    self.memory_write_fn(self.sp +% 1, ix_high);
     self.curr_index_reg.?.* = Z80.toUint16(sp_high, sp_low);
 
     self.wz = self.curr_index_reg.?.*;
@@ -175,8 +175,8 @@ pub fn ex_SP_IX(self: *Z80) !void {
 pub fn push_IX(self: *Z80) !void {
     const ixh = getHighByte(self.curr_index_reg.?.*);
     const ixl = getLowByte(self.curr_index_reg.?.*);
-    self.memory[self.sp - 1] = ixh;
-    self.memory[self.sp - 2] = ixl;
+    self.memory_write_fn(self.sp - 1, ixh);
+    self.memory_write_fn(self.sp - 2, ixl);
     self.sp -= 2;
     self.q = 0;
 }

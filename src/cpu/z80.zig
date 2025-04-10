@@ -3,9 +3,14 @@ const OpcodeTable = @import("opcode.zig").OpcodeTable;
 const handleInterrupt = @import("opcode.zig").handleInterrupt;
 const Bus = @import("bus.zig").Bus;
 const OpcodeCycles = @import("cycles.zig").OpcodeCycles;
+const Memory = @import("../Memory.zig").Memory;
 
-const ReadFn = *const fn (port: u16) u8;
-const WriteFn = *const fn (port: u16, value: u8) anyerror!void;
+const IOReadFn = *const fn (port: u16) u8;
+const IOWriteFn = *const fn (port: u16, value: u8) anyerror!void;
+const MemoryReadFn = *const fn (address: u16) u8;
+const MemoryWriteFn = *const fn (address: u16, value: u8) void;
+
+const total_memory_size = 0x10000;
 
 const Z80 = @This();
 
@@ -128,8 +133,6 @@ iy: u16 = 0xffff,
 curr_index_reg: ?*u16 = null,
 // memory refresh register
 r: u8 = 0,
-// cpu memory
-memory: []u8 = undefined,
 // cycle tracking
 cycle_count: usize = 0,
 total_cycle_count: usize = 0,
@@ -144,8 +147,10 @@ interrupt_pending: bool = false,
 halted: bool = false,
 rom_size: usize = 0,
 start_address: u16 = 0,
-read_fn: ReadFn,
-write_fn: WriteFn,
+read_fn: IOReadFn,
+write_fn: IOWriteFn,
+memory_read_fn: MemoryReadFn,
+memory_write_fn: MemoryWriteFn,
 bus: *Bus = undefined,
 scratch: [2]u8 = [_]u8{0} ** 2,
 displacement: i8 = 0,
@@ -154,38 +159,36 @@ displacement: i8 = 0,
 q: u8 = 0,
 wz: u16 = 0,
 
-pub fn init(allocator: std.mem.Allocator, read_fn: ReadFn, write_fn: WriteFn) !Z80 {
-    const memory = try allocator.alloc(u8, 0x10000);
-    var z80 = Z80{
-        .memory = memory,
+pub fn init(
+    read_fn: IOReadFn,
+    write_fn: IOWriteFn,
+    memory_read_fn: MemoryReadFn,
+    memory_write_fn: MemoryWriteFn,
+) !Z80 {
+    const z80 = Z80{
         .read_fn = read_fn,
         .write_fn = write_fn,
+        .memory_read_fn = memory_read_fn,
+        .memory_write_fn = memory_write_fn,
     };
-    z80.zeroMemory();
 
     return z80;
 }
 
-pub fn initWithRom(al: std.mem.Allocator, rom_data: []const u8, start_address: u16, bus: *Bus) !Z80 {
-    const memory = try al.alloc(u8, 0x10000);
-    var z80 = Z80{
-        .memory = memory,
-        .pc = start_address,
-        .bus = bus,
-        .read_fn = undefined,
-        .write_fn = undefined,
-    };
-    z80.zeroMemory();
+// pub fn initWithRom(al: std.mem.Allocator, rom_data: []const u8, start_address: u16, bus: *Bus) !Z80 {
+//     // const memory = try al.alloc(u8, 0x10000);
+//     var z80 = Z80{
+//         .pc = start_address,
+//         .bus = bus,
+//         .read_fn = undefined,
+//         .write_fn = undefined,
+//         .memory_read_fn = undefined,
+//         .memory_write_fn = undefined,
+//     };
 
-    @memcpy(memory[start_address .. start_address + rom_data.len], rom_data);
-    return z80;
-}
-
-pub fn zeroMemory(self: Z80) void {
-    for (self.memory) |*byte| {
-        byte.* = 0;
-    }
-}
+//     @memcpy(memory[start_address .. start_address + rom_data.len], rom_data);
+//     return z80;
+// }
 
 pub fn reset(self: *Z80) void {
     self.resetRegisters();
@@ -210,14 +213,8 @@ fn resetRegisters(self: *Z80) void {
     self.iy = 0xFFFF;
 }
 
-pub fn free(self: *Z80, al: std.mem.Allocator) void {
-    al.free(self.memory);
-    // self.bus.deinit();
-    // al.destroy(self.bus);
-}
-
 pub fn step(self: *Z80) !usize {
-    if (self.pc >= self.memory.len) {
+    if (self.pc >= total_memory_size) {
         return error.OutOfBoundsPC;
     }
 
@@ -231,7 +228,7 @@ pub fn step(self: *Z80) !usize {
     // }
 
     // Fetch the opcode
-    const opcode = self.memory[self.pc];
+    const opcode = self.memory_read_fn(self.pc);
     // std.debug.print("opcode: {X}, pc: {X}\n", .{ opcode, self.pc });
     self.pc +%= 1;
     self.increment_r();
@@ -251,24 +248,10 @@ pub fn step(self: *Z80) !usize {
 }
 
 pub fn fetchData(self: *Z80, count: u16) ![]const u8 {
-    // Safely compute PC + count in a wider type, then wrap to 16 bits
-    const sum = @as(u32, self.pc) + @as(u32, count);
-    const end_pc = @as(u16, @intCast(sum & 0xFFFF));
-
-    // If sum <= 0xFFFF, no wrapping is needed
-    if (sum <= 0xFFFF) {
-        @memcpy(self.scratch[0..count], self.memory[self.pc..end_pc]);
-    } else {
-        // Handle wrap-around by splitting the copy
-        const first_part_len = 0xFFFF - self.pc + 1;
-        const second_part_len = count - first_part_len;
-
-        @memcpy(self.scratch[0..first_part_len], self.memory[self.pc..]);
-        @memcpy(self.scratch[first_part_len..count], self.memory[0..second_part_len]);
+    for (self.scratch[0..count]) |*b| {
+        b.* = self.memory_read_fn(self.pc);
+        self.pc = (self.pc + 1) & 0xFFFF;
     }
-
-    // Update PC with wrap-around
-    self.pc = end_pc;
     return self.scratch[0..count];
 }
 
@@ -289,7 +272,7 @@ pub fn runCycles(self: *Z80, cycle_count: usize) !void {
         // fetch and execute next instruction
         try self.step();
 
-        if (self.pc >= self.memory.len) {
+        if (self.pc >= total_memory_size) {
             return error.OutOfBounds;
         }
     }

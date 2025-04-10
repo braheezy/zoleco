@@ -105,7 +105,7 @@ const MiscOpcodeTable = [256]?OpcodeHandler{
 };
 
 pub fn lookupBitOpcode(self: *Z80) !void {
-    const next_opcode = self.memory[self.pc];
+    const next_opcode = self.memory_read_fn(self.pc);
 
     self.pc +%= 1;
     self.increment_r();
@@ -121,10 +121,10 @@ pub fn lookupBitOpcode(self: *Z80) !void {
 
 pub fn lookupIndexedOpcode(self: *Z80) !void {
     // was this called for IX or IY? check the previous opcode
-    const prev_opcode = self.memory[self.pc -% 1];
+    const prev_opcode = self.memory_read_fn(self.pc -% 1);
     self.curr_index_reg = if (prev_opcode == 0xDD) &self.ix else &self.iy;
 
-    const opcode = self.memory[self.pc];
+    const opcode = self.memory_read_fn(self.pc);
     self.pc +%= 1;
     self.increment_r();
     self.cycle_count += IndexedOpcodeCycles[opcode];
@@ -135,7 +135,7 @@ pub fn lookupIndexedOpcode(self: *Z80) !void {
         self.cycle_count += 8;
 
         // Fetch the actual bit opcode
-        const bitOp = self.memory[self.pc];
+        const bitOp = self.memory_read_fn(self.pc);
         self.pc +%= 1;
 
         // Lookup and execute
@@ -163,7 +163,7 @@ pub fn lookupIndexedOpcode(self: *Z80) !void {
 }
 
 pub fn lookupMiscOpcode(self: *Z80) !void {
-    const opcode = self.memory[self.pc];
+    const opcode = self.memory_read_fn(self.pc);
     self.pc +%= 1;
     self.increment_r();
 
@@ -201,8 +201,8 @@ fn halt(self: *Z80) !void {
 fn rst38(self: *Z80) !void {
     const return_addr = self.pc;
     self.sp -= 2;
-    self.memory[self.sp + 1] = @intCast(return_addr >> 8);
-    self.memory[self.sp] = @intCast(return_addr & 0xFF);
+    self.memory_write_fn(self.sp + 1, @intCast(return_addr >> 8));
+    self.memory_write_fn(self.sp, @intCast(return_addr & 0xFF));
     self.pc = 0x38;
 
     self.q = 0;
@@ -212,8 +212,8 @@ fn rst38(self: *Z80) !void {
 fn rst30(self: *Z80) !void {
     const return_addr = self.pc;
     self.sp -= 2;
-    self.memory[self.sp + 1] = @intCast(return_addr >> 8);
-    self.memory[self.sp] = @intCast(return_addr & 0xFF);
+    self.memory_write_fn(self.sp + 1, @intCast(return_addr >> 8));
+    self.memory_write_fn(self.sp, @intCast(return_addr & 0xFF));
     self.pc = 0x30;
     self.q = 0;
     self.wz = 0x30;
@@ -222,8 +222,8 @@ fn rst30(self: *Z80) !void {
 fn rst28(self: *Z80) !void {
     const return_addr = self.pc;
     self.sp -= 2;
-    self.memory[self.sp + 1] = @intCast(return_addr >> 8);
-    self.memory[self.sp] = @intCast(return_addr & 0xFF);
+    self.memory_write_fn(self.sp + 1, @intCast(return_addr >> 8));
+    self.memory_write_fn(self.sp, @intCast(return_addr & 0xFF));
     self.pc = 0x28;
 
     self.q = 0;
@@ -233,8 +233,8 @@ fn rst28(self: *Z80) !void {
 fn rst20(self: *Z80) !void {
     const return_addr = self.pc;
     self.sp -= 2;
-    self.memory[self.sp + 1] = @intCast(return_addr >> 8);
-    self.memory[self.sp] = @intCast(return_addr & 0xFF);
+    self.memory_write_fn(self.sp + 1, @intCast(return_addr >> 8));
+    self.memory_write_fn(self.sp, @intCast(return_addr & 0xFF));
     self.pc = 0x20;
 
     self.q = 0;
@@ -244,8 +244,8 @@ fn rst20(self: *Z80) !void {
 fn rst18(self: *Z80) !void {
     const return_addr = self.pc;
     self.sp -= 2;
-    self.memory[self.sp + 1] = @intCast(return_addr >> 8);
-    self.memory[self.sp] = @intCast(return_addr & 0xFF);
+    self.memory_write_fn(self.sp + 1, @intCast(return_addr >> 8));
+    self.memory_write_fn(self.sp, @intCast(return_addr & 0xFF));
     self.pc = 0x18;
     self.q = 0;
     self.wz = 0x18;
@@ -254,8 +254,8 @@ fn rst18(self: *Z80) !void {
 fn rst10(self: *Z80) !void {
     const return_addr = self.pc;
     self.sp -= 2;
-    self.memory[self.sp + 1] = @intCast(return_addr >> 8);
-    self.memory[self.sp] = @intCast(return_addr & 0xFF);
+    self.memory_write_fn(self.sp + 1, @intCast(return_addr >> 8));
+    self.memory_write_fn(self.sp, @intCast(return_addr & 0xFF));
     self.pc = 0x10;
 
     self.q = 0;
@@ -265,8 +265,8 @@ fn rst10(self: *Z80) !void {
 fn rst8(self: *Z80) !void {
     const return_addr = self.pc;
     self.sp -= 2;
-    self.memory[self.sp + 1] = @intCast(return_addr >> 8);
-    self.memory[self.sp] = @intCast(return_addr & 0xFF);
+    self.memory_write_fn(self.sp + 1, @intCast(return_addr >> 8));
+    self.memory_write_fn(self.sp, @intCast(return_addr & 0xFF));
     self.pc = 0x08;
 
     self.q = 0;
@@ -276,8 +276,8 @@ fn rst8(self: *Z80) !void {
 fn rst0(self: *Z80) !void {
     const return_addr = self.pc;
     self.sp -= 2;
-    self.memory[self.sp + 1] = @intCast(return_addr >> 8);
-    self.memory[self.sp] = @intCast(return_addr & 0xFF);
+    self.memory_write_fn(self.sp + 1, @intCast(return_addr >> 8));
+    self.memory_write_fn(self.sp, @intCast(return_addr & 0xFF));
     self.pc = 0;
 
     self.q = 0;
@@ -286,7 +286,7 @@ fn rst0(self: *Z80) !void {
 
 // Used at the end of a non-maskable interrupt service routine (located at 0066h) to pop the top stack entry into PC. The value of IFF2 is copied to IFF1 so that maskable interrupts are allowed to continue as before.
 fn retn(self: *Z80) !void {
-    self.pc = Z80.toUint16(self.memory[self.sp + 1], self.memory[self.sp]);
+    self.pc = Z80.toUint16(self.memory_read_fn(self.sp + 1), self.memory_read_fn(self.sp));
     self.sp += 2;
     self.iff1 = self.iff2;
 
@@ -296,7 +296,7 @@ fn retn(self: *Z80) !void {
 
 // Used at the end of a maskable interrupt service routine. The top stack entry is popped into PC, and signals an I/O device that the interrupt has finished, allowing nested interrupts
 fn reti(self: *Z80) !void {
-    self.pc = Z80.toUint16(self.memory[self.sp + 1], self.memory[self.sp]);
+    self.pc = Z80.toUint16(self.memory_read_fn(self.sp + 1), self.memory_read_fn(self.sp));
     self.sp += 2;
     self.iff1 = self.iff2;
 

@@ -3,7 +3,7 @@ const Z80 = @import("../Z80.zig");
 
 // return helper
 pub fn _ret(self: *Z80) void {
-    const address = Z80.toUint16(self.memory[self.sp + 1], self.memory[self.sp]);
+    const address = Z80.toUint16(self.memory_read_fn(self.sp + 1), self.memory_read_fn(self.sp));
     self.pc = address;
     self.sp += 2;
     self.cycle_count += 6;

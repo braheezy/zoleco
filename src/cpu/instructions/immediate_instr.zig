@@ -62,7 +62,7 @@ pub fn moveImm_M(self: *Z80) !void {
     const data = try self.fetchData(1);
 
     const address = self.getHL();
-    self.memory[address] = data[0];
+    self.memory_write_fn(address, data[0]);
     self.q = 0;
 }
 

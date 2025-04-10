@@ -22,7 +22,7 @@ fn shiftLeftArithmetic(self: *Z80, val: u8) u8 {
         // Set WZ for indexed operations
         self.wz = addr;
         // Get value from memory
-        value = self.memory[addr];
+        value = self.memory_read_fn(addr);
     }
 
     const carry_out = (value & 0x80) != 0;
@@ -32,7 +32,7 @@ fn shiftLeftArithmetic(self: *Z80, val: u8) u8 {
     // Write result back to memory if indexed
     if (self.curr_index_reg != null) {
         const addr = self.getDisplacedAddress(self.displacement);
-        self.memory[addr] = result;
+        self.memory_write_fn(addr, result);
     }
 
     self.q = self.flag.toByte();
@@ -48,7 +48,7 @@ fn shiftLeft(self: *Z80, val: u8) u8 {
         // Set WZ for indexed operations
         self.wz = addr;
         // Get value from memory
-        value = self.memory[addr];
+        value = self.memory_read_fn(addr);
     }
 
     const carry_out = (value & 0x80) != 0;
@@ -58,7 +58,7 @@ fn shiftLeft(self: *Z80, val: u8) u8 {
     // Write result back to memory if indexed
     if (self.curr_index_reg != null) {
         const addr = self.getDisplacedAddress(self.displacement);
-        self.memory[addr] = result;
+        self.memory_write_fn(addr, result);
     }
 
     self.q = self.flag.toByte();
@@ -75,7 +75,7 @@ fn shiftRight(self: *Z80, val: u8) u8 {
         // Set WZ for indexed operations
         self.wz = addr;
         // Get value from memory
-        value = self.memory[addr];
+        value = self.memory_read_fn(addr);
     }
 
     const carry_out = (value & 0x01) != 0;
@@ -85,7 +85,7 @@ fn shiftRight(self: *Z80, val: u8) u8 {
     // Write result back to memory if indexed
     if (self.curr_index_reg != null) {
         const addr = self.getDisplacedAddress(self.displacement);
-        self.memory[addr] = result;
+        self.memory_write_fn(addr, result);
     }
 
     self.q = self.flag.toByte();
@@ -102,7 +102,7 @@ fn shiftRightArithmetic(self: *Z80, val: u8) u8 {
         // Set WZ for indexed operations
         self.wz = addr;
         // Get value from memory
-        value = self.memory[addr];
+        value = self.memory_read_fn(addr);
     }
 
     const carry_out = (value & 0x01) != 0;
@@ -113,7 +113,7 @@ fn shiftRightArithmetic(self: *Z80, val: u8) u8 {
     // Write result back to memory if indexed
     if (self.curr_index_reg != null) {
         const addr = self.getDisplacedAddress(self.displacement);
-        self.memory[addr] = result;
+        self.memory_write_fn(addr, result);
     }
 
     self.q = self.flag.toByte();
@@ -146,8 +146,8 @@ pub fn sla_L(self: *Z80) !void {
 
 pub fn sla_M(self: *Z80) !void {
     const addr = Z80.getHL(self);
-    const val = self.memory[addr];
-    self.memory[addr] = shiftLeftArithmetic(self, val);
+    const val = self.memory_read_fn(addr);
+    self.memory_write_fn(addr, shiftLeftArithmetic(self, val));
 }
 
 pub fn sla_A(self: *Z80) !void {
@@ -180,8 +180,8 @@ pub fn sra_L(self: *Z80) !void {
 
 pub fn sra_M(self: *Z80) !void {
     const addr = Z80.getHL(self);
-    const val = self.memory[addr];
-    self.memory[addr] = shiftRightArithmetic(self, val);
+    const val = self.memory_read_fn(addr);
+    self.memory_write_fn(addr, shiftRightArithmetic(self, val));
 }
 
 pub fn sra_A(self: *Z80) !void {
@@ -217,8 +217,8 @@ pub fn sll_M(self: *Z80) !void {
         self.getDisplacedAddress(self.displacement)
     else
         self.getHL();
-    const val = self.memory[address];
-    self.memory[address] = shiftLeft(self, val);
+    const val = self.memory_read_fn(address);
+    self.memory_write_fn(address, shiftLeft(self, val));
 }
 
 pub fn sll_A(self: *Z80) !void {
@@ -251,8 +251,8 @@ pub fn srl_L(self: *Z80) !void {
 
 pub fn srl_M(self: *Z80) !void {
     const addr = Z80.getHL(self);
-    const val = self.memory[addr];
-    self.memory[addr] = shiftRight(self, val);
+    const val = self.memory_read_fn(addr);
+    self.memory_write_fn(addr, shiftRight(self, val));
 }
 
 pub fn srl_A(self: *Z80) !void {

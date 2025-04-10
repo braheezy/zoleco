@@ -166,8 +166,8 @@ fn handleNMI(z80: *Z80) void {
 
     // Push PC onto stack
     z80.sp -%= 2;
-    z80.memory[z80.sp] = @truncate(z80.pc & 0xFF);
-    z80.memory[z80.sp + 1] = @truncate(z80.pc >> 8);
+    z80.memory_write_fn(z80.sp, @truncate(z80.pc & 0xFF));
+    z80.memory_write_fn(z80.sp + 1, @truncate(z80.pc >> 8));
 
     // Jump to NMI vector (0x0066)
     z80.pc = 0x0066;
@@ -190,8 +190,8 @@ fn handleINT(z80: *Z80) void {
 
     // Push PC onto stack
     z80.sp -%= 2;
-    z80.memory[z80.sp] = @truncate(z80.pc & 0xFF);
-    z80.memory[z80.sp + 1] = @truncate(z80.pc >> 8);
+    z80.memory_write_fn(z80.sp, @truncate(z80.pc & 0xFF));
+    z80.memory_write_fn(z80.sp + 1, @truncate(z80.pc >> 8));
 
     // In IM1 (which Colecovision uses), fixed jump to 0x0038
     z80.pc = 0x0038;
