@@ -8,6 +8,14 @@
             .url = "git+https://github.com/Not-Nik/raylib-zig#d6c77762cbdebbf56d3ff101142048dfae2496c4",
             .hash = "raylib_zig-5.6.0-dev-KE8REBMyBQCnQ9RBhHsoSKr97XmDHF84wx3g0UiMRDxj",
         },
+        .sdl = .{
+            .url = "git+https://github.com/ikskuh/SDL.zig#424ff5f9245ef352e4c508c77ddaeed2f46bd605",
+            .hash = "SDL2-0.0.0-yMCQigakBADGJHtb2ljt13P_cCnG8Y819HRnIibNVPFk",
+        },
+        .SDL2 = .{
+            .url = "git+https://github.com/ikskuh/SDL.zig#424ff5f9245ef352e4c508c77ddaeed2f46bd605",
+            .hash = "SDL2-0.0.0-yMCQigakBADGJHtb2ljt13P_cCnG8Y819HRnIibNVPFk",
+        },
     },
 
     .paths = .{

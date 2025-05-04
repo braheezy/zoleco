@@ -1,4 +1,5 @@
 const std = @import("std");
+const sdl = @import("sdl");
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
@@ -17,6 +18,9 @@ pub fn build(b: *std.Build) !void {
     const raygui = raylib_dep.module("raygui"); // raygui module
     const raylib_artifact = raylib_dep.artifact("raylib"); // raylib C library
 
+    const sdk = sdl.init(b, .{});
+    const sdl_mod = sdk.getNativeModule();
+
     // Define our local modules
     const sn76489_mod = b.addModule("SN76489", .{ .root_source_file = b.path("src/SN76489.zig") });
     const z80_mod = b.addModule("z80", .{ .root_source_file = b.path("src/root.zig") });
@@ -27,15 +31,21 @@ pub fn build(b: *std.Build) !void {
     try modules.put("tms9918", tms9918_mod);
     try modules.put("raylib", raylib);
     try modules.put("raygui", raygui);
+    try modules.put("sdl2", sdl_mod);
 
-    // Create main executable
-    const exe = b.addExecutable(.{
-        .name = "colecovision",
+    const exe_mod = b.createModule(.{
         .root_source_file = b.path("src/main.zig"),
         .target = target,
         .optimize = optimize,
     });
+
+    // Create main executable
+    const exe = b.addExecutable(.{
+        .name = "colecovision",
+        .root_module = exe_mod,
+    });
     exe.linkLibrary(raylib_artifact);
+    sdk.link(exe, .static, sdl.Library.SDL2);
     b.installArtifact(exe);
 
     // Create non-install compile step for code editors to check
@@ -46,9 +56,24 @@ pub fn build(b: *std.Build) !void {
         .optimize = optimize,
     });
     exe_check.linkLibrary(raylib_artifact);
+    sdk.link(exe_check, .static, sdl.Library.SDL2);
 
-    addModulesToExe(exe_check, modules, &[_][]const u8{ "SN76489", "z80", "tms9918", "raylib", "raygui" });
-    addModulesToExe(exe, modules, &[_][]const u8{ "SN76489", "z80", "tms9918", "raylib", "raygui" });
+    addModulesToExe(exe_check, modules, &[_][]const u8{
+        "SN76489",
+        "z80",
+        "tms9918",
+        "raylib",
+        "raygui",
+        "sdl2",
+    });
+    addModulesToExe(exe, modules, &[_][]const u8{
+        "SN76489",
+        "z80",
+        "tms9918",
+        "raylib",
+        "raygui",
+        "sdl2",
+    });
 
     const check = b.step("check", "Check if it compiles");
     check.dependOn(&exe_check.step);

@@ -6,6 +6,8 @@ const emulator = @import("emulator.zig");
 // Embed the default ROM
 const default_rom = @embedFile("roms/hello.rom");
 
+const App = @import("app.zig").App;
+
 const usage =
     \\ColecoVision Emulator
     \\
@@ -30,6 +32,7 @@ pub fn main() !void {
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
+    var rom_file: ?[]const u8 = null;
     // Handle help flag
     if (args.len > 1) {
         const arg = args[1];
@@ -37,9 +40,15 @@ pub fn main() !void {
             try std.io.getStdOut().writeAll(usage);
             return;
         }
+        rom_file = arg;
+    }
+    if (rom_file == null) {
+        rom_file = "src/roms/hello.rom";
     }
 
-    try emulator.run(allocator);
+    App.init(rom_file.?);
+
+    // try emulator.run(allocator);
 
     // Initialize emulator
     // var emu = try ColecoVisionEmulator.init(allocator);
