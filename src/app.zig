@@ -1,5 +1,6 @@
 const std = @import("std");
 const SDL = @import("sdl2");
+const Emu = @import("emu.zig").Emu;
 
 const window_width = 640;
 const window_height = 480;
@@ -9,12 +10,13 @@ pub const App = struct {
     gl_context: *SDL.SDL_GLContext = undefined,
     display_scale: f32 = 1.0,
 
-    pub fn init(rom_file: []const u8) void {
+    pub fn init(allocator: std.mem.Allocator, rom_file: []const u8) !void {
         _ = rom_file;
 
         var app = App{};
 
         app.sdlInit();
+        _ = try Emu.init(allocator);
 
         const renderer = SDL.SDL_CreateRenderer(app.window, -1, SDL.SDL_RENDERER_ACCELERATED) orelse sdlPanic();
         defer _ = SDL.SDL_DestroyRenderer(renderer);

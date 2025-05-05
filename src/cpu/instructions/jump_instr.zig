@@ -106,7 +106,7 @@ pub fn djnz(self: *Z80) !void {
     self.register.b -%= 1;
 
     if (self.register.b != 0) {
-        const displacement = Z80.signedByte(self.memory_read_fn(self.pc));
+        const displacement = Z80.signedByte(self.io.readMemory(self.io.ctx, self.pc));
         const new_pc = self.pc +% displacement;
         self.wz = new_pc +% 1;
         self.pc = new_pc;
@@ -128,13 +128,13 @@ fn jump_relative(self: *Z80, displacement: u8) void {
 }
 // JR d: Jump relative by signed displacement d.
 pub fn jr(self: *Z80) !void {
-    jump_relative(self, self.memory_read_fn(self.pc));
+    jump_relative(self, self.io.readMemory(self.io.ctx, self.pc));
 }
 
 // JRNZ: If the zero flag is unset, the signed value d is added to PC. The jump is measured from the start of the instruction opcode.
 pub fn jr_NZ(self: *Z80) !void {
     if (!self.flag.zero) {
-        jump_relative(self, self.memory_read_fn(self.pc));
+        jump_relative(self, self.io.readMemory(self.io.ctx, self.pc));
     } else {
         self.pc += 1;
     }
@@ -144,7 +144,7 @@ pub fn jr_NZ(self: *Z80) !void {
 // JRZ: If the zero flag is set, the signed value d is added to PC. The jump is measured from the start of the instruction opcode.
 pub fn jr_Z(self: *Z80) !void {
     if (self.flag.zero) {
-        jump_relative(self, self.memory_read_fn(self.pc));
+        jump_relative(self, self.io.readMemory(self.io.ctx, self.pc));
     } else {
         self.pc += 1;
     }
@@ -154,7 +154,7 @@ pub fn jr_Z(self: *Z80) !void {
 // JRNC: If the carry flag is unset, the signed value d is added to PC. The jump is measured from the start of the instruction opcode.
 pub fn jr_NC(self: *Z80) !void {
     if (!self.flag.carry) {
-        jump_relative(self, self.memory_read_fn(self.pc));
+        jump_relative(self, self.io.readMemory(self.io.ctx, self.pc));
     } else {
         self.pc += 1;
     }
@@ -164,7 +164,7 @@ pub fn jr_NC(self: *Z80) !void {
 // JRC: If the carry flag is set, the signed value d is added to PC. The jump is measured from the start of the instruction opcode.
 pub fn jr_C(self: *Z80) !void {
     if (self.flag.carry) {
-        jump_relative(self, self.memory_read_fn(self.pc));
+        jump_relative(self, self.io.readMemory(self.io.ctx, self.pc));
     } else {
         self.pc += 1;
     }

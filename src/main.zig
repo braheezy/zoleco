@@ -46,7 +46,7 @@ pub fn main() !void {
         rom_file = "src/roms/hello.rom";
     }
 
-    App.init(rom_file.?);
+    try App.init(allocator, rom_file.?);
 
     // try emulator.run(allocator);
 

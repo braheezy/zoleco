@@ -4,10 +4,31 @@ const handleInterrupt = @import("opcode.zig").handleInterrupt;
 const Bus = @import("bus.zig").Bus;
 const OpcodeCycles = @import("cycles.zig").OpcodeCycles;
 
-pub const IOReadFn = *const fn (port: u16) u8;
-pub const IOWriteFn = *const fn (port: u16, value: u8) anyerror!void;
-pub const MemoryReadFn = *const fn (address: u16) u8;
-pub const MemoryWriteFn = *const fn (address: u16, value: u8) void;
+pub const IO = struct {
+    readPort: *const fn (ctx: *anyopaque, port: u16) u8,
+    writePort: *const fn (ctx: *anyopaque, port: u16, value: u8) anyerror!void,
+    readMemory: *const fn (ctx: *anyopaque, address: u16) u8,
+    writeMemory: *const fn (ctx: *anyopaque, address: u16, value: u8) void,
+
+    /// Context pointer for the implementation
+    ctx: *anyopaque,
+
+    pub fn init(
+        ctx: *anyopaque,
+        readPort: *const fn (ctx: *anyopaque, port: u16) u8,
+        writePort: *const fn (ctx: *anyopaque, port: u16, value: u8) anyerror!void,
+        readMemory: *const fn (ctx: *anyopaque, address: u16) u8,
+        writeMemory: *const fn (ctx: *anyopaque, address: u16, value: u8) void,
+    ) IO {
+        return .{
+            .readPort = readPort,
+            .writePort = writePort,
+            .readMemory = readMemory,
+            .writeMemory = writeMemory,
+            .ctx = ctx,
+        };
+    }
+};
 
 const total_memory_size = 0x10000;
 
@@ -134,22 +155,22 @@ curr_index_reg: ?*u16 = null,
 r: u8 = 0,
 // cycle tracking
 cycle_count: usize = 0,
+injected_cycles: usize = 0,
 total_cycle_count: usize = 0,
 // interrupts
 interrupt_mode: InterruptMode = .{ .zero = {} },
-iff1: bool = true, // Main interrupt enable flag
-iff2: bool = true, // Backup interrupt enable flag
+iff1: bool = false, // Main interrupt enable flag
+iff2: bool = false, // Backup interrupt enable flag
+after_end_interrupt: bool = false,
 nmi_requested: bool = false,
 int_requested: bool = false,
+input_last_cycle: bool = false,
 i: u8 = 0, // interrupt vector
 interrupt_pending: bool = false,
 halted: bool = false,
 rom_size: usize = 0,
 start_address: u16 = 0,
-read_fn: IOReadFn,
-write_fn: IOWriteFn,
-memory_read_fn: MemoryReadFn,
-memory_write_fn: MemoryWriteFn,
+io: *IO,
 bus: *Bus = undefined,
 scratch: [2]u8 = [_]u8{0} ** 2,
 displacement: i8 = 0,
@@ -158,20 +179,10 @@ displacement: i8 = 0,
 q: u8 = 0,
 wz: u16 = 0,
 
-pub fn init(
-    read_fn: IOReadFn,
-    write_fn: IOWriteFn,
-    memory_read_fn: MemoryReadFn,
-    memory_write_fn: MemoryWriteFn,
-) !Z80 {
-    const z80 = Z80{
-        .read_fn = read_fn,
-        .write_fn = write_fn,
-        .memory_read_fn = memory_read_fn,
-        .memory_write_fn = memory_write_fn,
+pub fn init(io: *IO) Z80 {
+    return Z80{
+        .io = io,
     };
-
-    return z80;
 }
 
 // pub fn initWithRom(al: std.mem.Allocator, rom_data: []const u8, start_address: u16, bus: *Bus) !Z80 {
@@ -227,7 +238,7 @@ pub fn step(self: *Z80) !usize {
     // }
 
     // Fetch the opcode
-    const opcode = self.memory_read_fn(self.pc);
+    const opcode = self.io.readMemory(self.io.ctx, self.pc);
     // std.debug.print("opcode: {X}, pc: {X}\n", .{ opcode, self.pc });
     self.pc +%= 1;
     self.increment_r();
@@ -248,7 +259,7 @@ pub fn step(self: *Z80) !usize {
 
 pub fn fetchData(self: *Z80, count: u16) ![]const u8 {
     for (self.scratch[0..count]) |*b| {
-        b.* = self.memory_read_fn(self.pc);
+        b.* = self.io.readMemory(self.io.ctx, self.pc);
         self.pc = (self.pc + 1) & 0xFFFF;
     }
     return self.scratch[0..count];

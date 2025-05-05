@@ -6,7 +6,7 @@ pub fn out(self: *Z80) !void {
     const data = try self.fetchData(1);
     const port = data[0]; // Use immediate byte as port number
 
-    try self.write_fn(port, self.register.a);
+    try self.io.writePort(self.io.ctx, port, self.register.a);
 
     // WZ = (A << 8) | ((n + 1) & 0xFF)
     self.wz = (@as(u16, self.register.a) << 8) | (@as(u16, (port +% 1) & 0xFF));
@@ -19,7 +19,7 @@ pub fn in(self: *Z80) !void {
     const port = Z80.toUint16(self.register.a, data[0]);
     const actual_port: u8 = @intCast(port & 0xFF);
 
-    const value = self.read_fn(actual_port);
+    const value = self.io.readPort(self.io.ctx, actual_port);
     self.register.a = value;
 
     self.wz = port +% 1;
@@ -27,12 +27,12 @@ pub fn in(self: *Z80) !void {
 }
 
 fn in_reg(self: *Z80, reg: u8) u8 {
-    const data = self.memory_read_fn(self.pc);
+    const data = self.io.readMemory(self.io.ctx, self.pc);
     const port = Z80.toUint16(reg, data);
     const actual_port: u8 = @intCast(port & 0xFF);
     self.wz = Z80.toUint16(self.register.b, self.register.c) +% 1;
 
-    const value = self.read_fn(actual_port);
+    const value = self.io.readPort(self.io.ctx, actual_port);
 
     self.flag.half_carry = false;
     self.flag.add_subtract = false;
@@ -73,10 +73,10 @@ pub fn in_BC(self: *Z80) !void {
     _ = in_reg(self, self.register.b);
 }
 fn out_reg(self: *Z80, reg: u8) !void {
-    const data = self.memory_read_fn(self.pc);
+    const data = self.io.readMemory(self.io.ctx, self.pc);
     const port: u8 = data;
 
-    try self.write_fn(port, reg);
+    try self.io.writePort(self.io.ctx, port, reg);
     self.wz = Z80.toUint16(self.register.b, self.register.c) +% 1;
     self.q = 0;
 }
@@ -106,7 +106,7 @@ pub fn out_A(self: *Z80) !void {
 
 pub fn out_BC(self: *Z80) !void {
     // For NMOS Z80 (used in ColecoVision), output 0
-    try self.write_fn(@intCast(self.register.c), 0);
+    try self.io.writePort(self.io.ctx, @intCast(self.register.c), 0);
     self.wz = Z80.toUint16(self.register.b, self.register.c) +% 1;
     self.q = 0;
 }

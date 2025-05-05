@@ -9,8 +9,8 @@ pub fn ex_M_HL(self: *Z80) !void {
 
     // Read the values from memory at SP and SP+1
     const sp = self.sp;
-    const mem_l = self.memory_read_fn(sp);
-    const mem_h = self.memory_read_fn(sp + 1);
+    const mem_l = self.io.readMemory(self.io.ctx, sp);
+    const mem_h = self.io.readMemory(self.io.ctx, sp + 1);
 
     // Store current HL in temporary variables
     const temp_l = self.register.l;
@@ -21,8 +21,8 @@ pub fn ex_M_HL(self: *Z80) !void {
     self.register.h = mem_h;
 
     // Write original HL back to memory at SP and SP+1
-    self.memory_write_fn(sp, temp_l);
-    self.memory_write_fn(sp + 1, temp_h);
+    self.io.writeMemory(self.io.ctx, sp, temp_l);
+    self.io.writeMemory(self.io.ctx, sp + 1, temp_h);
 
     self.q = 0;
     self.wz = Z80.toUint16(self.register.h, self.register.l);
@@ -129,7 +129,7 @@ pub fn load_A_I(self: *Z80) !void {
 // and the previous contents of the high-order nibble of (HL) go to the low-order nibble of (HL).
 pub fn rrd(self: *Z80) !void {
     const hl_addr = self.getHL();
-    const hl_value = self.memory_read_fn(hl_addr);
+    const hl_value = self.io.readMemory(self.io.ctx, hl_addr);
     const old_a = self.register.a;
 
     // Extract nibbles
@@ -139,7 +139,7 @@ pub fn rrd(self: *Z80) !void {
 
     // Perform rotation
     self.register.a = (old_a & 0xF0) | hl_low; // A keeps high nibble, gets low nibble from (HL)
-    self.memory_write_fn(hl_addr, (a_low << 4) | hl_high); // (HL) gets low nibble of A in high position, high nibble moves to low position
+    self.io.writeMemory(self.io.ctx, hl_addr, (a_low << 4) | hl_high); // (HL) gets low nibble of A in high position, high nibble moves to low position
 
     // Set flags
     self.flag.sign = (self.register.a & 0x80) != 0;
@@ -163,7 +163,7 @@ pub fn rrd(self: *Z80) !void {
 // and the previous contents of the low-order nibble of A are copied to the low-order nibble of (HL).
 pub fn rld(self: *Z80) !void {
     const hl_addr = self.getHL();
-    const hl_value = self.memory_read_fn(hl_addr);
+    const hl_value = self.io.readMemory(self.io.ctx, hl_addr);
     const old_a = self.register.a;
 
     // Extract nibbles
@@ -173,7 +173,7 @@ pub fn rld(self: *Z80) !void {
 
     // Perform rotation
     self.register.a = (old_a & 0xF0) | hl_high; // A keeps high nibble, gets high nibble from (HL)
-    self.memory_write_fn(hl_addr, (hl_low << 4) | a_low); // (HL) gets low nibble in high position, low nibble of A in low position
+    self.io.writeMemory(self.io.ctx, hl_addr, (hl_low << 4) | a_low); // (HL) gets low nibble in high position, low nibble of A in low position
 
     // Set flags
     self.flag.sign = (self.register.a & 0x80) != 0;

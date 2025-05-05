@@ -23,7 +23,7 @@ pub fn rlc(self: *Z80, data: u8) u8 {
         // Set WZ for indexed operations
         self.wz = addr;
         // Get value from memory
-        value = self.memory_read_fn(addr);
+        value = self.io.readMemory(self.io.ctx, addr);
     }
 
     // Use value (not data) for all operations
@@ -45,7 +45,7 @@ pub fn rlc(self: *Z80, data: u8) u8 {
     // Write result back to memory if indexed
     if (self.curr_index_reg != null) {
         const addr = self.getDisplacedAddress(self.displacement);
-        self.memory_write_fn(addr, result);
+        self.io.writeMemory(self.io.ctx, addr, result);
     }
 
     return result;
@@ -77,7 +77,7 @@ pub fn rlc_L(self: *Z80) !void {
 
 pub fn rlc_M(self: *Z80) !void {
     const address = self.getHL();
-    self.memory_write_fn(address, rlc(self, self.memory_read_fn(address)));
+    self.io.writeMemory(self.io.ctx, address, rlc(self, self.io.readMemory(self.io.ctx, address)));
 }
 
 pub fn rlc_A(self: *Z80) !void {
@@ -111,7 +111,7 @@ fn rrc(self: *Z80, data: u8) u8 {
         // Set WZ for indexed operations
         self.wz = addr;
         // Get value from memory
-        value = self.memory_read_fn(addr);
+        value = self.io.readMemory(self.io.ctx, addr);
     }
 
     // Use value for all operations
@@ -136,7 +136,7 @@ fn rrc(self: *Z80, data: u8) u8 {
     // Write result back to memory if indexed
     if (self.curr_index_reg != null) {
         const addr = self.getDisplacedAddress(self.displacement);
-        self.memory_write_fn(addr, result);
+        self.io.writeMemory(self.io.ctx, addr, result);
     }
 
     return result;
@@ -172,7 +172,7 @@ pub fn rrc_M(self: *Z80) !void {
     else
         self.getHL();
 
-    self.memory_write_fn(address, rrc(self, self.memory_read_fn(address)));
+    self.io.writeMemory(self.io.ctx, address, rrc(self, self.io.readMemory(self.io.ctx, address)));
 }
 
 pub fn rrc_A(self: *Z80) !void {
@@ -209,7 +209,7 @@ pub fn rl(self: *Z80, data: u8) u8 {
         // Set WZ for indexed operations
         self.wz = addr;
         // Get value from memory
-        value = self.memory_read_fn(addr);
+        value = self.io.readMemory(self.io.ctx, addr);
     }
 
     const carry: u8 = if (self.flag.carry) 1 else 0;
@@ -234,7 +234,7 @@ pub fn rl(self: *Z80, data: u8) u8 {
     // Write result back to memory if indexed
     if (self.curr_index_reg != null) {
         const addr = self.getDisplacedAddress(self.displacement);
-        self.memory_write_fn(addr, result);
+        self.io.writeMemory(self.io.ctx, addr, result);
     }
 
     return result;
@@ -266,7 +266,7 @@ pub fn rl_L(self: *Z80) !void {
 
 pub fn rl_M(self: *Z80) !void {
     const address = self.getHL();
-    self.memory_write_fn(address, rl(self, self.memory_read_fn(address)));
+    self.io.writeMemory(self.io.ctx, address, rl(self, self.io.readMemory(self.io.ctx, address)));
 }
 
 pub fn rl_A(self: *Z80) !void {
@@ -302,7 +302,7 @@ fn rr(self: *Z80, data: u8) u8 {
         // Set WZ for indexed operations
         self.wz = addr;
         // Get value from memory
-        value = self.memory_read_fn(addr);
+        value = self.io.readMemory(self.io.ctx, addr);
     }
 
     const carry_rotate: u8 = if (self.flag.carry) 1 else 0;
@@ -328,7 +328,7 @@ fn rr(self: *Z80, data: u8) u8 {
     // Write result back to memory if indexed
     if (self.curr_index_reg != null) {
         const addr = self.getDisplacedAddress(self.displacement);
-        self.memory_write_fn(addr, result);
+        self.io.writeMemory(self.io.ctx, addr, result);
     }
 
     return result;
@@ -360,7 +360,7 @@ pub fn rr_L(self: *Z80) !void {
 
 pub fn rr_M(self: *Z80) !void {
     const address = self.getHL();
-    self.memory_write_fn(address, rr(self, self.memory_read_fn(address)));
+    self.io.writeMemory(self.io.ctx, address, rr(self, self.io.readMemory(self.io.ctx, address)));
 }
 
 pub fn rr_A(self: *Z80) !void {

@@ -54,7 +54,7 @@ pub fn inr_L(self: *Z80) !void {
 
 // INR M: Increment memory address pointed to by register pair HL.
 pub fn inr_M(self: *Z80) !void {
-    self.memory_write_fn(self.getHL(), inc(self, self.memory_read_fn(self.getHL())));
+    self.io.writeMemory(self.io.ctx, self.getHL(), inc(self, self.io.readMemory(self.io.ctx, self.getHL())));
 }
 
 // decrement helper
@@ -111,7 +111,7 @@ pub fn dcr_L(self: *Z80) !void {
 // DCR M: Decrement memory location pointed to by register pair HL.
 pub fn dcr_M(self: *Z80) !void {
     const memory_address = self.getHL();
-    self.memory_write_fn(memory_address, dcr(self, self.memory_read_fn(memory_address)));
+    self.io.writeMemory(self.io.ctx, memory_address, dcr(self, self.io.readMemory(self.io.ctx, memory_address)));
 }
 
 // decrement pair helper

@@ -59,7 +59,7 @@ pub fn add_L(self: *Z80) !void {
 
 // ADD M: ADD accumulator with memory address pointed to by register pair HL
 pub fn add_M(self: *Z80) !void {
-    self.register.a = add(self, self.memory_read_fn(self.getHL()));
+    self.register.a = add(self, self.io.readMemory(self.io.ctx, self.getHL()));
 }
 
 // ADD A: ADD accumulator with register A.
@@ -139,7 +139,7 @@ pub fn adc_L(self: *Z80) !void {
 
 // ADC M: Subtract memory address pointed to by register pair HL from accumulator.
 pub fn adc_M(self: *Z80) !void {
-    self.register.a = adc(self, self.memory_read_fn(self.getHL()));
+    self.register.a = adc(self, self.io.readMemory(self.io.ctx, self.getHL()));
 }
 
 // ADC A: Add accumulator with register A and carry.
@@ -225,7 +225,7 @@ pub fn sub_L(self: *Z80) !void {
 
 // SUB M: Subtract memory address pointed to by register pair HL from accumulator.
 pub fn sub_M(self: *Z80) !void {
-    self.register.a = sub(self, self.memory_read_fn(self.getHL()));
+    self.register.a = sub(self, self.io.readMemory(self.io.ctx, self.getHL()));
 }
 
 // SUB A: Subtract accumulator from accumulator.
@@ -312,7 +312,7 @@ pub fn sbb_L(self: *Z80) !void {
 
 // SBB M: Subtract memory address pointed to by register pair HL from accumulator with borrow.
 pub fn sbb_M(self: *Z80) !void {
-    self.register.a = sbb(self, self.memory_read_fn(self.getHL()));
+    self.register.a = sbb(self, self.io.readMemory(self.io.ctx, self.getHL()));
 }
 
 // SBB A: Subtract register A from accumulator with borrow.
@@ -376,7 +376,7 @@ pub fn ana_L(self: *Z80) !void {
 
 // ANA M: AND memory address pointed to by register pair HL with accumulator.
 pub fn ana_M(self: *Z80) !void {
-    ana(self, self.memory_read_fn(self.getHL()));
+    ana(self, self.io.readMemory(self.io.ctx, self.getHL()));
 }
 
 // ANA A: AND accumulator with accumulator.
@@ -440,7 +440,7 @@ pub fn xra_L(self: *Z80) !void {
 
 // XRA M: Exclusive-OR memory address pointed to by register pair HL with accumulator.
 pub fn xra_M(self: *Z80) !void {
-    xra(self, self.memory_read_fn(self.getHL()));
+    xra(self, self.io.readMemory(self.io.ctx, self.getHL()));
 }
 
 // XRA A: Exclusive-OR accumulator with accumulator.
@@ -505,7 +505,7 @@ pub fn ora_L(self: *Z80) !void {
 // ORA M: OR A with memory location pointed to by register pair HL
 pub fn ora_M(self: *Z80) !void {
     const address = self.getHL();
-    ora(self, self.memory_read_fn(address));
+    ora(self, self.io.readMemory(self.io.ctx, address));
 }
 
 // ORA A: OR A with register A
@@ -570,7 +570,7 @@ pub fn cmp_L(self: *Z80) !void {
 
 // CMP M: Compare A with memory address pointed to by register pair HL
 pub fn cmp_M(self: *Z80) !void {
-    compare(self, self.memory_read_fn(self.getHL()));
+    compare(self, self.io.readMemory(self.io.ctx, self.getHL()));
 }
 
 // CMP A: Compare A with register A
