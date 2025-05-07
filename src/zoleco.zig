@@ -4,11 +4,12 @@ const Memory = @import("memory_device.zig").Memory;
 const Cartridge = @import("Cartridge.zig");
 const Z80 = @import("z80").Z80;
 const ColecoVisionIO = @import("ports.zig");
+const Video = @import("video.zig").Video;
 
 pub const Zoleco = struct {
     allocator: std.mem.Allocator,
     memory: Memory = undefined,
-    // video: Video = undefined,
+    video: Video = undefined,
     cpu: *Z80,
     cartridge: Cartridge = .{},
 
@@ -23,6 +24,11 @@ pub const Zoleco = struct {
         zoleco.* = Zoleco{
             .allocator = allocator,
             .cpu = z80,
+            .memory = try Memory.init(
+                allocator,
+                @embedFile("roms/colecovision.rom"),
+            ),
+            .video = try Video.init(allocator),
         };
         return zoleco;
     }
