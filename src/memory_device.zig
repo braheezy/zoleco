@@ -27,6 +27,13 @@ pub const Memory = struct {
         return memory;
     }
 
+    pub fn deinit(self: *Memory, allocator: std.mem.Allocator) void {
+        std.log.info("Deiniting Memory", .{});
+        allocator.free(self.bios);
+        allocator.free(self.ram);
+        allocator.destroy(self);
+    }
+
     pub fn read(self: *Memory, address: u16) u8 {
         return switch (address & 0xE000) {
             0x0000 => self.bios[address],

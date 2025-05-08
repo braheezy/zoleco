@@ -7,32 +7,34 @@ const window_height = 480;
 
 pub const App = struct {
     window: *SDL.SDL_Window = undefined,
-    gl_context: *SDL.SDL_GLContext = undefined,
+    renderer: *SDL.SDL_Renderer = undefined,
+    texture: *SDL.SDL_Texture = undefined,
     display_scale: f32 = 1.0,
+    emu: Emu = undefined,
 
-    pub fn init(allocator: std.mem.Allocator, rom_file: []const u8) !void {
-        _ = rom_file;
-
+    pub fn init(allocator: std.mem.Allocator, rom_file: []const u8) !App {
         var app = App{};
 
         app.sdlInit();
-        _ = try Emu.init(allocator);
+        app.emu = try Emu.init(allocator);
+        app.initRenderer();
 
-        const renderer = SDL.SDL_CreateRenderer(app.window, -1, SDL.SDL_RENDERER_ACCELERATED) orelse sdlPanic();
-        defer _ = SDL.SDL_DestroyRenderer(renderer);
+        try app.emu.loadRom(allocator, rom_file);
+        return app;
 
-        mainLoop: while (true) {
-            var ev: SDL.SDL_Event = undefined;
-            while (SDL.SDL_PollEvent(&ev) != 0) {
-                if (ev.type == SDL.SDL_KEYDOWN and ev.key.keysym.sym == SDL.SDLK_ESCAPE)
-                    break :mainLoop;
-            }
+        // mainLoop: while (true) {
+        //     var ev: SDL.SDL_Event = undefined;
+        //     while (SDL.SDL_PollEvent(&ev) != 0) {
+        //         if (ev.type == SDL.SDL_KEYDOWN and ev.key.keysym.sym == SDL.SDLK_ESCAPE)
+        //             break :mainLoop;
+        //     }
 
-            _ = SDL.SDL_SetRenderDrawColor(renderer, 0xF7, 0xA4, 0x1D, 0xFF);
-            _ = SDL.SDL_RenderClear(renderer);
+        //     _ = SDL.SDL_SetRenderDrawColor(renderer, 0xF7, 0xA4, 0x1D, 0xFF);
+        //     _ = SDL.SDL_RenderClear(renderer);
 
-            SDL.SDL_RenderPresent(renderer);
-        }
+        //     SDL.SDL_RenderPresent(renderer);
+        // }
+
     }
 
     fn sdlInit(self: *App) void {
@@ -53,10 +55,6 @@ pub const App = struct {
             window_height,
             window_flags,
         ) orelse sdlPanic();
-        const gl_context = SDL.SDL_GL_CreateContext(self.window) orelse sdlPanic();
-        defer _ = SDL.SDL_GL_DeleteContext(gl_context);
-        _ = SDL.SDL_GL_MakeCurrent(self.window, gl_context);
-        _ = SDL.SDL_GL_SetSwapInterval(0);
         _ = SDL.SDL_SetWindowMinimumSize(self.window, 500, 300);
 
         var w: i32 = undefined;
@@ -76,9 +74,21 @@ pub const App = struct {
         _ = SDL.SDL_EventState(SDL.SDL_DROPFILE, SDL.SDL_ENABLE);
     }
 
-    pub fn deinit(self: *App) void {
+    pub fn deinit(self: *App, allocator: std.mem.Allocator) void {
+        std.log.info("Deiniting App", .{});
+        self.emu.deinit(allocator);
+        _ = SDL.SDL_DestroyRenderer(self.renderer);
+        _ = SDL.SDL_DestroyTexture(self.texture);
         _ = SDL.SDL_DestroyWindow(self.window);
         SDL.SDL_Quit();
+    }
+
+    fn initRenderer(self: *App) void {
+        const render_flags = SDL.SDL_RENDERER_ACCELERATED | SDL.SDL_RENDERER_PRESENTVSYNC;
+        self.renderer = SDL.SDL_CreateRenderer(self.window, -1, render_flags) orelse sdlPanic();
+        _ = SDL.SDL_SetHint(SDL.SDL_HINT_RENDER_SCALE_QUALITY, "0");
+        _ = SDL.SDL_RenderSetLogicalSize(self.renderer, window_width, window_height);
+        self.texture = SDL.SDL_CreateTexture(self.renderer, SDL.SDL_PIXELFORMAT_RGB24, SDL.SDL_TEXTUREACCESS_STREAMING, window_width, window_height) orelse sdlPanic();
     }
 };
 
