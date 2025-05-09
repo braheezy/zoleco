@@ -11,6 +11,9 @@ pub const App = struct {
     texture: *SDL.SDL_Texture = undefined,
     display_scale: f32 = 1.0,
     emu: Emu = undefined,
+    running: bool = true,
+    frame_time_start: u64 = 0,
+    frame_time_end: u64 = 0,
 
     pub fn init(allocator: std.mem.Allocator, rom_file: []const u8) !App {
         var app = App{};
@@ -21,20 +24,6 @@ pub const App = struct {
 
         try app.emu.loadRom(allocator, rom_file);
         return app;
-
-        // mainLoop: while (true) {
-        //     var ev: SDL.SDL_Event = undefined;
-        //     while (SDL.SDL_PollEvent(&ev) != 0) {
-        //         if (ev.type == SDL.SDL_KEYDOWN and ev.key.keysym.sym == SDL.SDLK_ESCAPE)
-        //             break :mainLoop;
-        //     }
-
-        //     _ = SDL.SDL_SetRenderDrawColor(renderer, 0xF7, 0xA4, 0x1D, 0xFF);
-        //     _ = SDL.SDL_RenderClear(renderer);
-
-        //     SDL.SDL_RenderPresent(renderer);
-        // }
-
     }
 
     fn sdlInit(self: *App) void {
@@ -89,6 +78,45 @@ pub const App = struct {
         _ = SDL.SDL_SetHint(SDL.SDL_HINT_RENDER_SCALE_QUALITY, "0");
         _ = SDL.SDL_RenderSetLogicalSize(self.renderer, window_width, window_height);
         self.texture = SDL.SDL_CreateTexture(self.renderer, SDL.SDL_PIXELFORMAT_RGB24, SDL.SDL_TEXTUREACCESS_STREAMING, window_width, window_height) orelse sdlPanic();
+    }
+
+    pub fn loop(self: *App) void {
+        while (self.running) {
+            self.frame_time_start = SDL.SDL_GetPerformanceCounter();
+
+            self.handleSdlEvents();
+            // handle_mouse_cursor
+            self.emu.run();
+        }
+    }
+
+    fn handleSdlEvents(self: *App) void {
+        var event: SDL.SDL_Event = undefined;
+
+        while (SDL.SDL_PollEvent(&event) != 0) {
+            if (event.type == SDL.SDL_QUIT) {
+                self.running = false;
+                break;
+            }
+
+            if (event.type == SDL.SDL_WINDOWEVENT and event.window.event == SDL.SDL_WINDOWEVENT_CLOSE and event.window.windowID == SDL.SDL_GetWindowID(self.window)) {
+                self.running = false;
+                break;
+            }
+
+            switch (event.type) {
+                SDL.SDL_KEYDOWN => {
+                    const key = event.key.keysym.scancode;
+
+                    if (key == SDL.SDL_SCANCODE_ESCAPE) {
+                        var e: SDL.SDL_Event = undefined;
+                        e.type = SDL.SDL_QUIT;
+                        _ = SDL.SDL_PushEvent(&e);
+                    }
+                },
+                else => {},
+            }
+        }
     }
 };
 

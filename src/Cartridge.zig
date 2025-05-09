@@ -44,7 +44,6 @@ pub fn loadFromFile(self: *Cartridge, allocator: std.mem.Allocator, file_path: [
 pub fn loadFromBuffer(self: *Cartridge, allocator: std.mem.Allocator, buffer: []const u8) !void {
     if (buffer.len % 1024 != 0) {
         std.log.warn("Buffer length is not a multiple of 1024: {d}", .{buffer.len});
-        // return error.InvalidBufferLength;
     }
 
     self.rom = try allocator.dupe(u8, buffer);

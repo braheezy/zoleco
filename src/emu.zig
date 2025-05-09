@@ -1,4 +1,5 @@
 const std = @import("std");
+const SDL = @import("sdl2");
 
 pub const Zoleco = @import("zoleco.zig").Zoleco;
 
@@ -29,5 +30,10 @@ pub const Emu = struct {
 
     pub fn loadRom(self: *Emu, allocator: std.mem.Allocator, rom_file: []const u8) !void {
         try self.zoleco.cartridge.loadFromFile(allocator, rom_file);
+    }
+
+    pub fn run(self: *Emu) void {
+        _ = self;
+        std.log.info("Running Emu", .{});
     }
 };
