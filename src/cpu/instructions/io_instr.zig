@@ -15,15 +15,23 @@ pub fn out(self: *Z80) !void {
 
 // IN A,(n): Input to A from port n
 pub fn in(self: *Z80) !void {
-    const data = try self.fetchData(1);
-    const port = Z80.toUint16(self.register.a, data[0]);
-    const actual_port: u8 = @intCast(port & 0xFF);
+    if (self.input_last_cycle) {
+        const data = try self.fetchData(1);
+        const port = Z80.toUint16(self.register.a, data[0]);
+        const actual_port: u8 = @intCast(port & 0xFF);
 
-    const value = self.io.readPort(self.io.ctx, actual_port);
-    self.register.a = value;
+        const value = self.io.readPort(self.io.ctx, actual_port);
+        self.register.a = value;
 
-    self.wz = port +% 1;
-    self.q = 0;
+        self.wz = port +% 1;
+        self.q = 0;
+
+        self.input_last_cycle = false;
+    } else {
+        self.pc -= 1;
+        self.cycle_count -= 1;
+        self.input_last_cycle = true;
+    }
 }
 
 fn in_reg(self: *Z80, reg: u8) u8 {

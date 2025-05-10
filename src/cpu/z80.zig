@@ -2,7 +2,10 @@ const std = @import("std");
 const OpcodeTable = @import("opcode.zig").OpcodeTable;
 const handleInterrupt = @import("opcode.zig").handleInterrupt;
 const Bus = @import("bus.zig").Bus;
+const push = @import("instructions/register_pair_instr.zig").push;
 const OpcodeCycles = @import("cycles.zig").OpcodeCycles;
+const getHighByte = @import("instructions/util.zig").getHighByte;
+const getLowByte = @import("instructions/util.zig").getLowByte;
 
 pub const IO = struct {
     readPort: *const fn (ctx: *anyopaque, port: u16) u8,
@@ -155,8 +158,8 @@ curr_index_reg: ?*u16 = null,
 r: u8 = 0,
 // cycle tracking
 cycle_count: usize = 0,
-injected_cycles: usize = 0,
-total_cycle_count: usize = 0,
+// injected_cycles: usize = 0,
+// total_cycle_count: usize = 0,
 // interrupts
 interrupt_mode: InterruptMode = .{ .zero = {} },
 iff1: bool = false, // Main interrupt enable flag
@@ -168,22 +171,16 @@ input_last_cycle: bool = false,
 i: u8 = 0, // interrupt vector
 interrupt_pending: bool = false,
 halted: bool = false,
-rom_size: usize = 0,
+// rom_size: usize = 0,
 start_address: u16 = 0,
 io: *IO,
-bus: *Bus = undefined,
+// bus: *Bus = undefined,
 scratch: [2]u8 = [_]u8{0} ** 2,
 displacement: i8 = 0,
 // Q is a special flag to track flag state. used in 2 opcodes
 // https://github.com/redcode/Z80/blob/f7ec2be293880059374bc9546370979fc97f69c5/sources/Z80.c#L501
 q: u8 = 0,
 wz: u16 = 0,
-
-pub fn init(io: *IO) Z80 {
-    return Z80{
-        .io = io,
-    };
-}
 
 // pub fn initWithRom(al: std.mem.Allocator, rom_data: []const u8, start_address: u16, bus: *Bus) !Z80 {
 //     // const memory = try al.alloc(u8, 0x10000);
@@ -200,18 +197,19 @@ pub fn init(io: *IO) Z80 {
 //     return z80;
 // }
 
+pub fn init(allocator: std.mem.Allocator) !*Z80 {
+    const z80 = try allocator.create(Z80);
+    z80.reset();
+    return z80;
+}
+
 pub fn reset(self: *Z80) void {
     self.resetRegisters();
 
+    self.* = Z80{ .io = self.io };
+
+    self.flag.zero = true;
     self.sp = 0xDFF0;
-    self.pc = 0;
-    self.iff1 = false;
-    self.iff2 = false;
-    self.halted = false;
-    self.wz = 0;
-    self.r = 0;
-    self.nmi_requested = false;
-    self.int = false;
 }
 
 fn resetRegisters(self: *Z80) void {
@@ -221,6 +219,46 @@ fn resetRegisters(self: *Z80) void {
     self.shadow_flag = Flag{};
     self.ix = 0xFFFF;
     self.iy = 0xFFFF;
+}
+
+pub fn runFor(self: *Z80, cycles: usize) !usize {
+    var executed_cycles: usize = 0;
+    while (executed_cycles < cycles) {
+        if (!self.input_last_cycle) {
+            if (self.nmi_requested) {
+                std.debug.print("handling NMI\n", .{});
+                self.leaveHalt();
+                self.nmi_requested = false;
+                self.iff1 = false;
+                const pc_high = getHighByte(self.pc);
+                const pc_low = getLowByte(self.pc);
+                push(self, pc_low, pc_high);
+                self.pc = 0x0066;
+                self.cycle_count += 11;
+                self.increment_r();
+                self.wz = self.pc;
+                return self.cycle_count;
+            } else if (self.iff1 and self.int_requested and !self.after_end_interrupt) {
+                self.leaveHalt();
+                self.int_requested = false;
+                self.iff1 = false;
+                self.iff2 = false;
+                const pc_high = getHighByte(self.pc);
+                const pc_low = getLowByte(self.pc);
+                push(self, pc_low, pc_high);
+                self.pc = 0x0038;
+                self.cycle_count += 13;
+                self.increment_r();
+                self.wz = self.pc;
+                return self.cycle_count;
+            }
+            self.after_end_interrupt = false;
+        }
+
+        executed_cycles += try self.step();
+    }
+    self.cycle_count = 0;
+    return executed_cycles;
 }
 
 pub fn step(self: *Z80) !usize {
@@ -238,16 +276,15 @@ pub fn step(self: *Z80) !usize {
     // }
 
     // Fetch the opcode
-    const opcode = self.io.readMemory(self.io.ctx, self.pc);
-    // std.debug.print("opcode: {X}, pc: {X}\n", .{ opcode, self.pc });
+    const opcode = self.nextOpcode();
     self.pc +%= 1;
     self.increment_r();
 
     // Execute the instruction
     if (OpcodeTable[opcode]) |handler| {
-        try handler(self);
         self.cycle_count += OpcodeCycles[opcode];
-        return OpcodeCycles[opcode];
+        try handler(self);
+        return self.cycle_count;
     } else {
         std.debug.print("Cannot step: unknown opcode: {X}\n", .{opcode});
         std.process.exit(1);
@@ -257,6 +294,16 @@ pub fn step(self: *Z80) !usize {
     // self.cycle_count += self.bus.getCyclesPenalty();
 }
 
+pub fn nextOpcode(self: *Z80) u8 {
+    return self.io.readMemory(self.io.ctx, self.pc);
+}
+
+fn leaveHalt(self: *Z80) void {
+    if (self.halted) {
+        self.halted = false;
+        self.pc += 1;
+    }
+}
 pub fn fetchData(self: *Z80, count: u16) ![]const u8 {
     for (self.scratch[0..count]) |*b| {
         b.* = self.io.readMemory(self.io.ctx, self.pc);

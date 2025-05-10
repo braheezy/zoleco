@@ -2,14 +2,17 @@ const std = @import("std");
 
 const Memory = @import("memory_device.zig").Memory;
 const Z80 = @import("z80").Z80;
+const Video = @import("video.zig").Video;
 
 pub const ColecoVisionIO = @This();
 
 // Interface instance
 io: Z80.IO,
 memory: *Memory,
+video: *Video,
+cpu: *Z80,
 
-pub fn init(allocator: std.mem.Allocator, memory: *Memory) !*ColecoVisionIO {
+pub fn init(allocator: std.mem.Allocator, memory: *Memory, video: *Video, cpu: *Z80) !*ColecoVisionIO {
     const self = try allocator.create(ColecoVisionIO);
 
     self.io = Z80.IO.init(
@@ -21,45 +24,58 @@ pub fn init(allocator: std.mem.Allocator, memory: *Memory) !*ColecoVisionIO {
     );
 
     self.memory = memory;
+    self.video = video;
+    self.cpu = cpu;
     return self;
 }
 
 pub fn ioRead(ctx: *anyopaque, port: u16) u8 {
     const self: *ColecoVisionIO = @ptrCast(@alignCast(ctx));
-    _ = self;
+
     const region = port & 0xE0;
     switch (region) {
         0xA0 => {
             if ((port & 0x01) != 0) {
-                // return video_device.tms9918.readStatus();
+                return self.video.getStatusFlags();
             } else {
-                // return video_device.tms9918.readData();
+                return self.video.getDataPort();
             }
         },
         0xE0 => {
             std.debug.print("ioRead (input): {}\n", .{port});
             // return input.read(port)
         },
-        else => return 0xFF,
+        else => {
+            if (port == 0x52) {
+                std.debug.print("ioRead (sgm audio): {}\n", .{port});
+                return 0xAA;
+            }
+            return 0xFF;
+        },
     }
     return 0xFF;
 }
 pub fn ioWrite(ctx: *anyopaque, port: u16, value: u8) !void {
     const self: *ColecoVisionIO = @ptrCast(@alignCast(ctx));
-    _ = self;
+
     const region = port & 0xE0;
     switch (region) {
+        0x80 => {
+            std.debug.print("ioWrite (input right): {d}\n", .{value});
+        },
         0xA0 => {
-            if ((port & 0x01) != 0) {
-                // video_device.tms9918.writeAddress(value);
+            if (port & 0x01 != 0) {
+                self.video.writeControl(value);
             } else {
-                // video_device.tms9918.writeData(value);
+                self.video.writeData(value);
             }
         },
+        0xC0 => {
+            std.debug.print("ioWrite (input left): {d}\n", .{value});
+        },
         0xE0 => {
-            // Stub: call audio routine if needed
-            std.debug.print("ioWrite (audio): {}\n", .{value});
-            // audio.writeRegister(value);
+            std.debug.print("ioWrite (audio reg): {d}\n", .{value});
+            self.cpu.cycle_count += 32;
         },
         else => {
             // Optionally log or ignore writes to other ports.

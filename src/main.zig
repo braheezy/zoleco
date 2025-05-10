@@ -49,7 +49,7 @@ pub fn main() !void {
     var app = try App.init(allocator, rom_file.?);
     defer app.deinit(allocator);
 
-    app.loop();
+    try app.loop();
 
     // try emulator.run(allocator);
 

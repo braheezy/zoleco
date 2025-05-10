@@ -10,13 +10,13 @@ pub const Memory = struct {
     // Cartridge ROM (variable size)
     rom: ?[]const u8 = null,
 
-    pub fn init(allocator: std.mem.Allocator, bios_data: []const u8) !*Memory {
+    pub fn init(allocator: std.mem.Allocator, bios_data: []const u8, is_pal: bool) !*Memory {
         assert(bios_data.len == 0x2000);
 
         const bios = try allocator.alloc(u8, 0x2000);
         @memcpy(bios, bios_data);
 
-        const ram = try allocator.alloc(u8, 0x0400);
+        const ram = try allocator.alloc(u8, 0x400);
         @memset(ram, 0xFF);
 
         const memory = try allocator.create(Memory);
@@ -24,6 +24,22 @@ pub const Memory = struct {
             .bios = bios,
             .ram = ram,
         };
+
+        var prng = std.Random.DefaultPrng.init(blk: {
+            var seed: u64 = undefined;
+            try std.posix.getrandom(std.mem.asBytes(&seed));
+            break :blk seed;
+        });
+        const rand = prng.random();
+        for (ram) |*byte| {
+            byte.* = rand.int(u8);
+        }
+        if (is_pal) {
+            memory.ram[0x69] = 0x32;
+        } else {
+            memory.ram[0x69] = 0x3C;
+        }
+
         return memory;
     }
 
@@ -35,7 +51,8 @@ pub const Memory = struct {
     }
 
     pub fn read(self: *Memory, address: u16) u8 {
-        return switch (address & 0xE000) {
+        const region = address & 0xE000;
+        return switch (region) {
             0x0000 => self.bios[address],
             0x2000, 0x4000 => 0xFF,
             0x6000 => self.ram[address & 0x03FF],
@@ -43,7 +60,7 @@ pub const Memory = struct {
                 if (self.rom) |rom| {
                     const rom_index = address - 0x8000;
                     if (rom_index >= rom.len) break :blk 0xFF;
-                    break :blk rom[rom_index];
+                    break :blk rom[address & 0x7FFF];
                 } else {
                     break :blk 0xFF;
                 }

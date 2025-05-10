@@ -155,7 +155,10 @@ fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
     var test_io = try TestIO.init(allocator);
     defer allocator.destroy(test_io);
 
-    var z80 = Z80.init(&test_io.io);
+    var z80 = try Z80.init(allocator);
+    defer allocator.destroy(z80);
+    z80.io = &test_io.io;
+    z80.input_last_cycle = true;
 
     for (test_cases) |*tc| {
         if (tc.ports) |ports| {
@@ -169,7 +172,7 @@ fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
             allocator,
             tc.*,
             &failures,
-            &z80,
+            z80,
             test_io,
         ) catch false) {
             result.successes += 1;
@@ -204,6 +207,7 @@ fn runTest(
     test_io.value = t.in_test_data orelse 0;
     _ = try z80.step();
     try validateState(z80.*, t.final, al, failures);
+    z80.input_last_cycle = true;
     return failures.items.len == 0;
 }
 

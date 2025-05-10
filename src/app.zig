@@ -10,7 +10,7 @@ pub const App = struct {
     renderer: *SDL.SDL_Renderer = undefined,
     texture: *SDL.SDL_Texture = undefined,
     display_scale: f32 = 1.0,
-    emu: Emu = undefined,
+    emu: *Emu = undefined,
     running: bool = true,
     frame_time_start: u64 = 0,
     frame_time_end: u64 = 0,
@@ -80,13 +80,16 @@ pub const App = struct {
         self.texture = SDL.SDL_CreateTexture(self.renderer, SDL.SDL_PIXELFORMAT_RGB24, SDL.SDL_TEXTUREACCESS_STREAMING, window_width, window_height) orelse sdlPanic();
     }
 
-    pub fn loop(self: *App) void {
+    pub fn loop(self: *App) !void {
         while (self.running) {
             self.frame_time_start = SDL.SDL_GetPerformanceCounter();
 
             self.handleSdlEvents();
-            // handle_mouse_cursor
-            self.emu.run();
+            // TODO: handle_mouse_cursor()
+            try self.run_emu();
+            self.render();
+            self.frame_time_end = SDL.SDL_GetPerformanceCounter();
+            // self.frameThrottle();
         }
     }
 
@@ -117,6 +120,36 @@ pub const App = struct {
                 else => {},
             }
         }
+    }
+
+    fn run_emu(self: *App) !void {
+        SDL.SDL_SetWindowTitle(self.window, "zoleco");
+        try self.emu.update();
+    }
+
+    fn render(self: *App) void {
+        // Clear the screen with a dark color
+        _ = SDL.SDL_SetRenderDrawColor(self.renderer, 25, 25, 25, 255);
+        _ = SDL.SDL_RenderClear(self.renderer);
+
+        // Update the texture with the framebuffer data
+        var pixels: ?*anyopaque = undefined;
+        var pitch: c_int = undefined;
+
+        if (SDL.SDL_LockTexture(self.texture, null, &pixels, &pitch) < 0) {
+            sdlPanic();
+        }
+
+        // Copy the framebuffer data to the texture
+        @memcpy(@as([*]u8, @ptrCast(pixels))[0..self.emu.framebuffer.len], self.emu.framebuffer);
+
+        SDL.SDL_UnlockTexture(self.texture);
+
+        // Render the texture to the screen
+        _ = SDL.SDL_RenderCopy(self.renderer, self.texture, null, null);
+
+        // Present the renderer
+        SDL.SDL_RenderPresent(self.renderer);
     }
 };
 
