@@ -69,9 +69,9 @@ pub const Zoleco = struct {
         var vblank = false;
         var total_clocks: usize = 0;
         while (!vblank) {
-            const opcode = self.cpu.nextOpcode();
-            std.debug.print("opcode: {X}\n", .{opcode});
-            // if (self.frame_count == 12 and self.video.render_line == 212) {
+            // const opcode = self.cpu.nextOpcode();
+            // std.debug.print("opcode: {X}\n", .{opcode});
+            // if (self.frame_count == 11 and self.video.render_line == 129 and self.video.cycle_counter == 215) {
             //     std.debug.print("frame_count: {d}\n", .{self.frame_count});
             // }
 
@@ -98,6 +98,7 @@ pub const Zoleco = struct {
 
         switch (self.pixel_format) {
             .rgb555, .rgb565, .bgr565, .bgr555 => {
+                unreachable;
                 // self.video.render16bit(src_buffer, framebuffer, self.pixel_format, size, true);
             },
             .rgb888, .bgr888 => {

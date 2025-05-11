@@ -1,14 +1,20 @@
 const std = @import("std");
 const SDL = @import("sdl2");
 const Emu = @import("emu.zig").Emu;
+const Renderer = @import("renderer.zig");
 
-const window_width = 640;
-const window_height = 480;
+// Import resolution constants from Video.zig
+const resolution_width_with_overscan = @import("Video.zig").resolution_width_with_overscan;
+const resolution_height_with_overscan = @import("Video.zig").resolution_height_with_overscan;
+
+pub const window_width = 640;
+pub const window_height = 480;
 
 pub const App = struct {
     window: *SDL.SDL_Window = undefined,
-    renderer: *SDL.SDL_Renderer = undefined,
+    renderer: *Renderer = undefined,
     texture: *SDL.SDL_Texture = undefined,
+    gl_context: SDL.SDL_GLContext = undefined,
     display_scale: f32 = 1.0,
     emu: *Emu = undefined,
     running: bool = true,
@@ -20,7 +26,7 @@ pub const App = struct {
 
         app.sdlInit();
         app.emu = try Emu.init(allocator);
-        app.initRenderer();
+        app.renderer = try Renderer.init(allocator, app.emu.framebuffer);
 
         try app.emu.loadRom(allocator, rom_file);
         return app;
@@ -44,6 +50,9 @@ pub const App = struct {
             window_height,
             window_flags,
         ) orelse sdlPanic();
+        self.gl_context = SDL.SDL_GL_CreateContext(self.window) orelse sdlPanic();
+        _ = SDL.SDL_GL_MakeCurrent(self.window, self.gl_context);
+        _ = SDL.SDL_GL_SetSwapInterval(1);
         _ = SDL.SDL_SetWindowMinimumSize(self.window, 500, 300);
 
         var w: i32 = undefined;
@@ -66,18 +75,23 @@ pub const App = struct {
     pub fn deinit(self: *App, allocator: std.mem.Allocator) void {
         std.log.info("Deiniting App", .{});
         self.emu.deinit(allocator);
-        _ = SDL.SDL_DestroyRenderer(self.renderer);
+        self.renderer.deinit(allocator);
         _ = SDL.SDL_DestroyTexture(self.texture);
         _ = SDL.SDL_DestroyWindow(self.window);
+        SDL.SDL_GL_DeleteContext(self.gl_context);
         SDL.SDL_Quit();
     }
 
     fn initRenderer(self: *App) void {
-        const render_flags = SDL.SDL_RENDERER_ACCELERATED | SDL.SDL_RENDERER_PRESENTVSYNC;
-        self.renderer = SDL.SDL_CreateRenderer(self.window, -1, render_flags) orelse sdlPanic();
-        _ = SDL.SDL_SetHint(SDL.SDL_HINT_RENDER_SCALE_QUALITY, "0");
-        _ = SDL.SDL_RenderSetLogicalSize(self.renderer, window_width, window_height);
-        self.texture = SDL.SDL_CreateTexture(self.renderer, SDL.SDL_PIXELFORMAT_RGB24, SDL.SDL_TEXTUREACCESS_STREAMING, window_width, window_height) orelse sdlPanic();
+        self.renderer = try Renderer.init();
+        // const render_flags = SDL.SDL_RENDERER_ACCELERATED | SDL.SDL_RENDERER_PRESENTVSYNC;
+        // self.renderer = SDL.SDL_CreateRenderer(self.window, -1, render_flags) orelse sdlPanic();
+        // _ = SDL.SDL_SetHint(SDL.SDL_HINT_RENDER_SCALE_QUALITY, "0");
+        // _ = SDL.SDL_RenderSetLogicalSize(self.renderer, window_width, window_height);
+
+        // // Create texture with RGB24 format (matches the emulator's framebuffer format)
+        // // SDL_PIXELFORMAT_RGB24 uses 24 bits per pixel in RGB order
+        // self.texture = SDL.SDL_CreateTexture(self.renderer, SDL.SDL_PIXELFORMAT_RGB24, SDL.SDL_TEXTUREACCESS_STREAMING, resolution_width_with_overscan, resolution_height_with_overscan) orelse sdlPanic();
     }
 
     pub fn loop(self: *App) !void {
@@ -128,28 +142,8 @@ pub const App = struct {
     }
 
     fn render(self: *App) void {
-        // Clear the screen with a dark color
-        _ = SDL.SDL_SetRenderDrawColor(self.renderer, 25, 25, 25, 255);
-        _ = SDL.SDL_RenderClear(self.renderer);
-
-        // Update the texture with the framebuffer data
-        var pixels: ?*anyopaque = undefined;
-        var pitch: c_int = undefined;
-
-        if (SDL.SDL_LockTexture(self.texture, null, &pixels, &pitch) < 0) {
-            sdlPanic();
-        }
-
-        // Copy the framebuffer data to the texture
-        @memcpy(@as([*]u8, @ptrCast(pixels))[0..self.emu.framebuffer.len], self.emu.framebuffer);
-
-        SDL.SDL_UnlockTexture(self.texture);
-
-        // Render the texture to the screen
-        _ = SDL.SDL_RenderCopy(self.renderer, self.texture, null, null);
-
-        // Present the renderer
-        SDL.SDL_RenderPresent(self.renderer);
+        self.renderer.render();
+        _ = SDL.SDL_GL_SwapWindow(self.window);
     }
 };
 

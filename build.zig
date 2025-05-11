@@ -46,6 +46,12 @@ pub fn build(b: *std.Build) !void {
     });
     exe.linkLibrary(raylib_artifact);
     sdk.link(exe, .static, sdl.Library.SDL2);
+
+    // Link OpenGL framework on macOS
+    if (target.result.os.tag == .macos) {
+        exe.linkFramework("OpenGL");
+    }
+
     b.installArtifact(exe);
 
     // Create non-install compile step for code editors to check
@@ -57,6 +63,15 @@ pub fn build(b: *std.Build) !void {
     });
     exe_check.linkLibrary(raylib_artifact);
     sdk.link(exe_check, .static, sdl.Library.SDL2);
+
+    // Link OpenGL framework on macOS for the check build
+    if (target.result.os.tag == .macos) {
+        exe_check.linkFramework("OpenGL");
+    }
+
+    const zopengl = b.dependency("zopengl", .{});
+    exe.root_module.addImport("zopengl", zopengl.module("root"));
+    exe_check.root_module.addImport("zopengl", zopengl.module("root"));
 
     addModulesToExe(exe_check, modules, &[_][]const u8{
         "SN76489",

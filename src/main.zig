@@ -23,9 +23,9 @@ const usage =
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer if (gpa.deinit() == .leak) {
-        std.process.exit(1);
-    };
+    // defer if (gpa.deinit() == .leak) {
+    //     std.process.exit(1);
+    // };
     const allocator = gpa.allocator();
 
     // Get command line arguments

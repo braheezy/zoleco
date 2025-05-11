@@ -121,10 +121,10 @@ pub const Video = struct {
             const green = self.current_palette[j + 1];
             const blue = self.current_palette[j + 2];
 
-            const red_5: u16 = @intCast(red * (31 / 255));
-            const green_5: u16 = @intCast(green * (31 / 255));
-            const green_6: u16 = @intCast(green * (63 / 255));
-            const blue_5: u16 = @intCast(blue * (31 / 255));
+            const red_5: u16 = @intCast(@as(u16, red) * 31 / 255);
+            const green_5: u16 = @intCast(@as(u16, green) * 31 / 255);
+            const green_6: u16 = @intCast(@as(u16, green) * 63 / 255);
+            const blue_5: u16 = @intCast(@as(u16, blue) * 31 / 255);
 
             self.palette_565_rgb[i] = red_5 << 11 | green_6 << 5 | blue_5;
             self.palette_555_rgb[i] = red_5 << 10 | green_5 << 5 | blue_5;
@@ -189,7 +189,6 @@ pub const Video = struct {
         if (self.cycle_counter >= cycles_per_line) {
             if (self.render_line == resolution_height) {
                 return_vblank = true;
-                std.debug.print("vblank eol\n", .{});
             }
             self.render_line += 1;
             self.render_line %= self.lines_per_frame;
@@ -336,73 +335,66 @@ pub const Video = struct {
         }
     }
 
-    fn renderSprites(self: *Video, line: usize) void {
+    pub fn renderSprites(self: *Video, line: usize) void {
+        var spriteCount: usize = 0;
+        const lineWidth: usize = line * resolution_width;
+        var spriteSize: i32 = if (isBitSet(self.registers[1], 1)) 16 else 8;
+        const spriteZoom = isBitSet(self.registers[1], 0);
+        if (spriteZoom) spriteSize *= 2;
+
+        const spriteAttrBase: u16 = @intCast((self.registers[5] & 0x7F) << 7);
+        const spritePatternBase: u16 = @as(u16, @intCast(self.registers[6] & 0x07)) << 11;
+
+        var maxSprite: usize = 31;
         var sprite_count: usize = 0;
-        const line_width = line * resolution_width;
-        var sprite_size: usize = if (isBitSet(self.registers[1], 1)) 16 else 8;
-        const sprite_zoom = isBitSet(self.registers[1], 0);
-        if (sprite_zoom) sprite_size *= 2;
-        const sprite_attribute_addr = (self.registers[5] & 0x7F) << 7;
-        const sprite_pattern_addr = @as(u16, @intCast((self.registers[6] & 0x07))) << 11;
-
-        var max_sprite: u8 = 31;
-
-        var spr: u8 = 0;
-        while (spr <= max_sprite) : (spr += 1) {
-            if (self.vram[sprite_attribute_addr + (spr << 2)] == 0xD0) {
-                max_sprite = spr - 1;
+        while (sprite_count <= maxSprite) : (sprite_count += 1) {
+            if (self.vram[spriteAttrBase + (sprite_count << 2)] == 0xD0) {
+                maxSprite = sprite_count - 1;
                 break;
             }
         }
 
-        for (0..max_sprite) |sprite| {
-            const sprite_attribute_offset = sprite_attribute_addr + (sprite << 2);
-            var sprite_y: i16 = (self.vram[sprite_attribute_offset] + 1) & 0xFF;
+        var sprite: u8 = 0;
+        while (sprite <= maxSprite) : (sprite += 1) {
+            const off: usize = spriteAttrBase + (sprite << 2);
+            var sprite_y: i32 = @intCast((self.vram[off] + 1) & 0xFF);
 
-            if (sprite_y >= 0xE0) {
-                sprite_y = -(0x100 - sprite_y);
-            }
-            if ((sprite_y > line) or ((@as(usize, @intCast(sprite_y)) + sprite_size) <= line)) {
-                continue;
-            }
+            if (sprite_y >= 0xE0) sprite_y = -(0x100 - sprite_y);
+            if (sprite_y > line or (sprite_y + spriteSize) <= line) continue;
 
-            sprite_count += 1;
-            if (!isBitSet(self.status, 6) and (sprite_count > 4)) {
+            spriteCount += 1;
+            if (!isBitSet(self.status, 6) and spriteCount > 4) {
                 self.status = setBit(self.status, 6);
-                self.status = @intCast((self.status & 0xE0) | sprite);
+                self.status = (self.status & 0xE0) | sprite;
             }
 
-            const sprite_color = self.vram[sprite_attribute_offset + 3] & 0x0F;
+            const sprite_color: u8 = self.vram[off + 3] & 0x0F;
             if (sprite_color == 0) continue;
 
-            const sprite_shift: u8 = if (self.vram[sprite_attribute_offset + 3] & 0x80 != 0) 32 else 0;
-            const sprite_x = (self.vram[sprite_attribute_offset + 1] - sprite_shift) & 0xFF;
-            if (sprite_x > 0) continue;
+            const sprite_shift: u8 = if ((self.vram[off + 3] & 0x80) != 0) 32 else 0;
+            const sprite_x = self.vram[off + 1] - sprite_shift;
+            if (sprite_x >= resolution_width) continue;
 
-            var sprite_tile = self.vram[sprite_attribute_offset + 2];
-            sprite_tile &= if (isBitSet(self.registers[1], 1)) 0xFC else 0xFF;
+            var tile: u8 = self.vram[off + 2];
+            tile &= if (isBitSet(self.registers[1], 1)) 0xFC else 0xFF;
 
-            const sprite_line_address = sprite_pattern_addr + (sprite_tile << 3) + ((line - @as(usize, @intCast(sprite_y))) >> if (sprite_zoom) 1 else 0);
-            for (0..sprite_size) |tile_x| {
-                const sprite_pixel_x = sprite_x + tile_x;
-                if (sprite_pixel_x >= resolution_width) break;
-                if (sprite_pixel_x < 0) break;
+            const lineAddr: usize = @intCast(spritePatternBase + (tile << 3) + ((@as(i32, @intCast(line)) - sprite_y) >> (if (spriteZoom) 1 else 0)));
 
-                const pixel = line_width + sprite_pixel_x;
-                var sprite_pixel = false;
+            var tx: u32 = 0;
+            while (tx < spriteSize) : (tx += 1) {
+                const px = sprite_x + tx;
+                if (px >= resolution_width) break;
+                if (px < 0) continue;
 
-                const tile_x_adjusted = tile_x >> if (sprite_zoom) 1 else 0;
-                sprite_pixel = if (tile_x_adjusted < 8)
-                    isBitSet(self.vram[sprite_line_address], @intCast(7 - tile_x_adjusted))
-                else
-                    isBitSet(self.vram[sprite_line_address + 16], @intCast(15 - tile_x_adjusted));
+                const pixel = lineWidth + px;
+                const tile_x_adjusted = tx >> (if (spriteZoom) 1 else 0);
+                const sprite_pixel = if (tile_x_adjusted < 8) isBitSet(self.vram[lineAddr], @intCast(7 - tile_x_adjusted)) else isBitSet(self.vram[lineAddr + 16], @intCast(15 - tile_x_adjusted));
 
-                if (sprite_pixel and ((sprite_count < 5) or self.no_sprite_limit)) {
+                if (sprite_pixel and ((spriteCount < 5) or self.no_sprite_limit)) {
                     if (!isBitSet(self.info_buffer[pixel], 0) and (sprite_color > 0)) {
                         self.framebuffer[pixel] = sprite_color;
                         self.info_buffer[pixel] = setBit(self.info_buffer[pixel], 0);
                     }
-
                     if (isBitSet(self.info_buffer[pixel], 1)) {
                         self.status = setBit(self.status, 5);
                     } else {
@@ -430,7 +422,7 @@ pub const Video = struct {
         var overscan_total_width: usize = resolution_width;
         var overscan_total_height: usize = 0;
         var overscan_enabled = false;
-        const overscan_color: usize = self.registers[7] & 0x0F * 3;
+        const overscan_color: usize = self.registers[7] & 0x0F;
         const bgr = (pixel_format == .bgr888);
         const buffer_size = size * 3;
 
@@ -438,7 +430,7 @@ pub const Video = struct {
             overscan_enabled = true;
             overscan_content_v = resolution_height;
             overscan_v = if (self.is_pal) resolution_overscan_v_pal else resolution_overscan_v;
-            overscan_total_height = overscan_content_v + overscan_v * 2;
+            overscan_total_height = overscan_content_v + (overscan_v * 2);
         }
         if (enable_overscan and self.overscan == .full_320) {
             overscan_content_h = resolution_width;
@@ -454,17 +446,17 @@ pub const Video = struct {
         var i: usize = 0;
         var j: usize = 0;
         while (j < buffer_size) : (j += 3) {
-            var src_color: usize = 0;
+            var color_index: usize = 0;
             if (overscan_enabled) {
                 const is_h_overscan = overscan_h_l > 0 and
-                    (x < overscan_h_l or x >= overscan_h_l + overscan_content_h);
+                    (x < overscan_h_l or x >= (overscan_h_l + overscan_content_h));
                 const is_v_overscan = overscan_v > 0 and
-                    (y < overscan_v or y >= overscan_v + overscan_content_v);
+                    (y < overscan_v or y >= (overscan_v + overscan_content_v));
 
                 if (is_h_overscan or is_v_overscan) {
-                    src_color = overscan_color;
+                    color_index = overscan_color;
                 } else {
-                    src_color = src[i] * 3;
+                    color_index = src[i];
                     i += 1;
                 }
                 x += 1;
@@ -474,13 +466,25 @@ pub const Video = struct {
                     if (y == overscan_total_height) y = 0;
                 }
             } else {
-                src_color = src[i] * 3;
+                color_index = src[i];
                 i += 1;
             }
 
-            dst[j + 0] = if (bgr) self.current_palette[src_color + 2] else self.current_palette[src_color];
-            dst[j + 1] = self.current_palette[src_color + 1];
-            dst[j + 2] = if (bgr) self.current_palette[src_color] else self.current_palette[src_color + 2];
+            // The color_index is a value from 0-15, and each color in the palette is 3 bytes (RGB)
+            // So we need to multiply by 3 to get the correct offset
+            const palette_index = color_index * 3;
+
+            // Make sure we don't go out of bounds
+            if (palette_index + 2 < self.current_palette.len) {
+                dst[j + 0] = if (bgr) self.current_palette[palette_index + 2] else self.current_palette[palette_index + 0];
+                dst[j + 1] = self.current_palette[palette_index + 1];
+                dst[j + 2] = if (bgr) self.current_palette[palette_index + 0] else self.current_palette[palette_index + 2];
+            } else {
+                // Set to black if out of bounds
+                dst[j + 0] = 0;
+                dst[j + 1] = 0;
+                dst[j + 2] = 0;
+            }
         }
     }
 
@@ -578,6 +582,9 @@ pub const Video = struct {
     pub fn writeData(self: *Video, data: u8) void {
         self.first_byte_in_sequence = true;
         self.buffer = data;
+        // if (data != 0) {
+        //     std.debug.print("writing data {X} to address {X}\n", .{ data, self.address });
+        // }
         self.vram[self.address] = data;
         self.address = (self.address + 1) & 0x3FFF;
     }
