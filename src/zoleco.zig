@@ -17,6 +17,7 @@ pub const Zoleco = struct {
     io: *ColecoVisionIO,
     cartridge: Cartridge = .{},
     pixel_format: PixelFormat = .rgb888,
+    frame_count: u32 = 0,
 
     pub fn init(allocator: std.mem.Allocator) !*Zoleco {
         // First initialize memory
@@ -70,6 +71,10 @@ pub const Zoleco = struct {
         while (!vblank) {
             const opcode = self.cpu.nextOpcode();
             std.debug.print("opcode: {X}\n", .{opcode});
+            // if (self.frame_count == 12 and self.video.render_line == 212) {
+            //     std.debug.print("frame_count: {d}\n", .{self.frame_count});
+            // }
+
             const clock_cycles = try self.cpu.runFor(1);
             vblank = self.video.tick(clock_cycles);
 
@@ -80,6 +85,10 @@ pub const Zoleco = struct {
             }
         }
 
+        self.frame_count += 1;
+        if (self.frame_count == 13) {
+            std.debug.print("frame_count: {d}\n", .{self.frame_count});
+        }
         self.renderFrameBuffer(framebuffer);
     }
 

@@ -160,6 +160,7 @@ pub fn lookupIndexedOpcode(self: *Z80) !void {
         std.debug.print("unknown index opcode: {x}\n", .{opcode});
         std.process.exit(1);
     }
+    self.curr_index_reg = null;
 }
 
 pub fn lookupMiscOpcode(self: *Z80) !void {

@@ -29,7 +29,7 @@ pub fn in(self: *Z80) !void {
         self.input_last_cycle = false;
     } else {
         self.pc -= 1;
-        self.cycle_count -= 1;
+        self.cycle_count -= 11;
         self.input_last_cycle = true;
     }
 }

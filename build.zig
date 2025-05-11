@@ -79,7 +79,7 @@ pub fn build(b: *std.Build) !void {
     check.dependOn(&exe_check.step);
 
     defineRun(b, exe);
-    // try defineCpuTest(b, target, optimize, modules);
+    try defineCpuTest(b, target, optimize, modules);
     // defineExamples(b, target, optimize, modules, raylib_artifact);
 }
 

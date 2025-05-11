@@ -558,6 +558,7 @@ pub const Video = struct {
     pub fn getStatusFlags(self: *Video) u8 {
         self.first_byte_in_sequence = true;
         const ret = self.status;
+        self.status &= 0x1F;
 
         if (isBitSet(self.registers[1], 5) and isBitSet(self.status, 7)) {
             self.z80.nmi_requested = true;
