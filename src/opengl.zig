@@ -11,6 +11,7 @@ pub const RGB = c.GL_RGB;
 pub const UNSIGNED_BYTE = c.GL_UNSIGNED_BYTE;
 pub const COLOR_BUFFER_BIT = c.GL_COLOR_BUFFER_BIT;
 pub const BLEND = c.GL_BLEND;
+pub const DEPTH_TEST = c.GL_DEPTH_TEST;
 pub const NEAREST = c.GL_NEAREST;
 pub const LINEAR = c.GL_LINEAR;
 pub const CLAMP_TO_EDGE = c.GL_CLAMP_TO_EDGE;

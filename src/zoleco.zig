@@ -87,7 +87,7 @@ pub const Zoleco = struct {
 
         self.frame_count += 1;
 
-        if (self.frame_count == 13) {
+        if (self.frame_count == 12) {
             std.debug.print("frame_count: {d}\n", .{self.frame_count});
             // print vram contents from address 00e0 through 038f
             // for (0..0x33f) |i| {
@@ -149,9 +149,21 @@ pub const Zoleco = struct {
 
         // Print frame debug info for every frame
         var checksum: usize = 0;
-        for (framebuffer) |pixel| {
-            checksum += pixel;
+        for (framebuffer, 0..) |pixel, i| {
+            checksum ^= (pixel * (i + 1));
         }
         std.debug.print("Frame: {d}, Framebuffer length: {d}, Checksum: {d}\n", .{ self.frame_count, framebuffer.len, checksum });
+
+        if (self.frame_count == 15) {
+            // print entire framebuffer
+            std.debug.print("!!!!!!!!!!!Framebuffer:\n", .{});
+            for (framebuffer, 0..) |pixel, i| {
+                std.debug.print("{X:02} ", .{pixel});
+                if (i % 16 == 15) {
+                    std.debug.print("\n", .{});
+                }
+            }
+            std.debug.print("\n", .{});
+        }
     }
 };

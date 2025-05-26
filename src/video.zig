@@ -81,7 +81,8 @@ pub const Video = struct {
     palette_555_bgr: [16]u16 = undefined,
     custom_palette: [48]u8 = undefined,
     current_palette: *const [48]u8 = undefined,
-    debug_flag: bool = false,
+    name_table_addr: u16 = 0,
+    pattern_table_addr: u16 = 0,
 
     pub fn init(allocator: std.mem.Allocator, z80: *Z80) !*Video {
         const self = try allocator.create(Video);
@@ -236,9 +237,9 @@ pub const Video = struct {
     fn renderBackground(self: *Video, line: usize) void {
         const line_offset = line * resolution_width;
 
-        const name_table_addr = @as(u16, @intCast(self.registers[2])) << 10;
+        self.name_table_addr = @as(u16, @intCast(self.registers[2])) << 10;
         var color_table_addr: u16 = @as(u16, @intCast(self.registers[3])) << 6;
-        var pattern_table_addr = @as(u16, @intCast(self.registers[4])) << 11;
+        self.pattern_table_addr = @as(u16, @intCast(self.registers[4])) << 11;
         const region_mask = (@as(u16, @intCast(self.registers[4] & 0x03)) << 8) | 0xFF;
         const color_mask = ((self.registers[3] & 0x7F) << 3) | 0x07;
         var backdrop_color = self.registers[7] & 0x0F;
@@ -265,9 +266,9 @@ pub const Video = struct {
 
                 for (0..40) |tile_x| {
                     const tile_number = (tile_y * 40) + tile_x;
-                    const name_tile_addr = name_table_addr + tile_number;
+                    const name_tile_addr = self.name_table_addr + tile_number;
                     const name_tile = self.vram[name_tile_addr];
-                    const pattern_line = self.vram[pattern_table_addr + (name_tile << 3) + tile_y_offset];
+                    const pattern_line = self.vram[self.pattern_table_addr + (name_tile << 3) + tile_y_offset];
 
                     const screen_offset = line_offset + (tile_x * 6) + 8;
 
@@ -282,26 +283,26 @@ pub const Video = struct {
                 return;
             },
             2 => {
-                pattern_table_addr &= 0x2000;
+                self.pattern_table_addr &= 0x2000;
                 color_table_addr &= 0x2000;
                 region = (tile_y & 0x18) << 5;
             },
             4 => {
-                pattern_table_addr &= 0x2000;
+                self.pattern_table_addr &= 0x2000;
             },
             else => {},
         }
 
         for (0..32) |tile_x| {
             const tile_number = (tile_y << 5) + tile_x;
-            const name_tile_addr = name_table_addr + tile_number;
+            const name_tile_addr = self.name_table_addr + tile_number;
             var name_tile: u16 = @intCast(self.vram[name_tile_addr]);
             var pattern_line: usize = 0;
             var color_line: usize = 0;
 
             if (self.mode == 4) {
                 const delta: usize = if (line & 0x04 != 0) 1 else 0;
-                const offset_color = pattern_table_addr + (name_tile << 3) + ((tile_y & 0x03) << 1) + delta;
+                const offset_color = self.pattern_table_addr + (name_tile << 3) + ((tile_y & 0x03) << 1) + delta;
                 color_line = self.vram[offset_color];
 
                 var left_color = color_line >> 4;
@@ -314,24 +315,43 @@ pub const Video = struct {
                 for (0..4) |tile_pixel| {
                     const pixel = screen_offset + tile_pixel;
 
-                    std.debug.print("renderBackground 1\n", .{});
+                    // std.debug.print("renderBackground 1\\n", .{});
                     self.setPixel(pixel, @intCast(left_color));
                     self.info_buffer[pixel] = 0;
                 }
 
                 for (4..8) |tile_pixel| {
                     const pixel = screen_offset + tile_pixel;
-                    std.debug.print("renderBackground 2\n", .{});
+                    // std.debug.print("renderBackground 2\\n", .{});
                     self.setPixel(pixel, @intCast(right_color));
                     self.info_buffer[pixel] = 0;
                 }
                 continue;
             } else if (self.mode == 0) {
-                pattern_line = self.vram[pattern_table_addr + (name_tile << 3) + tile_y_offset];
+                pattern_line = self.vram[self.pattern_table_addr + (name_tile << 3) + tile_y_offset];
                 color_line = self.vram[color_table_addr + (name_tile >> 3)];
+
+                // New conditional debug print for a specific character
+                // if (line >= 160 and line < 168 and tile_x == 11) { // Around row 20, for tile_x 11
+                //     std.debug.print(
+                //         "Char Debug: L={d} TX={d} TY={d} TYo={d} Name={X} Pattern={X} Color={X} R2={X} R3={X} R4={X}\n",
+                //         .{
+                //             line,
+                //             tile_x,
+                //             tile_y,
+                //             tile_y_offset,
+                //             name_tile,
+                //             pattern_line,
+                //             color_line,
+                //             self.registers[2],
+                //             self.registers[3],
+                //             self.registers[4],
+                //         },
+                //     );
+                // }
             } else if (self.mode == 2) {
                 name_tile += @intCast(region);
-                pattern_line = self.vram[pattern_table_addr + ((name_tile & region_mask) << 3) + tile_y_offset];
+                pattern_line = self.vram[self.pattern_table_addr + ((name_tile & region_mask) << 3) + tile_y_offset];
                 color_line = self.vram[color_table_addr + ((name_tile & color_mask) << 3) + tile_y_offset];
             }
 
@@ -344,7 +364,9 @@ pub const Video = struct {
 
             for (0..8) |tile_pixel| {
                 const pixel = screen_offset + tile_pixel;
-                const target_color: u16 = if (isBitSet(@intCast(pattern_line), @intCast(7 - tile_pixel))) @intCast(foreground_color) else @intCast(background_color);
+                const current_bit_check = 7 - tile_pixel;
+                const bit_is_set_result = isBitSet(@intCast(pattern_line), @intCast(current_bit_check));
+                const target_color: u16 = if (bit_is_set_result) @intCast(foreground_color) else @intCast(background_color);
 
                 self.setPixel(pixel, target_color);
                 self.info_buffer[pixel] = 0;
