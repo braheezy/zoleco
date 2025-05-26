@@ -71,10 +71,10 @@ pub fn ioWrite(ctx: *anyopaque, port: u16, value: u8) !void {
             }
         },
         0xC0 => {
-            std.debug.print("ioWrite (input left): {d}\n", .{value});
+            // std.debug.print("ioWrite (input left): {d}\n", .{value});
         },
         0xE0 => {
-            std.debug.print("ioWrite (audio reg): {d}\n", .{value});
+            // std.debug.print("ioWrite (audio reg): {d}\n", .{value});
             self.cpu.cycle_count += 32;
         },
         else => {

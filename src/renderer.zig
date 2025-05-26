@@ -20,6 +20,7 @@ rendererEmuDebugVramTiles: u32 = 0,
 rendererEmuDebugVramSprites: [64]u32 = undefined,
 firstFrame: bool = false,
 framebuffer: []u8 = undefined,
+
 pub fn init(allocator: std.mem.Allocator, framebuffer: []u8) !*Renderer {
     const version = gl.getString(gl.VERSION);
     std.debug.print("Using OpenGL {s}\n", .{version});

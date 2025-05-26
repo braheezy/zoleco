@@ -3,9 +3,9 @@ const SDL = @import("sdl2");
 const Emu = @import("emu.zig").Emu;
 const Renderer = @import("renderer.zig");
 
-// Import resolution constants from Video.zig
-const resolution_width_with_overscan = @import("Video.zig").resolution_width_with_overscan;
-const resolution_height_with_overscan = @import("Video.zig").resolution_height_with_overscan;
+// Import resolution constants from video.zig
+const resolution_width_with_overscan = @import("video.zig").resolution_width_with_overscan;
+const resolution_height_with_overscan = @import("video.zig").resolution_height_with_overscan;
 
 pub const window_width = 640;
 pub const window_height = 480;
@@ -103,7 +103,17 @@ pub const App = struct {
             try self.run_emu();
             self.render();
             self.frame_time_end = SDL.SDL_GetPerformanceCounter();
-            // self.frameThrottle();
+            self.frameThrottle();
+        }
+    }
+
+    fn frameThrottle(self: *App) void {
+        const elapsed: f32 = @floatFromInt(((self.frame_time_end - self.frame_time_start) * 1000) / SDL.SDL_GetPerformanceFrequency());
+
+        const min: f32 = 16.666;
+
+        if (elapsed < min) {
+            SDL.SDL_Delay(@intFromFloat(min - elapsed));
         }
     }
 

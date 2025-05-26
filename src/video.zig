@@ -44,7 +44,7 @@ pub const PixelFormat = enum {
     bgr888,
 };
 
-var palette_888_coleco = [_]u8{ 0, 0, 0, 0, 0, 0, 33, 200, 66, 94, 220, 120, 84, 85, 237, 125, 118, 252, 212, 82, 77, 66, 235, 245, 252, 85, 84, 255, 121, 120, 212, 193, 84, 230, 206, 128, 33, 176, 59, 201, 91, 186, 204, 204, 204, 255, 255, 255 };
+const palette_888_coleco = [_]u8{ 0, 0, 0, 0, 0, 0, 33, 200, 66, 94, 220, 120, 84, 85, 237, 125, 118, 252, 212, 82, 77, 66, 235, 245, 252, 85, 84, 255, 121, 120, 212, 193, 84, 230, 206, 128, 33, 176, 59, 201, 91, 186, 204, 204, 204, 255, 255, 255 };
 const palette_888_tms9918 = [_]u8{ 0, 0, 0, 0, 8, 0, 0, 241, 1, 50, 251, 65, 67, 76, 255, 112, 110, 255, 238, 75, 28, 9, 255, 255, 255, 78, 31, 255, 112, 65, 211, 213, 0, 228, 221, 52, 0, 209, 0, 219, 79, 211, 193, 212, 190, 244, 255, 241 };
 
 const two_bit_to_8bit = [_]u8{ 0, 85, 170, 255 };
@@ -80,7 +80,8 @@ pub const Video = struct {
     palette_565_bgr: [16]u16 = undefined,
     palette_555_bgr: [16]u16 = undefined,
     custom_palette: [48]u8 = undefined,
-    current_palette: []u8 = undefined,
+    current_palette: *const [48]u8 = undefined,
+    debug_flag: bool = false,
 
     pub fn init(allocator: std.mem.Allocator, z80: *Z80) !*Video {
         const self = try allocator.create(Video);
@@ -101,6 +102,9 @@ pub const Video = struct {
         self.current_palette = &palette_888_coleco;
         self.initPalettes();
         self.reset(false);
+
+        // Test isBitSet function
+        std.debug.print("Testing isBitSet: bit 5 of 0x20 = {}, bit 7 of 0x80 = {}\n", .{ isBitSet(0x20, 5), isBitSet(0x80, 7) });
 
         return self;
     }
@@ -165,7 +169,12 @@ pub const Video = struct {
             if (!self.line_events.vint and self.cycle_counter >= self.timing.get(.vint)) {
                 self.line_events.vint = true;
 
-                if (isBitSet(self.registers[1], 5) and !isBitSet(self.status, 7)) {
+                // Debug: Check interrupt conditions
+                const reg1_bit5 = isBitSet(self.registers[1], 5);
+                const status_bit7 = isBitSet(self.status, 7);
+                // std.debug.print("VINT: reg1[5]={}, status[7]={}, registers[1]={X}, status={X}\n", .{ reg1_bit5, status_bit7, self.registers[1], self.status });
+
+                if (reg1_bit5 and !status_bit7) {
                     self.z80.nmi_requested = true;
                     std.debug.print("NMI requested vint\n", .{});
                 }
@@ -217,7 +226,7 @@ pub const Video = struct {
 
                 for (0..resolution_width) |scx| {
                     const pixel = line_width + scx;
-                    self.framebuffer[pixel] = self.palette_565_rgb[color];
+                    self.setPixel(pixel, color);
                     self.info_buffer[pixel] = 0;
                 }
             }
@@ -228,7 +237,7 @@ pub const Video = struct {
         const line_offset = line * resolution_width;
 
         const name_table_addr = @as(u16, @intCast(self.registers[2])) << 10;
-        var color_table_addr: u16 = @intCast(self.registers[3] << 6);
+        var color_table_addr: u16 = @as(u16, @intCast(self.registers[3])) << 6;
         var pattern_table_addr = @as(u16, @intCast(self.registers[4])) << 11;
         const region_mask = (@as(u16, @intCast(self.registers[4] & 0x03)) << 8) | 0xFF;
         const color_mask = ((self.registers[3] & 0x7F) << 3) | 0x07;
@@ -247,8 +256,9 @@ pub const Video = struct {
 
                 for (0..8) |i| {
                     const pixel = line_offset + i;
-                    self.framebuffer[pixel] = background_color;
-                    self.framebuffer[pixel + 248] = background_color;
+                    std.debug.print("renderBackground 3\n", .{});
+                    self.setPixel(pixel, background_color);
+                    self.setPixel(pixel + 248, background_color);
                     self.info_buffer[pixel] = 0;
                     self.info_buffer[pixel + 248] = 0;
                 }
@@ -263,7 +273,9 @@ pub const Video = struct {
 
                     for (0..6) |tile_pixel| {
                         const pixel = screen_offset + tile_pixel;
-                        self.framebuffer[pixel] = if (isBitSet(pattern_line, @intCast(7 - tile_pixel))) foreground_color else background_color;
+                        const target_color = if (isBitSet(pattern_line, @intCast(7 - tile_pixel))) foreground_color else background_color;
+                        std.debug.print("renderBackground 4\n", .{});
+                        self.setPixel(pixel, target_color);
                         self.info_buffer[pixel] = 0;
                     }
                 }
@@ -283,7 +295,7 @@ pub const Video = struct {
         for (0..32) |tile_x| {
             const tile_number = (tile_y << 5) + tile_x;
             const name_tile_addr = name_table_addr + tile_number;
-            var name_tile: u8 = self.vram[name_tile_addr];
+            var name_tile: u16 = @intCast(self.vram[name_tile_addr]);
             var pattern_line: usize = 0;
             var color_line: usize = 0;
 
@@ -301,19 +313,22 @@ pub const Video = struct {
 
                 for (0..4) |tile_pixel| {
                     const pixel = screen_offset + tile_pixel;
-                    self.framebuffer[pixel] = @intCast(left_color);
+
+                    std.debug.print("renderBackground 1\n", .{});
+                    self.setPixel(pixel, @intCast(left_color));
                     self.info_buffer[pixel] = 0;
                 }
 
                 for (4..8) |tile_pixel| {
                     const pixel = screen_offset + tile_pixel;
-                    self.framebuffer[pixel] = @intCast(right_color);
+                    std.debug.print("renderBackground 2\n", .{});
+                    self.setPixel(pixel, @intCast(right_color));
                     self.info_buffer[pixel] = 0;
                 }
                 continue;
             } else if (self.mode == 0) {
                 pattern_line = self.vram[pattern_table_addr + (name_tile << 3) + tile_y_offset];
-                color_line = self.vram[color_table_addr + (name_tile << 3)];
+                color_line = self.vram[color_table_addr + (name_tile >> 3)];
             } else if (self.mode == 2) {
                 name_tile += @intCast(region);
                 pattern_line = self.vram[pattern_table_addr + ((name_tile & region_mask) << 3) + tile_y_offset];
@@ -329,10 +344,22 @@ pub const Video = struct {
 
             for (0..8) |tile_pixel| {
                 const pixel = screen_offset + tile_pixel;
-                self.framebuffer[pixel] = if (isBitSet(@intCast(pattern_line), @intCast(7 - tile_pixel))) @intCast(foreground_color) else @intCast(background_color);
+                const target_color: u16 = if (isBitSet(@intCast(pattern_line), @intCast(7 - tile_pixel))) @intCast(foreground_color) else @intCast(background_color);
+
+                self.setPixel(pixel, target_color);
                 self.info_buffer[pixel] = 0;
             }
         }
+    }
+
+    pub fn setPixel(self: *Video, pixel: usize, color: u16) void {
+        // std.debug.print("setting pixel {x} to {d}\n", .{ pixel, color });
+        // if (pixel == 0x8058) {
+        //     self.framebuffer[pixel] = color;
+        //     self.debug_flag = true;
+        //     return;
+        // }
+        self.framebuffer[pixel] = color;
     }
 
     pub fn renderSprites(self: *Video, line: usize) void {
@@ -342,7 +369,7 @@ pub const Video = struct {
         const spriteZoom = isBitSet(self.registers[1], 0);
         if (spriteZoom) spriteSize *= 2;
 
-        const spriteAttrBase: u16 = @intCast((self.registers[5] & 0x7F) << 7);
+        const spriteAttrBase: u16 = @as(u16, @intCast(self.registers[5] & 0x7F)) << 7;
         const spritePatternBase: u16 = @as(u16, @intCast(self.registers[6] & 0x07)) << 11;
 
         var maxSprite: usize = 31;
@@ -357,7 +384,7 @@ pub const Video = struct {
         var sprite: u8 = 0;
         while (sprite <= maxSprite) : (sprite += 1) {
             const off: usize = spriteAttrBase + (sprite << 2);
-            var sprite_y: i32 = @intCast((self.vram[off] + 1) & 0xFF);
+            var sprite_y = @as(i32, @intCast(self.vram[off] + 1)) & 0xFF;
 
             if (sprite_y >= 0xE0) sprite_y = -(0x100 - sprite_y);
             if (sprite_y > line or (sprite_y + spriteSize) <= line) continue;
@@ -392,7 +419,7 @@ pub const Video = struct {
 
                 if (sprite_pixel and ((spriteCount < 5) or self.no_sprite_limit)) {
                     if (!isBitSet(self.info_buffer[pixel], 0) and (sprite_color > 0)) {
-                        self.framebuffer[pixel] = sprite_color;
+                        self.setPixel(pixel, sprite_color);
                         self.info_buffer[pixel] = setBit(self.info_buffer[pixel], 0);
                     }
                     if (isBitSet(self.info_buffer[pixel], 1)) {
@@ -407,7 +434,7 @@ pub const Video = struct {
 
     pub fn render24bit(
         self: *Video,
-        src: []const u16,
+        src: []u16,
         dst: []u8,
         pixel_format: PixelFormat,
         size: usize,
@@ -422,7 +449,7 @@ pub const Video = struct {
         var overscan_total_width: usize = resolution_width;
         var overscan_total_height: usize = 0;
         var overscan_enabled = false;
-        const overscan_color: usize = self.registers[7] & 0x0F;
+        const overscan_color = @as(u16, @intCast(self.registers[7] & 0x0F)) * 3;
         const bgr = (pixel_format == .bgr888);
         const buffer_size = size * 3;
 
@@ -446,7 +473,7 @@ pub const Video = struct {
         var i: usize = 0;
         var j: usize = 0;
         while (j < buffer_size) : (j += 3) {
-            var color_index: usize = 0;
+            var src_color: u16 = 0;
             if (overscan_enabled) {
                 const is_h_overscan = overscan_h_l > 0 and
                     (x < overscan_h_l or x >= (overscan_h_l + overscan_content_h));
@@ -454,9 +481,9 @@ pub const Video = struct {
                     (y < overscan_v or y >= (overscan_v + overscan_content_v));
 
                 if (is_h_overscan or is_v_overscan) {
-                    color_index = overscan_color;
+                    src_color = overscan_color;
                 } else {
-                    color_index = src[i];
+                    src_color = src[i] * 3;
                     i += 1;
                 }
                 x += 1;
@@ -466,98 +493,15 @@ pub const Video = struct {
                     if (y == overscan_total_height) y = 0;
                 }
             } else {
-                color_index = src[i];
+                src_color = src[i] * 3;
                 i += 1;
             }
 
-            // The color_index is a value from 0-15, and each color in the palette is 3 bytes (RGB)
-            // So we need to multiply by 3 to get the correct offset
-            const palette_index = color_index * 3;
-
-            // Make sure we don't go out of bounds
-            if (palette_index + 2 < self.current_palette.len) {
-                dst[j + 0] = if (bgr) self.current_palette[palette_index + 2] else self.current_palette[palette_index + 0];
-                dst[j + 1] = self.current_palette[palette_index + 1];
-                dst[j + 2] = if (bgr) self.current_palette[palette_index + 0] else self.current_palette[palette_index + 2];
-            } else {
-                // Set to black if out of bounds
-                dst[j + 0] = 0;
-                dst[j + 1] = 0;
-                dst[j + 2] = 0;
-            }
+            dst[j + 0] = if (bgr) self.current_palette[src_color + 2] else self.current_palette[src_color];
+            dst[j + 1] = self.current_palette[src_color + 1];
+            dst[j + 2] = if (bgr) self.current_palette[src_color] else self.current_palette[src_color + 2];
         }
     }
-
-    // pub fn render16bit(
-    //     self: *Video,
-    //     src: []const u16,
-    //     dst: []u8,
-    //     fmt: ColorFormat,
-    //     enableOverscan: bool,
-    // ) void {
-    //     var x: usize = 0;
-    //     var y: usize = 0;
-    //     var overscan_h_l: usize = 0;
-    //     var overscan_v: usize = 0;
-    //     var overscan_content_h: usize = 0;
-    //     var overscan_content_v: usize = 0;
-    //     var overscan_total_width: usize = GC_RESOLUTION_WIDTH;
-    //     var overscan_total_height: usize = 0;
-    //     var overscan_enabled = false;
-    //     const overscan_color = @intCast(u16, self.vdpRegister[7] & 0x0F);
-    //     const buffer_size = dst.len;
-    //     const bgr = (fmt == .BGR555 or fmt == .BGR565);
-    //     const green_6 = (fmt == .RGB565 or fmt == .BGR565);
-    //     const pal = if (bgr) (green_6 ? self.palette565_bgr : self.palette555_bgr)
-    //                 else        (green_6 ? self.palette565_rgb : self.palette555_rgb);
-
-    //     if (enableOverscan and self.overscanMode != .Disabled) {
-    //         overscan_enabled = true;
-    //         overscan_content_v = GC_RESOLUTION_HEIGHT;
-    //         overscan_v = if (self.isPAL) GC_RESOLUTION_OVERSCAN_V_PAL else GC_RESOLUTION_OVERSCAN_V;
-    //         overscan_total_height = overscan_content_v + overscan_v * 2;
-    //     }
-    //     if (enableOverscan and self.overscanMode == .Full320) {
-    //         overscan_content_h = GC_RESOLUTION_WIDTH;
-    //         overscan_h_l = GC_RESOLUTION_SMS_OVERSCAN_H_320_L;
-    //         overscan_total_width = overscan_content_h + overscan_h_l + GC_RESOLUTION_SMS_OVERSCAN_H_320_R;
-    //     }
-    //     if (enableOverscan and self.overscanMode == .Full284) {
-    //         overscan_content_h = GC_RESOLUTION_WIDTH;
-    //         overscan_h_l = GC_RESOLUTION_SMS_OVERSCAN_H_284_L;
-    //         overscan_total_width = overscan_content_h + overscan_h_l + GC_RESOLUTION_SMS_OVERSCAN_H_284_R;
-    //     }
-
-    //     var i: usize = 0;
-    //     var j: usize = 0;
-    //     while (j < buffer_size) : (j += 2) {
-    //         var src_color: u16 = 0;
-    //         if (overscan_enabled) {
-    //             const is_h_overscan = overscan_h_l > 0 and
-    //                 (x < overscan_h_l or x >= overscan_h_l + overscan_content_h);
-    //             const is_v_overscan = overscan_v > 0 and
-    //                 (y < overscan_v or y >= overscan_v + overscan_content_v);
-    //             if (is_h_overscan or is_v_overscan) {
-    //                 src_color = overscan_color;
-    //             } else {
-    //                 src_color = src[i];
-    //                 i += 1;
-    //             }
-    //             x += 1;
-    //             if (x == overscan_total_width) {
-    //                 x = 0;
-    //                 y += 1;
-    //                 if (y == overscan_total_height) y = 0;
-    //             }
-    //         } else {
-    //             src_color = src[i];
-    //             i += 1;
-    //         }
-
-    //         // Write 16-bit pixel
-    //         @ptrCast(*u16, &dst[j]).* = pal[@intCast(usize, src_color)];
-    //     }
-    // }
 
     pub fn getStatusFlags(self: *Video) u8 {
         self.first_byte_in_sequence = true;
@@ -609,6 +553,11 @@ pub const Video = struct {
                     const reg: u8 = control & 0x07;
                     self.registers[reg] = self.buffer & masks[reg];
 
+                    // Debug register writes
+                    if (reg == 1) {
+                        std.debug.print("Register 1 written: {X} (masked: {X}), old_nmi={}, new_nmi={}\n", .{ self.buffer, self.registers[reg], old_nmi, isBitSet(self.registers[1], 5) });
+                    }
+
                     if (reg == 1 and isBitSet(self.registers[1], 5) and !old_nmi and isBitSet(self.status, 7)) {
                         self.z80.nmi_requested = true;
                         std.debug.print("NMI requested control\n", .{});
@@ -616,6 +565,7 @@ pub const Video = struct {
 
                     if (reg < 2) {
                         self.mode = ((self.registers[1] & 0x08) >> 1) | (self.registers[0] & 0x02) | ((self.registers[1] & 0x10) >> 4);
+                        std.debug.print("Mode updated to: {}\n", .{self.mode});
                     }
                 },
                 else => {},
@@ -625,14 +575,14 @@ pub const Video = struct {
 };
 
 fn isBitSet(value: u8, bit: u8) bool {
-    const bit_pos: u3 = @truncate(bit);
+    const bit_pos: u3 = @intCast(bit);
     return (value & (@as(u8, 1) << bit_pos)) != 0;
 }
 fn setBit(value: u8, bit: u8) u8 {
-    const bit_pos: u3 = @truncate(bit);
+    const bit_pos: u3 = @intCast(bit);
     return value | (@as(u8, 1) << bit_pos);
 }
 fn unsetBit(value: u8, bit: u8) u8 {
-    const bit_pos: u3 = @truncate(bit);
+    const bit_pos: u3 = @intCast(bit);
     return value & ~(@as(u8, 1) << bit_pos);
 }

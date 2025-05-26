@@ -3,7 +3,7 @@ const sdl = @import("sdl");
 
 pub fn build(b: *std.Build) !void {
     const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
+    const optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .Debug });
 
     var modules = std.StringHashMap(*std.Build.Module).init(std.heap.page_allocator);
     defer modules.deinit();

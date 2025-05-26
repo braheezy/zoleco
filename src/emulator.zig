@@ -53,7 +53,7 @@ pub fn ioWrite(port: u16, value: u8) !void {
         },
         0xE0 => {
             // Stub: call audio routine if needed
-            std.debug.print("ioWrite (audio): {}\n", .{value});
+            // std.debug.print("ioWrite (audio): {}\n", .{value});
             // audio.writeRegister(value);
         },
         else => {

@@ -3,8 +3,8 @@ const SDL = @import("sdl2");
 
 pub const Zoleco = @import("zoleco.zig").Zoleco;
 
-const resolution_width_with_overscan = @import("Video.zig").resolution_width_with_overscan;
-const resolution_height_with_overscan = @import("Video.zig").resolution_height_with_overscan;
+const resolution_width_with_overscan = @import("video.zig").resolution_width_with_overscan;
+const resolution_height_with_overscan = @import("video.zig").resolution_height_with_overscan;
 
 pub const Emu = struct {
     framebuffer: []u8,

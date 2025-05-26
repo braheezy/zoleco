@@ -7,8 +7,8 @@ const ColecoVisionIO = @import("ports.zig");
 const Video = @import("video.zig").Video;
 const PixelFormat = @import("video.zig").PixelFormat;
 
-const resolution_width_with_overscan = @import("Video.zig").resolution_width_with_overscan;
-const resolution_height_with_overscan = @import("Video.zig").resolution_height_with_overscan;
+const resolution_width_with_overscan = @import("video.zig").resolution_width_with_overscan;
+const resolution_height_with_overscan = @import("video.zig").resolution_height_with_overscan;
 
 pub const Zoleco = struct {
     memory: *Memory = undefined,
@@ -86,8 +86,32 @@ pub const Zoleco = struct {
         }
 
         self.frame_count += 1;
+
         if (self.frame_count == 13) {
             std.debug.print("frame_count: {d}\n", .{self.frame_count});
+            // print vram contents from address 00e0 through 038f
+            // for (0..0x33f) |i| {
+            //     const addr: usize = 0x00e0 + i;
+            //     const value = self.video.vram[addr];
+            //     std.debug.print("{X} ", .{value});
+            //     // newline after 16 digits have been printed
+            //     if (i % 16 == 15) {
+            //         std.debug.print("\n", .{});
+            //     }
+            // }
+            // std.debug.print("\n", .{});
+
+            // Debug: Check video state and framebuffer
+            std.debug.print("Video debug info:\n", .{});
+            std.debug.print("  Display enabled: {}\n", .{self.video.display_enabled});
+            std.debug.print("  Mode: {}\n", .{self.video.mode});
+            std.debug.print("  VDP registers: ", .{});
+            for (self.video.registers) |reg| {
+                std.debug.print("{X} ", .{reg});
+            }
+            std.debug.print("\n", .{});
+
+            std.debug.print("\n", .{});
         }
         self.renderFrameBuffer(framebuffer);
     }
@@ -95,6 +119,17 @@ pub const Zoleco = struct {
     fn renderFrameBuffer(self: *Zoleco, framebuffer: []u8) void {
         const size = resolution_width_with_overscan * resolution_height_with_overscan;
         const src_buffer = self.video.framebuffer;
+
+        // Print frame debug info for every frame
+        var checksum2: usize = 0;
+        for (src_buffer) |pixel| {
+            checksum2 += pixel;
+        }
+        std.debug.print("Frame: {d}, src_buffer length: {d}, Checksum: {d}\n", .{
+            self.frame_count,
+            src_buffer.len,
+            checksum2,
+        });
 
         switch (self.pixel_format) {
             .rgb555, .rgb565, .bgr565, .bgr555 => {
@@ -111,5 +146,12 @@ pub const Zoleco = struct {
                 );
             },
         }
+
+        // Print frame debug info for every frame
+        var checksum: usize = 0;
+        for (framebuffer) |pixel| {
+            checksum += pixel;
+        }
+        std.debug.print("Frame: {d}, Framebuffer length: {d}, Checksum: {d}\n", .{ self.frame_count, framebuffer.len, checksum });
     }
 };
