@@ -73,7 +73,7 @@ pub const App = struct {
     }
 
     pub fn deinit(self: *App, allocator: std.mem.Allocator) void {
-        std.log.info("Deiniting App", .{});
+        // std.log.info("Deiniting App", .{});
         self.emu.deinit(allocator);
         self.renderer.deinit(allocator);
         _ = SDL.SDL_DestroyTexture(self.texture);

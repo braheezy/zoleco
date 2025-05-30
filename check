@@ -1,0 +1,24 @@
+#!/bin/bash
+
+FILE1="Gearcoleco/platforms/macos/out"
+FILE2="zoleco/out"
+
+SIZE1=$(wc -c < "$FILE1")
+SIZE2=$(wc -c < "$FILE2")
+MIN=$(( SIZE1 < SIZE2 ? SIZE1 : SIZE2 ))
+
+# Truncate the larger file
+if [ "$SIZE1" -gt "$MIN" ]; then
+  truncate -s "$MIN" "$FILE1"
+fi
+
+if [ "$SIZE2" -gt "$MIN" ]; then
+  truncate -s "$MIN" "$FILE2"
+fi
+
+# Compare
+if cmp "$FILE1" "$FILE2" >/dev/null; then
+  echo "Files are identical after truncation to $MIN bytes"
+else
+  echo "Files differ after truncation to $MIN bytes"
+fi
