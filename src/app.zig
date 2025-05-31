@@ -12,11 +12,9 @@ pub const window_height = 480;
 
 pub const App = struct {
     window: *SDL.SDL_Window = undefined,
-    renderer: *Renderer = undefined,
-    texture: *SDL.SDL_Texture = undefined,
-    gl_context: SDL.SDL_GLContext = undefined,
     display_scale: f32 = 1.0,
     emu: *Emu = undefined,
+    renderer: *Renderer = undefined,
     running: bool = true,
     frame_time_start: u64 = 0,
     frame_time_end: u64 = 0,
@@ -28,6 +26,9 @@ pub const App = struct {
         app.emu = try Emu.init(allocator);
         app.renderer = try Renderer.init(allocator, app.emu.framebuffer);
 
+        // Initialize SDL components of the renderer after window creation
+        try app.renderer.initSDL(app.window);
+
         try app.emu.loadRom(allocator, rom_file);
         return app;
     }
@@ -35,12 +36,8 @@ pub const App = struct {
     fn sdlInit(self: *App) void {
         if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO | SDL.SDL_INIT_TIMER) < 0)
             sdlPanic();
-        _ = SDL.SDL_GL_SetAttribute(SDL.SDL_GL_DOUBLEBUFFER, 1);
-        _ = SDL.SDL_GL_SetAttribute(SDL.SDL_GL_DEPTH_SIZE, 24);
-        _ = SDL.SDL_GL_SetAttribute(SDL.SDL_GL_STENCIL_SIZE, 8);
-        _ = SDL.SDL_GL_SetAttribute(SDL.SDL_GL_CONTEXT_MAJOR_VERSION, 2);
-        _ = SDL.SDL_GL_SetAttribute(SDL.SDL_GL_CONTEXT_MINOR_VERSION, 2);
-        const window_flags = (SDL.SDL_WINDOW_OPENGL | SDL.SDL_WINDOW_ALLOW_HIGHDPI);
+
+        const window_flags = SDL.SDL_WINDOW_ALLOW_HIGHDPI;
 
         self.window = SDL.SDL_CreateWindow(
             "Zoleco",
@@ -50,9 +47,6 @@ pub const App = struct {
             window_height,
             window_flags,
         ) orelse sdlPanic();
-        self.gl_context = SDL.SDL_GL_CreateContext(self.window) orelse sdlPanic();
-        _ = SDL.SDL_GL_MakeCurrent(self.window, self.gl_context);
-        _ = SDL.SDL_GL_SetSwapInterval(1);
         _ = SDL.SDL_SetWindowMinimumSize(self.window, 500, 300);
 
         var w: i32 = undefined;
@@ -60,7 +54,7 @@ pub const App = struct {
         SDL.SDL_GetWindowSize(self.window, &w, &h);
         var display_w: i32 = undefined;
         var display_h: i32 = undefined;
-        SDL.SDL_GL_GetDrawableSize(self.window, &display_w, &display_h);
+        SDL.SDL_GetWindowSize(self.window, &display_w, &display_h);
 
         if (w > 0 and h > 0) {
             const scale_w = (@as(f32, @floatFromInt(display_w)) / @as(f32, @floatFromInt(w)));
@@ -76,22 +70,8 @@ pub const App = struct {
         // std.log.info("Deiniting App", .{});
         self.emu.deinit(allocator);
         self.renderer.deinit(allocator);
-        _ = SDL.SDL_DestroyTexture(self.texture);
         _ = SDL.SDL_DestroyWindow(self.window);
-        SDL.SDL_GL_DeleteContext(self.gl_context);
         SDL.SDL_Quit();
-    }
-
-    fn initRenderer(self: *App) void {
-        self.renderer = try Renderer.init();
-        // const render_flags = SDL.SDL_RENDERER_ACCELERATED | SDL.SDL_RENDERER_PRESENTVSYNC;
-        // self.renderer = SDL.SDL_CreateRenderer(self.window, -1, render_flags) orelse sdlPanic();
-        // _ = SDL.SDL_SetHint(SDL.SDL_HINT_RENDER_SCALE_QUALITY, "0");
-        // _ = SDL.SDL_RenderSetLogicalSize(self.renderer, window_width, window_height);
-
-        // // Create texture with RGB24 format (matches the emulator's framebuffer format)
-        // // SDL_PIXELFORMAT_RGB24 uses 24 bits per pixel in RGB order
-        // self.texture = SDL.SDL_CreateTexture(self.renderer, SDL.SDL_PIXELFORMAT_RGB24, SDL.SDL_TEXTUREACCESS_STREAMING, resolution_width_with_overscan, resolution_height_with_overscan) orelse sdlPanic();
     }
 
     pub fn loop(self: *App) !void {
@@ -153,7 +133,6 @@ pub const App = struct {
 
     fn render(self: *App) void {
         self.renderer.render();
-        _ = SDL.SDL_GL_SwapWindow(self.window);
     }
 };
 
