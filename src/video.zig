@@ -104,14 +104,10 @@ pub const Video = struct {
         self.initPalettes();
         self.reset(false);
 
-        // Test isBitSet function
-        std.debug.print("Testing isBitSet: bit 5 of 0x20 = {}, bit 7 of 0x80 = {}\n", .{ isBitSet(0x20, 5), isBitSet(0x80, 7) });
-
         return self;
     }
 
     pub fn deinit(self: *Video, allocator: std.mem.Allocator) void {
-        std.log.info("Deiniting Video", .{});
         allocator.free(self.info_buffer);
         allocator.free(self.framebuffer);
         allocator.free(self.vram);
@@ -170,14 +166,11 @@ pub const Video = struct {
             if (!self.line_events.vint and self.cycle_counter >= self.timing.get(.vint)) {
                 self.line_events.vint = true;
 
-                // Debug: Check interrupt conditions
                 const reg1_bit5 = isBitSet(self.registers[1], 5);
                 const status_bit7 = isBitSet(self.status, 7);
-                // std.debug.print("VINT: reg1[5]={}, status[7]={}, registers[1]={X}, status={X}\n", .{ reg1_bit5, status_bit7, self.registers[1], self.status });
 
                 if (reg1_bit5 and !status_bit7) {
                     self.z80.nmi_requested = true;
-                    std.debug.print("NMI requested vint\n", .{});
                 }
                 self.status = setBit(self.status, 7);
             }
@@ -257,7 +250,6 @@ pub const Video = struct {
 
                 for (0..8) |i| {
                     const pixel = line_offset + i;
-                    std.debug.print("renderBackground 3\n", .{});
                     self.setPixel(pixel, background_color);
                     self.setPixel(pixel + 248, background_color);
                     self.info_buffer[pixel] = 0;
@@ -275,7 +267,6 @@ pub const Video = struct {
                     for (0..6) |tile_pixel| {
                         const pixel = screen_offset + tile_pixel;
                         const target_color = if (isBitSet(pattern_line, @intCast(7 - tile_pixel))) foreground_color else background_color;
-                        std.debug.print("renderBackground 4\n", .{});
                         self.setPixel(pixel, target_color);
                         self.info_buffer[pixel] = 0;
                     }
@@ -315,14 +306,12 @@ pub const Video = struct {
                 for (0..4) |tile_pixel| {
                     const pixel = screen_offset + tile_pixel;
 
-                    // std.debug.print("renderBackground 1\\n", .{});
                     self.setPixel(pixel, @intCast(left_color));
                     self.info_buffer[pixel] = 0;
                 }
 
                 for (4..8) |tile_pixel| {
                     const pixel = screen_offset + tile_pixel;
-                    // std.debug.print("renderBackground 2\\n", .{});
                     self.setPixel(pixel, @intCast(right_color));
                     self.info_buffer[pixel] = 0;
                 }
@@ -330,25 +319,6 @@ pub const Video = struct {
             } else if (self.mode == 0) {
                 pattern_line = self.vram[self.pattern_table_addr + (name_tile << 3) + tile_y_offset];
                 color_line = self.vram[color_table_addr + (name_tile >> 3)];
-
-                // New conditional debug print for a specific character
-                // if (line >= 160 and line < 168 and tile_x == 11) { // Around row 20, for tile_x 11
-                //     std.debug.print(
-                //         "Char Debug: L={d} TX={d} TY={d} TYo={d} Name={X} Pattern={X} Color={X} R2={X} R3={X} R4={X}\n",
-                //         .{
-                //             line,
-                //             tile_x,
-                //             tile_y,
-                //             tile_y_offset,
-                //             name_tile,
-                //             pattern_line,
-                //             color_line,
-                //             self.registers[2],
-                //             self.registers[3],
-                //             self.registers[4],
-                //         },
-                //     );
-                // }
             } else if (self.mode == 2) {
                 name_tile += @intCast(region);
                 pattern_line = self.vram[self.pattern_table_addr + ((name_tile & region_mask) << 3) + tile_y_offset];
@@ -375,12 +345,6 @@ pub const Video = struct {
     }
 
     pub fn setPixel(self: *Video, pixel: usize, color: u16) void {
-        // std.debug.print("setting pixel {x} to {d}\n", .{ pixel, color });
-        // if (pixel == 0x8058) {
-        //     self.framebuffer[pixel] = color;
-        //     self.debug_flag = true;
-        //     return;
-        // }
         self.framebuffer[pixel] = color;
     }
 
@@ -532,7 +496,6 @@ pub const Video = struct {
 
         if (isBitSet(self.registers[1], 5) and isBitSet(self.status, 7)) {
             self.z80.nmi_requested = true;
-            std.debug.print("NMI requested status\n", .{});
         }
         return ret;
     }
@@ -548,9 +511,6 @@ pub const Video = struct {
     pub fn writeData(self: *Video, data: u8) void {
         self.first_byte_in_sequence = true;
         self.buffer = data;
-        // if (data != 0) {
-        //     std.debug.print("writing data {X} to address {X}\n", .{ data, self.address });
-        // }
         self.vram[self.address] = data;
         self.address = (self.address + 1) & 0x3FFF;
     }
@@ -575,19 +535,12 @@ pub const Video = struct {
                     const reg: u8 = control & 0x07;
                     self.registers[reg] = self.buffer & masks[reg];
 
-                    // Debug register writes
-                    if (reg == 1) {
-                        std.debug.print("Register 1 written: {X} (masked: {X}), old_nmi={}, new_nmi={}\n", .{ self.buffer, self.registers[reg], old_nmi, isBitSet(self.registers[1], 5) });
-                    }
-
                     if (reg == 1 and isBitSet(self.registers[1], 5) and !old_nmi and isBitSet(self.status, 7)) {
                         self.z80.nmi_requested = true;
-                        std.debug.print("NMI requested control\n", .{});
                     }
 
                     if (reg < 2) {
                         self.mode = ((self.registers[1] & 0x08) >> 1) | (self.registers[0] & 0x02) | ((self.registers[1] & 0x10) >> 4);
-                        std.debug.print("Mode updated to: {}\n", .{self.mode});
                     }
                 },
                 else => {},

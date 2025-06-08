@@ -42,7 +42,7 @@ pub fn main() !void {
     defer std.process.argsFree(allocator, args);
 
     // Load VGM file
-    var fileBuf: []const u8 = @embedFile("pickupCoin0.vgm");
+    var fileBuf: []const u8 = @embedFile("example.vgm");
     if (args.len > 1) {
         const file = try std.fs.cwd().openFile(args[1], .{});
         defer file.close();

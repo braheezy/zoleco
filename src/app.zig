@@ -3,10 +3,6 @@ const SDL = @import("sdl2");
 const Emu = @import("emu.zig").Emu;
 const Renderer = @import("renderer.zig");
 
-// Import resolution constants from video.zig
-const resolution_width_with_overscan = @import("video.zig").resolution_width_with_overscan;
-const resolution_height_with_overscan = @import("video.zig").resolution_height_with_overscan;
-
 pub const window_width = 640;
 pub const window_height = 480;
 
@@ -67,7 +63,6 @@ pub const App = struct {
     }
 
     pub fn deinit(self: *App, allocator: std.mem.Allocator) void {
-        // std.log.info("Deiniting App", .{});
         self.emu.deinit(allocator);
         self.renderer.deinit(allocator);
         _ = SDL.SDL_DestroyWindow(self.window);

@@ -27,7 +27,7 @@ pub fn deinit(self: *Cartridge, allocator: std.mem.Allocator) void {
 }
 
 pub fn loadFromFile(self: *Cartridge, allocator: std.mem.Allocator, file_path: []const u8) !void {
-    // std.log.info("Loading cartridge from {s}", .{file_path});
+    std.log.info("Loading cartridge from {s}", .{file_path});
 
     self.filepath = file_path;
     self.filename = std.fs.path.basename(file_path);
@@ -51,12 +51,12 @@ pub fn loadFromBuffer(self: *Cartridge, allocator: std.mem.Allocator, buffer: []
 }
 
 fn gatherMetadata(self: *Cartridge) !void {
-    // std.log.info("ROM Size: {d} KB", .{self.rom.len / 1024});
+    std.log.info("ROM Size: {d} KB", .{self.rom.len / 1024});
 
     const increment: u8 = if (self.rom.len % 0x4000 > 0) 1 else 0;
     self.rom_bank_count = @intCast((self.rom.len / 0x4000) + increment);
 
-    // std.log.info("ROM Banks: {d}", .{self.rom_bank_count});
+    std.log.info("ROM Banks: {d}", .{self.rom_bank_count});
 
     var header_offset: u16 = 0;
     var header = self.rom[header_offset + 1] | @as(u16, @intCast(self.rom[header_offset + 0])) << 8;

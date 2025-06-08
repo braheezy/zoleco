@@ -1,7 +1,6 @@
 const std = @import("std");
 const OpcodeTable = @import("opcode.zig").OpcodeTable;
 const handleInterrupt = @import("opcode.zig").handleInterrupt;
-const Bus = @import("bus.zig").Bus;
 const push = @import("instructions/register_pair_instr.zig").push;
 const OpcodeCycles = @import("cycles.zig").OpcodeCycles;
 const getHighByte = @import("instructions/util.zig").getHighByte;
@@ -158,8 +157,6 @@ curr_index_reg: ?*u16 = null,
 r: u8 = 0,
 // cycle tracking
 cycle_count: usize = 0,
-// injected_cycles: usize = 0,
-// total_cycle_count: usize = 0,
 // interrupts
 interrupt_mode: InterruptMode = .{ .zero = {} },
 iff1: bool = false, // Main interrupt enable flag
@@ -171,31 +168,14 @@ input_last_cycle: bool = false,
 i: u8 = 0, // interrupt vector
 interrupt_pending: bool = false,
 halted: bool = false,
-// rom_size: usize = 0,
 start_address: u16 = 0,
 io: *IO,
-// bus: *Bus = undefined,
 scratch: [2]u8 = [_]u8{0} ** 2,
 displacement: i8 = 0,
 // Q is a special flag to track flag state. used in 2 opcodes
 // https://github.com/redcode/Z80/blob/f7ec2be293880059374bc9546370979fc97f69c5/sources/Z80.c#L501
 q: u8 = 0,
 wz: u16 = 0,
-
-// pub fn initWithRom(al: std.mem.Allocator, rom_data: []const u8, start_address: u16, bus: *Bus) !Z80 {
-//     // const memory = try al.alloc(u8, 0x10000);
-//     var z80 = Z80{
-//         .pc = start_address,
-//         .bus = bus,
-//         .read_fn = undefined,
-//         .write_fn = undefined,
-//         .memory_read_fn = undefined,
-//         .memory_write_fn = undefined,
-//     };
-
-//     @memcpy(memory[start_address .. start_address + rom_data.len], rom_data);
-//     return z80;
-// }
 
 pub fn init(allocator: std.mem.Allocator) !*Z80 {
     const z80 = try allocator.create(Z80);
@@ -266,15 +246,6 @@ pub fn step(self: *Z80) !usize {
         return error.OutOfBoundsPC;
     }
 
-    // Handle pending interrupts
-    // try handleInterrupt(self);
-
-    // If halted, count cycles but don't execute
-    // if (self.halted) {
-    //     self.cycle_count += 4;
-    //     return;
-    // }
-
     // Fetch the opcode
     const opcode = self.nextOpcode();
     self.pc +%= 1;
@@ -289,9 +260,6 @@ pub fn step(self: *Z80) !usize {
         std.debug.print("Cannot step: unknown opcode: {X}\n", .{opcode});
         std.process.exit(1);
     }
-
-    // Add any I/O cycle penalties
-    // self.cycle_count += self.bus.getCyclesPenalty();
 }
 
 pub fn nextOpcode(self: *Z80) u8 {
@@ -317,15 +285,7 @@ pub fn getHL(self: *Z80) u16 {
 }
 
 pub fn runCycles(self: *Z80, cycle_count: usize) !void {
-    // TODO: Update to measure how long the frame takes and
-    //  slow down or speed up accordingly to hardware-specific info
-
     while (self.cycle_count < cycle_count) {
-        if (self.iff1 or self.iff2) {
-            // TODO: do interrupt handling
-            std.debug.print("interrupts enabled\n", .{});
-        }
-
         // fetch and execute next instruction
         try self.step();
 

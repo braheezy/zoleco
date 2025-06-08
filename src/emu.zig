@@ -24,7 +24,6 @@ pub const Emu = struct {
     }
 
     pub fn deinit(self: *Emu, allocator: std.mem.Allocator) void {
-        std.log.info("Deiniting Emu", .{});
         allocator.free(self.framebuffer);
         self.zoleco.deinit(allocator);
         allocator.destroy(self);

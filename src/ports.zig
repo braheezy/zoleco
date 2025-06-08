@@ -1,12 +1,11 @@
 const std = @import("std");
 
-const Memory = @import("memory_device.zig").Memory;
+const Memory = @import("Memory.zig");
 const Z80 = @import("z80").Z80;
 const Video = @import("video.zig").Video;
 
 pub const ColecoVisionIO = @This();
 
-// Interface instance
 io: Z80.IO,
 memory: *Memory,
 video: *Video,
@@ -42,12 +41,11 @@ pub fn ioRead(ctx: *anyopaque, port: u16) u8 {
             }
         },
         0xE0 => {
-            std.debug.print("ioRead (input): {}\n", .{port});
-            // return input.read(port)
+            // std.debug.print("ioRead (input): {}\n", .{port});
         },
         else => {
             if (port == 0x52) {
-                std.debug.print("ioRead (sgm audio): {}\n", .{port});
+                // std.debug.print("ioRead (sgm audio): {}\n", .{port});
                 return 0xAA;
             }
             return 0xFF;
@@ -61,7 +59,7 @@ pub fn ioWrite(ctx: *anyopaque, port: u16, value: u8) !void {
     const region = port & 0xE0;
     switch (region) {
         0x80 => {
-            std.debug.print("ioWrite (input right): {d}\n", .{value});
+            // std.debug.print("ioWrite (input right): {d}\n", .{value});
         },
         0xA0 => {
             if (port & 0x01 != 0) {

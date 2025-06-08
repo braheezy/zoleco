@@ -1,17 +1,10 @@
 const std = @import("std");
-const ColecoVisionEmulator = @import("colecovision.zig");
-const rl = @import("raylib");
-const emulator = @import("emulator.zig");
-
-// Embed the default ROM
-const default_rom = @embedFile("roms/hello.rom");
-
 const App = @import("app.zig").App;
 
 const usage =
-    \\ColecoVision Emulator
+    \\zoleco: A ColecoVision emulator
     \\
-    \\Usage: colecovision [options] [rom_path]
+    \\Usage: zoleco [options] [rom_path]
     \\
     \\Options:
     \\  -h, --help    Print this help message
@@ -23,9 +16,9 @@ const usage =
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    // defer if (gpa.deinit() == .leak) {
-    //     std.process.exit(1);
-    // };
+    defer if (gpa.deinit() == .leak) {
+        std.process.exit(1);
+    };
     const allocator = gpa.allocator();
 
     // Get command line arguments
@@ -50,51 +43,4 @@ pub fn main() !void {
     defer app.deinit(allocator);
 
     try app.loop();
-
-    // try emulator.run(allocator);
-
-    // Initialize emulator
-    // var emu = try ColecoVisionEmulator.init(allocator);
-    // defer emu.deinit();
-
-    // // Load BIOS
-    // try emu.loadBios();
-
-    // Load ROM (either from file or default)
-    // if (args.len > 1) {
-    //     // Load ROM from file
-    //     const rom_path = args[1];
-    //     const rom_data = try std.fs.cwd().readFileAlloc(allocator, rom_path, 1024 * 1024); // 1MB max
-    //     defer allocator.free(rom_data);
-    //     try emu.loadRom(rom_data);
-    // } else {
-    //     // Load default ROM
-    //     try emu.loadRom(default_rom);
-    // }
-
-    // const window_width = 800;
-    // const window_height = 600;
-
-    // rl.setTraceLogLevel(.err);
-    // rl.initWindow(window_width, window_height, "zoleco");
-    // defer rl.closeWindow();
-    // rl.setWindowSize(window_width, window_height);
-    // rl.setTargetFPS(60);
-
-    // // Create texture at VDP's native resolution (256x192)
-    // emu.screen_texture = try rl.loadRenderTexture(256, 192);
-    // defer rl.unloadRenderTexture(emu.screen_texture);
-
-    // // Main emulation loop
-    // while (!rl.windowShouldClose()) {
-    //     try emu.runFrame();
-
-    //     rl.beginDrawing();
-    //     defer rl.endDrawing();
-
-    //     rl.clearBackground(rl.Color.blank);
-
-    //     try emu.draw();
-    //     // TODO: Add input handling
-    // }
 }
