@@ -77,6 +77,7 @@ pub const Zoleco = struct {
         var total_clocks: usize = 0;
         while (!vblank) {
             const clock_cycles = try self.cpu.runFor(1);
+            self.cpu.cycle_count = 0;
             vblank = self.video.tick(clock_cycles);
 
             total_clocks += clock_cycles;
