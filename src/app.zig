@@ -133,6 +133,44 @@ pub const App = struct {
                     const controller: Controller = @enumFromInt(i);
                     if (key == config.input[i].left) {
                         self.emu.zoleco.input.keyPressed(controller, .left);
+                    } else if (key == config.input[i].right) {
+                        self.emu.zoleco.input.keyPressed(controller, .right);
+                    } else if (key == config.input[i].up) {
+                        self.emu.zoleco.input.keyPressed(controller, .up);
+                    } else if (key == config.input[i].down) {
+                        self.emu.zoleco.input.keyPressed(controller, .down);
+                    } else if (key == config.input[i].left_button) {
+                        self.emu.zoleco.input.keyPressed(controller, .left_button);
+                    } else if (key == config.input[i].right_button) {
+                        self.emu.zoleco.input.keyPressed(controller, .right_button);
+                    } else if (key == config.input[i].blue) {
+                        self.emu.zoleco.input.keyPressed(controller, .blue);
+                    } else if (key == config.input[i].purple) {
+                        self.emu.zoleco.input.keyPressed(controller, .purple);
+                    } else if (key == config.input[i].zero) {
+                        self.emu.zoleco.input.keyPressed(controller, .pad_0);
+                    } else if (key == config.input[i].one) {
+                        self.emu.zoleco.input.keyPressed(controller, .pad_1);
+                    } else if (key == config.input[i].two) {
+                        self.emu.zoleco.input.keyPressed(controller, .pad_2);
+                    } else if (key == config.input[i].three) {
+                        self.emu.zoleco.input.keyPressed(controller, .pad_3);
+                    } else if (key == config.input[i].four) {
+                        self.emu.zoleco.input.keyPressed(controller, .pad_4);
+                    } else if (key == config.input[i].five) {
+                        self.emu.zoleco.input.keyPressed(controller, .pad_5);
+                    } else if (key == config.input[i].six) {
+                        self.emu.zoleco.input.keyPressed(controller, .pad_6);
+                    } else if (key == config.input[i].seven) {
+                        self.emu.zoleco.input.keyPressed(controller, .pad_7);
+                    } else if (key == config.input[i].eight) {
+                        self.emu.zoleco.input.keyPressed(controller, .pad_8);
+                    } else if (key == config.input[i].nine) {
+                        self.emu.zoleco.input.keyPressed(controller, .pad_9);
+                    } else if (key == config.input[i].asterisk) {
+                        self.emu.zoleco.input.keyPressed(controller, .asterisk);
+                    } else if (key == config.input[i].hash) {
+                        self.emu.zoleco.input.keyPressed(controller, .hash);
                     }
                 }
             },
@@ -143,6 +181,44 @@ pub const App = struct {
                     const controller: Controller = @enumFromInt(i);
                     if (key == config.input[i].left) {
                         self.emu.zoleco.input.keyReleased(controller, .left);
+                    } else if (key == config.input[i].right) {
+                        self.emu.zoleco.input.keyReleased(controller, .right);
+                    } else if (key == config.input[i].up) {
+                        self.emu.zoleco.input.keyReleased(controller, .up);
+                    } else if (key == config.input[i].down) {
+                        self.emu.zoleco.input.keyReleased(controller, .down);
+                    } else if (key == config.input[i].left_button) {
+                        self.emu.zoleco.input.keyReleased(controller, .left_button);
+                    } else if (key == config.input[i].right_button) {
+                        self.emu.zoleco.input.keyReleased(controller, .right_button);
+                    } else if (key == config.input[i].blue) {
+                        self.emu.zoleco.input.keyReleased(controller, .blue);
+                    } else if (key == config.input[i].purple) {
+                        self.emu.zoleco.input.keyReleased(controller, .purple);
+                    } else if (key == config.input[i].zero) {
+                        self.emu.zoleco.input.keyReleased(controller, .pad_0);
+                    } else if (key == config.input[i].one) {
+                        self.emu.zoleco.input.keyReleased(controller, .pad_1);
+                    } else if (key == config.input[i].two) {
+                        self.emu.zoleco.input.keyReleased(controller, .pad_2);
+                    } else if (key == config.input[i].three) {
+                        self.emu.zoleco.input.keyReleased(controller, .pad_3);
+                    } else if (key == config.input[i].four) {
+                        self.emu.zoleco.input.keyReleased(controller, .pad_4);
+                    } else if (key == config.input[i].five) {
+                        self.emu.zoleco.input.keyReleased(controller, .pad_5);
+                    } else if (key == config.input[i].six) {
+                        self.emu.zoleco.input.keyReleased(controller, .pad_6);
+                    } else if (key == config.input[i].seven) {
+                        self.emu.zoleco.input.keyReleased(controller, .pad_7);
+                    } else if (key == config.input[i].eight) {
+                        self.emu.zoleco.input.keyReleased(controller, .pad_8);
+                    } else if (key == config.input[i].nine) {
+                        self.emu.zoleco.input.keyReleased(controller, .pad_9);
+                    } else if (key == config.input[i].asterisk) {
+                        self.emu.zoleco.input.keyReleased(controller, .asterisk);
+                    } else if (key == config.input[i].hash) {
+                        self.emu.zoleco.input.keyReleased(controller, .hash);
                     }
                 }
             },
