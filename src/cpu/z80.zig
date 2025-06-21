@@ -206,7 +206,6 @@ pub fn runFor(self: *Z80, cycles: usize) !usize {
     while (executed_cycles < cycles) {
         if (!self.input_last_cycle) {
             if (self.nmi_requested) {
-                std.debug.print("handling NMI\n", .{});
                 self.leaveHalt();
                 self.nmi_requested = false;
                 self.iff1 = false;

@@ -2,6 +2,10 @@ const std = @import("std");
 const SDL = @import("sdl2");
 const Emu = @import("emu.zig").Emu;
 const Renderer = @import("renderer.zig");
+const Controller = @import("Input.zig").Controller;
+const Config = @import("config.zig").Config;
+
+var config: Config = undefined;
 
 pub const window_width = 640;
 pub const window_height = 480;
@@ -17,6 +21,8 @@ pub const App = struct {
 
     pub fn init(allocator: std.mem.Allocator, rom_file: []const u8) !App {
         var app = App{};
+
+        config = try Config.init();
 
         app.sdlInit();
         app.emu = try Emu.init(allocator);
@@ -106,18 +112,41 @@ pub const App = struct {
                 break;
             }
 
-            switch (event.type) {
-                SDL.SDL_KEYDOWN => {
-                    const key = event.key.keysym.scancode;
+            self.sdlEventsEmu(&event);
+        }
+    }
 
-                    if (key == SDL.SDL_SCANCODE_ESCAPE) {
-                        var e: SDL.SDL_Event = undefined;
-                        e.type = SDL.SDL_QUIT;
-                        _ = SDL.SDL_PushEvent(&e);
+    fn sdlEventsEmu(self: *App, event: *SDL.SDL_Event) void {
+        switch (event.type) {
+            SDL.SDL_KEYDOWN => {
+                if (event.key.repeat != 0) return;
+
+                const key = event.key.keysym.scancode;
+
+                if (key == SDL.SDL_SCANCODE_ESCAPE) {
+                    var e: SDL.SDL_Event = undefined;
+                    e.type = SDL.SDL_QUIT;
+                    _ = SDL.SDL_PushEvent(&e);
+                    return;
+                }
+                for (0..2) |i| {
+                    const controller: Controller = @enumFromInt(i);
+                    if (key == config.input[i].left) {
+                        self.emu.zoleco.input.keyPressed(controller, .left);
                     }
-                },
-                else => {},
-            }
+                }
+            },
+            SDL.SDL_KEYUP => {
+                const key = event.key.keysym.scancode;
+
+                for (0..2) |i| {
+                    const controller: Controller = @enumFromInt(i);
+                    if (key == config.input[i].left) {
+                        self.emu.zoleco.input.keyReleased(controller, .left);
+                    }
+                }
+            },
+            else => {},
         }
     }
 

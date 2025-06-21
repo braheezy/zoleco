@@ -549,15 +549,11 @@ pub const Video = struct {
     }
 };
 
-fn isBitSet(value: u8, bit: u8) bool {
+pub fn isBitSet(value: u8, bit: u8) bool {
     const bit_pos: u3 = @intCast(bit);
     return (value & (@as(u8, 1) << bit_pos)) != 0;
 }
-fn setBit(value: u8, bit: u8) u8 {
+pub fn setBit(value: u8, bit: u8) u8 {
     const bit_pos: u3 = @intCast(bit);
     return value | (@as(u8, 1) << bit_pos);
-}
-fn unsetBit(value: u8, bit: u8) u8 {
-    const bit_pos: u3 = @intCast(bit);
-    return value & ~(@as(u8, 1) << bit_pos);
 }

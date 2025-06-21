@@ -117,7 +117,8 @@ pub fn dcr_M(self: *Z80) !void {
 // decrement pair helper
 fn decPair(self: *Z80, reg1: u8, reg2: u8) struct { u8, u8 } {
     var combined = Z80.toUint16(reg1, reg2);
-    combined -= 1;
+    if (combined > 0) combined -= 1;
+
     self.q = 0;
 
     return .{ @as(u8, @intCast(combined >> 8)), @as(u8, @intCast(combined & 0xFF)) };

@@ -6,6 +6,7 @@ const Z80 = @import("z80").Z80;
 const ColecoVisionIO = @import("ports.zig");
 const Video = @import("video.zig").Video;
 const PixelFormat = @import("video.zig").PixelFormat;
+const Input = @import("Input.zig");
 
 const resolution_width_with_overscan = @import("video.zig").resolution_width_with_overscan;
 const resolution_height_with_overscan = @import("video.zig").resolution_height_with_overscan;
@@ -14,6 +15,7 @@ pub const Zoleco = struct {
     memory: *Memory = undefined,
     video: *Video = undefined,
     cpu: *Z80,
+    input: *Input,
     io: *ColecoVisionIO,
     cartridge: Cartridge = .{},
     pixel_format: PixelFormat = .rgb888,
@@ -33,12 +35,16 @@ pub const Zoleco = struct {
         // Initialize the video system
         const video = try Video.init(allocator, z80);
 
+        // Initialize the input system
+        const input = try Input.init(allocator, z80);
+
         // Then initialize the IO with the properly initialized memory
         const io = try ColecoVisionIO.init(
             allocator,
             memory,
             video,
             z80,
+            input,
         );
 
         z80.io = &io.io;
@@ -49,6 +55,7 @@ pub const Zoleco = struct {
             .cpu = z80,
             .memory = memory,
             .video = video,
+            .input = input,
             .io = io,
         };
         return zoleco;
@@ -58,6 +65,7 @@ pub const Zoleco = struct {
         self.cartridge.deinit(allocator);
         self.video.deinit(allocator);
         self.memory.deinit(allocator);
+        self.input.deinit(allocator);
         allocator.destroy(self.io);
         allocator.destroy(self.cpu);
 
@@ -87,10 +95,8 @@ pub const Zoleco = struct {
         const size = resolution_width_with_overscan * resolution_height_with_overscan;
         const src_buffer = self.video.framebuffer;
 
-        // Print frame debug info for every frame
-        var checksum2: usize = 0;
-        for (src_buffer) |pixel| {
-            checksum2 += pixel;
+        if (self.frame_count == 13) {
+            std.log.info("frame_count: {d}\n", .{self.frame_count});
         }
 
         switch (self.pixel_format) {

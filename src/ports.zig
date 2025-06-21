@@ -3,6 +3,7 @@ const std = @import("std");
 const Memory = @import("Memory.zig");
 const Z80 = @import("z80").Z80;
 const Video = @import("video.zig").Video;
+const Input = @import("Input.zig");
 
 pub const ColecoVisionIO = @This();
 
@@ -10,8 +11,15 @@ io: Z80.IO,
 memory: *Memory,
 video: *Video,
 cpu: *Z80,
+input: *Input,
 
-pub fn init(allocator: std.mem.Allocator, memory: *Memory, video: *Video, cpu: *Z80) !*ColecoVisionIO {
+pub fn init(
+    allocator: std.mem.Allocator,
+    memory: *Memory,
+    video: *Video,
+    cpu: *Z80,
+    input: *Input,
+) !*ColecoVisionIO {
     const self = try allocator.create(ColecoVisionIO);
 
     self.io = Z80.IO.init(
@@ -24,6 +32,7 @@ pub fn init(allocator: std.mem.Allocator, memory: *Memory, video: *Video, cpu: *
 
     self.memory = memory;
     self.video = video;
+    self.input = input;
     self.cpu = cpu;
     return self;
 }
@@ -41,7 +50,7 @@ pub fn ioRead(ctx: *anyopaque, port: u16) u8 {
             }
         },
         0xE0 => {
-            // std.debug.print("ioRead (input): {}\n", .{port});
+            return self.input.read(@intCast(port));
         },
         else => {
             if (port == 0x52) {
@@ -59,7 +68,7 @@ pub fn ioWrite(ctx: *anyopaque, port: u16, value: u8) !void {
     const region = port & 0xE0;
     switch (region) {
         0x80 => {
-            // std.debug.print("ioWrite (input right): {d}\n", .{value});
+            self.input.segment = .keypad_right_buttons;
         },
         0xA0 => {
             if (port & 0x01 != 0) {
@@ -69,7 +78,7 @@ pub fn ioWrite(ctx: *anyopaque, port: u16, value: u8) !void {
             }
         },
         0xC0 => {
-            // std.debug.print("ioWrite (input left): {d}\n", .{value});
+            self.input.segment = .joystick_left_buttons;
         },
         0xE0 => {
             // std.debug.print("ioWrite (audio reg): {d}\n", .{value});
