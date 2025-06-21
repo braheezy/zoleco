@@ -33,7 +33,7 @@ pub fn initSDL(self: *Renderer, window: *SDL.SDL_Window) !void {
     _ = SDL.SDL_SetHint(SDL.SDL_HINT_RENDER_SCALE_QUALITY, "0");
     _ = SDL.SDL_RenderSetLogicalSize(self.sdl_renderer, window_width, window_height);
 
-    self.texture = SDL.SDL_CreateTexture(self.sdl_renderer, SDL.SDL_PIXELFORMAT_BGR24, SDL.SDL_TEXTUREACCESS_STREAMING, video.resolution_width, video.resolution_height) orelse {
+    self.texture = SDL.SDL_CreateTexture(self.sdl_renderer, SDL.SDL_PIXELFORMAT_RGB24, SDL.SDL_TEXTUREACCESS_STREAMING, video.resolution_width, video.resolution_height) orelse {
         const str = @as(?[*:0]const u8, SDL.SDL_GetError()) orelse "unknown error";
         @panic(std.mem.sliceTo(str, 0));
     };
