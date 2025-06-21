@@ -350,7 +350,7 @@ pub const Video = struct {
 
     pub fn renderSprites(self: *Video, line: usize) void {
         var spriteCount: usize = 0;
-        const lineWidth: usize = line * resolution_width;
+        const line_width: usize = line * resolution_width;
         var spriteSize: i32 = if (isBitSet(self.registers[1], 1)) 16 else 8;
         const spriteZoom = isBitSet(self.registers[1], 0);
         if (spriteZoom) spriteSize *= 2;
@@ -358,11 +358,11 @@ pub const Video = struct {
         const spriteAttrBase: u16 = @as(u16, @intCast(self.registers[5] & 0x7F)) << 7;
         const spritePatternBase: u16 = @as(u16, @intCast(self.registers[6] & 0x07)) << 11;
 
-        var maxSprite: usize = 31;
-        var sprite_count: usize = 0;
-        while (sprite_count <= maxSprite) : (sprite_count += 1) {
-            if (self.vram[spriteAttrBase + (sprite_count << 2)] == 0xD0) {
-                maxSprite = sprite_count - 1;
+        var maxSprite: i8 = 31;
+        var sp: i8 = 0;
+        while (sp <= maxSprite) : (sp += 1) {
+            if (self.vram[spriteAttrBase + @as(usize, @intCast(sp << 2))] == 0xD0) {
+                maxSprite = @intCast(sp - 1);
                 break;
             }
         }
@@ -370,7 +370,7 @@ pub const Video = struct {
         var sprite: u8 = 0;
         while (sprite <= maxSprite) : (sprite += 1) {
             const off: usize = spriteAttrBase + (sprite << 2);
-            var sprite_y = @as(i32, @intCast(self.vram[off] + 1)) & 0xFF;
+            var sprite_y = @as(i32, @intCast(self.vram[off] & 0xFF)) + 1;
 
             if (sprite_y >= 0xE0) sprite_y = -(0x100 - sprite_y);
             if (sprite_y > line or (sprite_y + spriteSize) <= line) continue;
@@ -385,7 +385,7 @@ pub const Video = struct {
             if (sprite_color == 0) continue;
 
             const sprite_shift: u8 = if ((self.vram[off + 3] & 0x80) != 0) 32 else 0;
-            const sprite_x = self.vram[off + 1] - sprite_shift;
+            const sprite_x = @as(i32, @intCast(self.vram[off + 1])) - sprite_shift;
             if (sprite_x >= resolution_width) continue;
 
             var tile: u8 = self.vram[off + 2];
@@ -395,11 +395,11 @@ pub const Video = struct {
 
             var tx: u32 = 0;
             while (tx < spriteSize) : (tx += 1) {
-                const px = sprite_x + tx;
+                const px = sprite_x + @as(i32, @intCast(tx));
                 if (px >= resolution_width) break;
                 if (px < 0) continue;
 
-                const pixel = lineWidth + px;
+                const pixel = line_width + @as(usize, @intCast(px));
                 const tile_x_adjusted = tx >> (if (spriteZoom) 1 else 0);
                 const sprite_pixel = if (tile_x_adjusted < 8) isBitSet(self.vram[lineAddr], @intCast(7 - tile_x_adjusted)) else isBitSet(self.vram[lineAddr + 16], @intCast(15 - tile_x_adjusted));
 

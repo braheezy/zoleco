@@ -87,8 +87,8 @@ pub fn dad_SP(self: *Z80) !void {
 
 pub fn push(self: *Z80, lower: u8, upper: u8) void {
     // Store value in stack, note: stack grows downwards
-    self.io.writeMemory(self.io.ctx, self.sp - 1, upper);
-    self.io.writeMemory(self.io.ctx, self.sp - 2, lower);
+    self.io.writeMemory(self.io.ctx, self.sp -% 1, upper);
+    self.io.writeMemory(self.io.ctx, self.sp -% 2, lower);
     self.sp -= 2;
     self.q = 0;
 }

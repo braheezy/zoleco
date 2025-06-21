@@ -201,8 +201,8 @@ fn halt(self: *Z80) !void {
 
 fn rst38(self: *Z80) !void {
     const return_addr = self.pc;
-    self.sp -= 2;
-    self.io.writeMemory(self.io.ctx, self.sp + 1, @intCast(return_addr >> 8));
+    self.sp -%= 2;
+    self.io.writeMemory(self.io.ctx, self.sp +% 1, @intCast(return_addr >> 8));
     self.io.writeMemory(self.io.ctx, self.sp, @intCast(return_addr & 0xFF));
     self.pc = 0x38;
 
