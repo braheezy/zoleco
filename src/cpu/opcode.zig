@@ -197,6 +197,7 @@ fn halt(self: *Z80) !void {
     self.halted = true;
 
     self.q = 0;
+    self.pc -= 1;
 }
 
 fn rst38(self: *Z80) !void {
