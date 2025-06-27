@@ -80,6 +80,10 @@ pub const Zoleco = struct {
             self.cpu.cycle_count = 0;
             vblank = self.video.tick(clock_cycles);
 
+            // if (self.frame_count == 17 and self.video.render_line == 225 and self.video.cycle_counter == 157) {
+            //     std.log.info("render_line: {d}, cycle_counter: {d}\n", .{ self.video.render_line, self.video.cycle_counter });
+            // }
+
             total_clocks += clock_cycles;
 
             if (total_clocks > 702240) {
@@ -96,9 +100,9 @@ pub const Zoleco = struct {
         const size = resolution_width_with_overscan * resolution_height_with_overscan;
         const src_buffer = self.video.framebuffer;
 
-        if (self.frame_count == 13) {
-            std.log.info("frame_count: {d}\n", .{self.frame_count});
-        }
+        // if (self.frame_count == 21) {
+        //     std.log.info("frame_count: {d}\n", .{self.frame_count});
+        // }
 
         switch (self.pixel_format) {
             .rgb555, .rgb565, .bgr565, .bgr555 => {
@@ -115,5 +119,14 @@ pub const Zoleco = struct {
                 );
             },
         }
+
+        // if (self.frame_count == 21) {
+        // print entire framebuffer
+        // std.log.info("framebuffer length: {d}\n", .{framebuffer.len});
+        // for (framebuffer) |pixel| {
+        //     std.debug.print("{X:2} ", .{pixel});
+        // }
+        // std.log.info("\n", .{});
+        // }
     }
 };

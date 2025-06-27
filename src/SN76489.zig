@@ -45,11 +45,11 @@ noise_fref: bool = false,
 base_count: u32 = 0,
 
 // Rate converter: synchronize chip clock cycles to audio sample output
-// fixed-point step size for each audio sample period. It converts the sample rate into a timing increment.
+// using fixed-point step size for each audio sample period. It converts the sample rate into a timing increment.
 realstep: u32 = 0,
 // track elapsed emulated time. When it exceeds a threshold defined by realstep, a sample is produced.
 sngtime: u32 = 0,
-// fixed-point step size per emulated chip cycle. It determines how much to advance time on each chip cycle.
+// a fixed-point step size per emulated chip cycle. It determines how much to advance time on each chip cycle.
 sngstep: u32 = 0,
 
 adr: u32 = 0,
