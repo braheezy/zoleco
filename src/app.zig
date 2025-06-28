@@ -36,7 +36,7 @@ pub const App = struct {
     }
 
     fn sdlInit(self: *App) void {
-        if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO | SDL.SDL_INIT_TIMER) < 0)
+        if (SDL.SDL_Init(SDL.SDL_INIT_VIDEO | SDL.SDL_INIT_TIMER | SDL.SDL_INIT_AUDIO) < 0)
             sdlPanic();
 
         const window_flags = SDL.SDL_WINDOW_ALLOW_HIGHDPI;

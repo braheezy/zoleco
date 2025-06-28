@@ -4,6 +4,7 @@ const Memory = @import("Memory.zig");
 const Z80 = @import("z80").Z80;
 const Video = @import("video.zig").Video;
 const Input = @import("Input.zig");
+const Audio = @import("Audio.zig").Audio;
 
 pub const ColecoVisionIO = @This();
 
@@ -12,6 +13,7 @@ memory: *Memory,
 video: *Video,
 cpu: *Z80,
 input: *Input,
+audio: *Audio,
 
 pub fn init(
     allocator: std.mem.Allocator,
@@ -19,6 +21,7 @@ pub fn init(
     video: *Video,
     cpu: *Z80,
     input: *Input,
+    audio: *Audio,
 ) !*ColecoVisionIO {
     const self = try allocator.create(ColecoVisionIO);
 
@@ -34,6 +37,7 @@ pub fn init(
     self.video = video;
     self.input = input;
     self.cpu = cpu;
+    self.audio = audio;
     return self;
 }
 
@@ -81,7 +85,7 @@ pub fn ioWrite(ctx: *anyopaque, port: u16, value: u8) !void {
             self.input.segment = .joystick_left_buttons;
         },
         0xE0 => {
-            // std.debug.print("ioWrite (audio reg): {d}\n", .{value});
+            self.audio.write(value);
             self.cpu.cycle_count += 32;
         },
         else => {

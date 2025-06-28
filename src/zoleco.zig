@@ -7,6 +7,7 @@ const ColecoVisionIO = @import("ports.zig");
 const Video = @import("video.zig").Video;
 const PixelFormat = @import("video.zig").PixelFormat;
 const Input = @import("Input.zig");
+const Audio = @import("Audio.zig").Audio;
 
 const resolution_width_with_overscan = @import("video.zig").resolution_width_with_overscan;
 const resolution_height_with_overscan = @import("video.zig").resolution_height_with_overscan;
@@ -21,7 +22,7 @@ pub const Zoleco = struct {
     pixel_format: PixelFormat = .rgb888,
     frame_count: u32 = 0,
 
-    pub fn init(allocator: std.mem.Allocator) !*Zoleco {
+    pub fn init(allocator: std.mem.Allocator, audio: *Audio) !*Zoleco {
         // First initialize memory
         const memory = try Memory.init(
             allocator,
@@ -45,6 +46,7 @@ pub const Zoleco = struct {
             video,
             z80,
             input,
+            audio,
         );
 
         z80.io = &io.io;

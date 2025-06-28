@@ -1,6 +1,0 @@
----
-description:
-globs:
-alwaysApply: true
----
-I am trying to develop a Colecovision emulator in Zig. It is a port of Gearcoleco when it comes to core emulator loop, rendering, and vdp emulation. I have verified through step debugging and comparing to the Gearcoleco debugger that I match all cpu registers, RAM, VRAM, vdp address and status and registers, etc. through the first 12 frames. At this point, the vdp pattern table is populated in gearcoleco and by frame 13, the beginning text of the spalsh screen is drawn.
