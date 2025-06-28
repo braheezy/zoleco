@@ -3,6 +3,7 @@
 A ColecoVision emulator.
 
 ![demo](./demo.png)
+![demo1](./demo1.png)
 
 ## Development
 
