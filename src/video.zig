@@ -233,12 +233,14 @@ pub const Video = struct {
         self.name_table_addr = @as(u16, @intCast(self.registers[2])) << 10;
         var color_table_addr: u16 = @as(u16, @intCast(self.registers[3])) << 6;
         self.pattern_table_addr = @as(u16, @intCast(self.registers[4])) << 11;
+        const region_mask = (@as(u16, @intCast(self.registers[4] & 0x03)) << 8) | 0xFF;
+        const color_mask = (@as(u16, @intCast(self.registers[3] & 0x7F)) << 3) | 0x07;
         var backdrop_color = self.registers[7] & 0x0F;
         backdrop_color = if (backdrop_color > 0) backdrop_color else 1;
 
         const tile_y: usize = line >> 3;
         const tile_y_offset = line & 7;
-        var region: usize = 0;
+        var region: u16 = 0;
 
         switch (self.mode) {
             1 => {
@@ -274,7 +276,7 @@ pub const Video = struct {
             2 => {
                 self.pattern_table_addr &= 0x2000;
                 color_table_addr &= 0x2000;
-                region = (tile_y & 0x18) << 5;
+                region = @as(u16, @intCast((tile_y & 0x18) << 5));
             },
             4 => {
                 self.pattern_table_addr &= 0x2000;
@@ -285,7 +287,7 @@ pub const Video = struct {
         for (0..32) |tile_x| {
             const tile_number = (tile_y << 5) + tile_x;
             const name_tile_addr = self.name_table_addr + tile_number;
-            const name_tile: u16 = @intCast(self.vram[name_tile_addr]);
+            var name_tile: u16 = @intCast(self.vram[name_tile_addr]);
             var pattern_line: usize = 0;
             var color_line: usize = 0;
 
@@ -318,11 +320,13 @@ pub const Video = struct {
                 pattern_line = self.vram[self.pattern_table_addr + (name_tile << 3) + tile_y_offset];
                 color_line = self.vram[color_table_addr + (name_tile >> 3)];
             } else if (self.mode == 2) {
-                const region_mask = (@as(u16, @intCast(self.registers[4] & 0x03)) << 8) | 0xFF;
-                // const color_mask = ((self.registers[3] & 0x7F) << 3) | 0x07;
-                const name_with_region = name_tile + region;
-                pattern_line = self.vram[self.pattern_table_addr + ((name_with_region & region_mask) << 3) + tile_y_offset];
-                color_line = self.vram[color_table_addr + ((name_with_region & region_mask) << 3) + tile_y_offset];
+                name_tile += region;
+
+                // Pattern lookup - uses region_mask to select correct 2KB bank
+                pattern_line = self.vram[self.pattern_table_addr + ((name_tile & region_mask) << 3) + tile_y_offset];
+
+                // Color lookup - uses color_mask to stay within 6KB color table
+                color_line = self.vram[color_table_addr + ((name_tile & color_mask) << 3) + tile_y_offset];
             }
 
             var foreground_color = color_line >> 4;
