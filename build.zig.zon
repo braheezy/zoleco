@@ -5,21 +5,9 @@
     .minimum_zig_version = "0.14.0",
 
     .dependencies = .{
-        .raylib_zig = .{
-            .url = "git+https://github.com/Not-Nik/raylib-zig#d6c77762cbdebbf56d3ff101142048dfae2496c4",
-            .hash = "raylib_zig-5.6.0-dev-KE8REBMyBQCnQ9RBhHsoSKr97XmDHF84wx3g0UiMRDxj",
-        },
         .sdl = .{
             .url = "git+https://github.com/ikskuh/SDL.zig#424ff5f9245ef352e4c508c77ddaeed2f46bd605",
             .hash = "SDL2-0.0.0-yMCQigakBADGJHtb2ljt13P_cCnG8Y819HRnIibNVPFk",
-        },
-        .SDL2 = .{
-            .url = "git+https://github.com/ikskuh/SDL.zig#424ff5f9245ef352e4c508c77ddaeed2f46bd605",
-            .hash = "SDL2-0.0.0-yMCQigakBADGJHtb2ljt13P_cCnG8Y819HRnIibNVPFk",
-        },
-        .zopengl = .{
-            .url = "git+https://github.com/zig-gamedev/zopengl#27f5f228bc1f6da4a4f6acaca07d1cc5ad135171",
-            .hash = "zopengl-0.6.0-dev-5-tnz59jCAB6WpFFql6YdVtwBLlOcReCYVOnxQTPD-xC",
         },
     },
 
@@ -27,8 +15,5 @@
         "build.zig",
         "build.zig.zon",
         "src",
-        // For example...
-        //"LICENSE",
-        //"README.md",
     },
 }

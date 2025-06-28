@@ -56,7 +56,14 @@ pub fn build(b: *std.Build) !void {
     }
     test_step.dependOn(&run_test.step);
 
-    defineVgmPlayer(b, target, optimize, sn76489_mod);
+    const vgm_player_exe = defineVgmPlayer(
+        b,
+        target,
+        optimize,
+        sn76489_mod,
+        sdk.getWrapperModule(),
+    );
+    sdk.link(vgm_player_exe, .static, sdl.Library.SDL2);
 }
 
 fn defineRun(b: *std.Build, exe: *std.Build.Step.Compile) void {
@@ -74,29 +81,21 @@ fn defineVgmPlayer(
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
     sn76489_mod: *std.Build.Module,
-) void {
-    const raylib_dep = b.dependency("raylib_zig", .{
-        .target = target,
-        .optimize = optimize,
-    });
-
-    const raylib = raylib_dep.module("raylib"); // main raylib module
-    const raylib_artifact = raylib_dep.artifact("raylib"); // raylib C library
-
+    sdl_mod: *std.Build.Module,
+) *std.Build.Step.Compile {
     const vgm_player_mod = b.createModule(.{
         .root_source_file = b.path("examples/vgm_player/main.zig"),
         .target = target,
         .optimize = optimize,
     });
     vgm_player_mod.addImport("SN76489", sn76489_mod);
-    vgm_player_mod.addImport("raylib", raylib);
+    vgm_player_mod.addImport("sdl2", sdl_mod);
 
     const vgm_player_exe = b.addExecutable(.{
         .name = "vgm_player",
         .root_module = vgm_player_mod,
     });
 
-    vgm_player_exe.linkLibrary(raylib_artifact);
     b.installArtifact(vgm_player_exe);
 
     const run_cmd = b.addRunArtifact(vgm_player_exe);
@@ -106,4 +105,6 @@ fn defineVgmPlayer(
     }
     const run_step = b.step("vgm", "Run the vgm example");
     run_step.dependOn(&run_cmd.step);
+
+    return vgm_player_exe;
 }
