@@ -6,7 +6,8 @@ pub const Zoleco = @import("zoleco.zig").Zoleco;
 
 const resolution_width_with_overscan = @import("video.zig").resolution_width_with_overscan;
 const resolution_height_with_overscan = @import("video.zig").resolution_height_with_overscan;
-const audio_buffer_size = 4096;
+// Reduce buffer size for better responsiveness to short sound effects
+const audio_buffer_size = 1024;
 
 pub const Emu = struct {
     framebuffer: []u8,
