@@ -1,8 +1,9 @@
 ## zoleco
 
-The [ColecoVision](https://en.wikipedia.org/wiki/ColecoVision) was a video game console from the early 80s. This is a full emulator of that system, capable of running ROMs for that console.
+The [ColecoVision](https://en.wikipedia.org/wiki/ColecoVision) was a 2nd-generation video game console from the early 80s. This is a full emulator of that system, capable of running ROMs for that console.
 
 ![hello](./demos/hello.png)
+![donkey](./demos/donkey-kong.png)
 ![frogger](./demos/frogger.png)
 
 See [demos](#demos) for more.
@@ -22,6 +23,8 @@ Then build and run:
 zig build
 ./zig-out/bin/zoleco <path to rom>
 ```
+
+Most ROMs are easily found online. I don't know the full legality but this stuff is so old I doubt anyone cares.
 
 I've only tested this on MacOS but the dependencies are platform agnostic so it might work on yours. If it does, let me know in an Issue!
 
