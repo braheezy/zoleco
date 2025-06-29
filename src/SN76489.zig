@@ -178,7 +178,11 @@ inline fn update_output(self: *SN76489) void {
 
         // Subtract the noise period length from the counter to handle overshoot.
         if (self.noise_fref) {
-            self.noise_count -= self.freq[2];
+            if (self.freq[2] < self.noise_count) {
+                self.noise_count -= self.freq[2];
+            } else {
+                self.noise_count = 0;
+            }
         } else {
             self.noise_count -= self.noise_freq;
         }
