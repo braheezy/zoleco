@@ -1,6 +1,6 @@
 ## zoleco
 
-The [ColecoVision](https://en.wikipedia.org/wiki/ColecoVision) was a 2nd-generation video game console from the early 80s. This is a full emulator of that system, capable of running ROMs for that console.
+The [ColecoVision](https://en.wikipedia.org/wiki/ColecoVision) was a 2nd-generation video game console from the early 80s. `zoleco` is a full emulator of the system, capable of running ROMs for that console.
 
 ![hello](./demos/hello.png)
 ![donkey](./demos/donkey-kong.png)
@@ -84,3 +84,9 @@ The `tms9918_viewer` example video code is not actually used in the emulator bec
 ![smurf2](./demos/smurf2.png)
 <video src="https://github.com/user-attachments/assets/adb5636a-f38f-401b-bd7f-ae807c5382e8" controls="controls" style="max-width: 730px;">
 </video>
+
+## Prior Art
+
+`zoleco` is a minimal emulator that can run ROMs and that's about it.
+
+For a full-featured modern emulator, see the esteemed [Gearcoleco](https://github.com/drhelius/Gearcoleco).
