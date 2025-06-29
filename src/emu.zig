@@ -6,7 +6,7 @@ pub const Zoleco = @import("zoleco.zig").Zoleco;
 
 const resolution_width_with_overscan = @import("video.zig").resolution_width_with_overscan;
 const resolution_height_with_overscan = @import("video.zig").resolution_height_with_overscan;
-const audio_buffer_size = 8192;
+const audio_buffer_size = 4096;
 
 pub const Emu = struct {
     framebuffer: []u8,
@@ -18,7 +18,9 @@ pub const Emu = struct {
 
         const emu = try allocator.create(Emu);
         emu.framebuffer = try allocator.alloc(u8, screen_size * 3);
+        // Enable high quality audio mode for better timing accuracy
         emu.audio = try Audio.init(allocator, 3579545, 44100, audio_buffer_size, 1);
+        emu.audio.chip.set_quality(true);
         emu.zoleco = try Zoleco.init(allocator, emu.audio);
         @memset(emu.framebuffer, 0);
 
