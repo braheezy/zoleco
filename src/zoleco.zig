@@ -26,7 +26,7 @@ pub const Zoleco = struct {
         // First initialize memory
         const memory = try Memory.init(
             allocator,
-            @embedFile("roms/colecovision.rom"),
+            @embedFile("roms/colecovision.bios"),
             false,
         );
 
