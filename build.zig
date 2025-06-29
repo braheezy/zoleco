@@ -56,7 +56,7 @@ pub fn build(b: *std.Build) !void {
     }
     test_step.dependOn(&run_test.step);
 
-    const vgm_player_exe = defineVgmPlayer(
+    const vgm_player_exe = buildVgmPlayer(
         b,
         target,
         optimize,
@@ -64,6 +64,14 @@ pub fn build(b: *std.Build) !void {
         sdk.getWrapperModule(),
     );
     sdk.link(vgm_player_exe, .static, sdl.Library.SDL2);
+
+    const tms9918_viewer_exe = buildTms9918Viewer(
+        b,
+        target,
+        optimize,
+        sdk.getWrapperModule(),
+    );
+    sdk.link(tms9918_viewer_exe, .static, sdl.Library.SDL2);
 }
 
 fn defineRun(b: *std.Build, exe: *std.Build.Step.Compile) void {
@@ -76,7 +84,7 @@ fn defineRun(b: *std.Build, exe: *std.Build.Step.Compile) void {
     run_step.dependOn(&run_cmd.step);
 }
 
-fn defineVgmPlayer(
+fn buildVgmPlayer(
     b: *std.Build,
     target: std.Build.ResolvedTarget,
     optimize: std.builtin.OptimizeMode,
@@ -107,4 +115,32 @@ fn defineVgmPlayer(
     run_step.dependOn(&run_cmd.step);
 
     return vgm_player_exe;
+}
+
+fn buildTms9918Viewer(
+    b: *std.Build,
+    target: std.Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+    sdl_mod: *std.Build.Module,
+) *std.Build.Step.Compile {
+    const tms9918_viewer_mod = b.createModule(.{
+        .root_source_file = b.path("examples/tms9918_viewer/main.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+    tms9918_viewer_mod.addImport("sdl2", sdl_mod);
+
+    const tms9918_viewer_exe = b.addExecutable(.{
+        .name = "tms9918_viewer",
+        .root_module = tms9918_viewer_mod,
+    });
+
+    b.installArtifact(tms9918_viewer_exe);
+
+    const run_cmd = b.addRunArtifact(tms9918_viewer_exe);
+    run_cmd.step.dependOn(b.getInstallStep());
+    const run_step = b.step("tms", "Run the tms9918 viewer");
+    run_step.dependOn(&run_cmd.step);
+
+    return tms9918_viewer_exe;
 }
