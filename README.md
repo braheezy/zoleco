@@ -82,4 +82,5 @@ The `tms9918_viewer` example video code is not actually used in the emulator bec
 
 ![smurf1](./demos/smurf1.png)
 ![smurf2](./demos/smurf2.png)
-![qbert](./demos/qbert.mp4)
+<video src="https://github.com/user-attachments/assets/adb5636a-f38f-401b-bd7f-ae807c5382e8" controls="controls" style="max-width: 730px;">
+</video>
