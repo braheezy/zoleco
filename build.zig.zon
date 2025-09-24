@@ -2,12 +2,12 @@
     .name = .zolecovision,
     .version = "0.0.0",
     .fingerprint = 0xb78b494f0e883cbf,
-    .minimum_zig_version = "0.14.0",
+    .minimum_zig_version = "0.15.1",
 
     .dependencies = .{
         .sdl = .{
-            .url = "git+https://github.com/ikskuh/SDL.zig#424ff5f9245ef352e4c508c77ddaeed2f46bd605",
-            .hash = "SDL2-0.0.0-yMCQigakBADGJHtb2ljt13P_cCnG8Y819HRnIibNVPFk",
+            .url = "git+https://github.com/braheezy/SDL.zig#e3a687e0a6629f9d22aba0b48d4665a722eadab8",
+            .hash = "SDL2-0.0.0-yMCQisChBAC4SNhkNVPyqfXMSXMtjeXjNAgnNlitn7mF",
         },
     },
 

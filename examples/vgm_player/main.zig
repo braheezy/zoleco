@@ -11,7 +11,7 @@ var globalPlayer: Player = undefined;
 var globalBuffer: [MAX_SAMPLES_PER_UPDATE * CHANNELS]i16 = undefined;
 
 // Audio callback function for SDL
-fn audioCallback(userdata: ?*anyopaque, stream: [*c]u8, len: c_int) callconv(.C) void {
+fn audioCallback(userdata: ?*anyopaque, stream: [*c]u8, len: c_int) callconv(.c) void {
     _ = userdata;
     const frames = @divExact(@as(usize, @intCast(len)), @sizeOf(i16) * CHANNELS);
     const buffer = @as([*]i16, @ptrCast(@alignCast(stream)))[0 .. frames * CHANNELS];
@@ -58,7 +58,11 @@ pub fn main() !void {
     globalPlayer.enable();
     audio_device.device.pause(false);
 
+    var in_buffer: [1024]u8 = undefined;
+    var stdin_reader = std.fs.File.stdin().readerStreaming(&in_buffer);
+    const in = &stdin_reader.interface;
+
     // Wait for user input to quit
     std.debug.print("Playing VGM file. Press Enter to quit...\n", .{});
-    _ = try std.io.getStdIn().reader().readByte();
+    _ = try in.takeByte();
 }

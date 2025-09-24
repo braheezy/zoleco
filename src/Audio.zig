@@ -97,7 +97,7 @@ var audio_callback_count: usize = 0;
 
 // SDL audio callback function that provides new audio data when needed
 // This is called by SDL in a separate thread when it needs more audio data to play
-fn audioCallback(userdata: ?*anyopaque, stream: [*c]u8, len: c_int) callconv(.C) void {
+fn audioCallback(userdata: ?*anyopaque, stream: [*c]u8, len: c_int) callconv(.c) void {
     _ = userdata;
     // Calculate the number of frames based on the buffer length and audio format
     const frames = @divExact(@as(usize, @intCast(len)), @sizeOf(i16) * @as(usize, global_audio.channels));

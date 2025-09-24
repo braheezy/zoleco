@@ -14,6 +14,10 @@ const usage =
     \\
 ;
 
+var stdout_buffer: [1024]u8 = undefined;
+var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+const stdout = &stdout_writer.interface;
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer if (gpa.deinit() == .leak) {
@@ -30,7 +34,8 @@ pub fn main() !void {
     if (args.len > 1) {
         const arg = args[1];
         if (std.mem.eql(u8, arg, "-h") or std.mem.eql(u8, arg, "--help")) {
-            try std.io.getStdOut().writeAll(usage);
+            try stdout.writeAll(usage);
+            try stdout.flush();
             return;
         }
         rom_file = arg;

@@ -26,7 +26,7 @@ zig build
 
 Most ROMs are easily found online. I don't know the full legality but this stuff is so old I doubt anyone cares.
 
-I've only tested this on MacOS but the dependencies are platform agnostic so it might work on yours. If it does, let me know in an Issue!
+I've only tested this on MacOS but the dependencies are platform agnostic so it might work on yours. If it doesn't, let me know in an Issue!
 
 ### Keybindings
 

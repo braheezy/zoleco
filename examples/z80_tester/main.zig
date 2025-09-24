@@ -109,7 +109,7 @@ fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
     // Split the filename (without .json) into parts
     const base_name = name[0 .. name.len - 5]; // Remove .json
     var parts = std.mem.splitScalar(u8, base_name, ' ');
-    var opcodes = std.ArrayList([]const u8).init(allocator);
+    var opcodes = std.array_list.Managed([]const u8).init(allocator);
     defer opcodes.deinit();
 
     while (parts.next()) |part| {
@@ -146,7 +146,7 @@ fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
 
     const test_cases = parsed.value;
     var result = Result{ .successes = 0, .total = test_cases.len };
-    var failures = std.ArrayList([]const u8).init(allocator);
+    var failures = std.array_list.Managed([]const u8).init(allocator);
     defer {
         for (failures.items) |msg| allocator.free(msg);
         failures.deinit();
@@ -199,7 +199,7 @@ fn printResult(successes: usize, total: usize) void {
 fn runTest(
     al: std.mem.Allocator,
     t: TestCase,
-    failures: *std.ArrayList([]const u8),
+    failures: *std.array_list.Managed([]const u8),
     z80: *Z80,
     test_io: *TestIO,
 ) !bool {
@@ -273,7 +273,7 @@ fn loadState(z80: *Z80, state: State) void {
     }
 }
 
-fn checkEquals(comptime T: type, allocator: std.mem.Allocator, failures: *std.ArrayList([]const u8), label: []const u8, actual: T, expected: T) !void {
+fn checkEquals(comptime T: type, allocator: std.mem.Allocator, failures: *std.array_list.Managed([]const u8), label: []const u8, actual: T, expected: T) !void {
     if (@TypeOf(actual) == Z80.InterruptMode) {
         const actual_mode = @intFromEnum(actual);
         const expected_mode = @intFromEnum(expected);
@@ -289,7 +289,7 @@ fn checkEquals(comptime T: type, allocator: std.mem.Allocator, failures: *std.Ar
     }
 }
 
-fn validateState(z80: Z80, state: State, al: std.mem.Allocator, failures: *std.ArrayList([]const u8)) !void {
+fn validateState(z80: Z80, state: State, al: std.mem.Allocator, failures: *std.array_list.Managed([]const u8)) !void {
     try checkEquals(u16, al, failures, "pc", z80.pc, state.pc);
     try checkEquals(u16, al, failures, "sp", z80.sp, state.sp);
     try checkEquals(u16, al, failures, "ix", z80.ix, state.ix);

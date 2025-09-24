@@ -18,7 +18,7 @@ _ptr: usize = 0,
 _loop: usize = 0,
 _enable: bool = false,
 _looping: bool = false,
-_commands: std.ArrayList(Command) = undefined,
+_commands: std.array_list.Managed(Command) = undefined,
 _cmdIndex: usize = 0,
 
 /// Initialize the Player
@@ -28,7 +28,7 @@ pub fn init(al: std.mem.Allocator) !Player {
     player._chip.set_quality(true);
     player.unload();
     player._looping = false;
-    player._commands = std.ArrayList(Command).init(al);
+    player._commands = std.array_list.Managed(Command).init(al);
 
     return player;
 }
