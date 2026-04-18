@@ -6,8 +6,8 @@
 
     .dependencies = .{
         .sdl = .{
-            .url = "git+https://github.com/braheezy/SDL.zig#e3a687e0a6629f9d22aba0b48d4665a722eadab8",
-            .hash = "SDL2-0.0.0-yMCQisChBAC4SNhkNVPyqfXMSXMtjeXjNAgnNlitn7mF",
+            .url = "git+https://github.com/braheezy/SDL.zig#a1c36303a95c37ba36c69b19f79683f2eb5050b4",
+            .hash = "SDL2-0.0.0-yMCQipWnBABMAdfue6YmerIoyHg-6r3f3zapmQoy9teu",
         },
     },
 

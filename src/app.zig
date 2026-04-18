@@ -19,19 +19,19 @@ pub const App = struct {
     frame_time_start: u64 = 0,
     frame_time_end: u64 = 0,
 
-    pub fn init(allocator: std.mem.Allocator, rom_file: []const u8) !App {
+    pub fn init(io: std.Io, allocator: std.mem.Allocator, rom_file: []const u8) !App {
         var app = App{};
 
         config = try Config.init();
 
         app.sdlInit();
-        app.emu = try Emu.init(allocator);
+        app.emu = try Emu.init(io, allocator);
         app.renderer = try Renderer.init(allocator, app.emu.framebuffer);
 
         // Initialize SDL components of the renderer after window creation
         try app.renderer.initSDL(app.window);
 
-        try app.emu.loadRom(allocator, rom_file);
+        try app.emu.loadRom(io, allocator, rom_file);
         return app;
     }
 

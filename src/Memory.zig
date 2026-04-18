@@ -10,7 +10,7 @@ ram: []u8,
 // Cartridge ROM (variable size)
 rom: ?[]const u8 = null,
 
-pub fn init(allocator: std.mem.Allocator, bios_data: []const u8, is_pal: bool) !*Memory {
+pub fn init(io: std.Io, allocator: std.mem.Allocator, bios_data: []const u8, is_pal: bool) !*Memory {
     assert(bios_data.len == 0x2000);
 
     const bios = try allocator.alloc(u8, 0x2000);
@@ -27,7 +27,7 @@ pub fn init(allocator: std.mem.Allocator, bios_data: []const u8, is_pal: bool) !
 
     var prng = std.Random.DefaultPrng.init(blk: {
         var seed: u64 = undefined;
-        try std.posix.getrandom(std.mem.asBytes(&seed));
+        io.random(std.mem.asBytes(&seed));
         break :blk seed;
     });
     const rand = prng.random();

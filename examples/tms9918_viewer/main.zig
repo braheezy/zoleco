@@ -2,7 +2,7 @@ const std = @import("std");
 const TMS9918 = @import("TMS9918.zig");
 const sdl = @import("sdl2");
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
     const window_width = 800;
     const window_height = 600;
     const screen_width = 256;
@@ -32,15 +32,9 @@ pub fn main() !void {
     });
     defer renderer.destroy();
 
-    // Initialize allocator and other resources
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    defer if (gpa.deinit() == .leak) {
-        std.process.exit(1);
-    };
+    const allocator = init.gpa;
 
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     const default_file = @embedFile("image.bin");
     var clean_needed = false;
@@ -49,7 +43,7 @@ pub fn main() !void {
     if (args.len >= 2) {
         // Read ROM from provided file path
         clean_needed = true;
-        rom_bytes = try std.fs.cwd().readFileAlloc(allocator, args[1], 0x10000);
+        rom_bytes = try std.Io.Dir.cwd().readFileAlloc(init.io, args[1], allocator, .limited(0x10000));
     } else {
         // Allocate a mutable buffer and copy the embedded data into it
         const buffer = try allocator.alloc(u8, default_file.len);

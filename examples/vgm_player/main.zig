@@ -20,7 +20,7 @@ fn audioCallback(userdata: ?*anyopaque, stream: [*c]u8, len: c_int) callconv(.c)
     globalPlayer.render(buffer);
 }
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
     // Initialize SDL
     try sdl.init(.{
         .audio = true,
@@ -59,7 +59,7 @@ pub fn main() !void {
     audio_device.device.pause(false);
 
     var in_buffer: [1024]u8 = undefined;
-    var stdin_reader = std.fs.File.stdin().readerStreaming(&in_buffer);
+    var stdin_reader = std.Io.File.stdin().readerStreaming(init.io, &in_buffer);
     const in = &stdin_reader.interface;
 
     // Wait for user input to quit

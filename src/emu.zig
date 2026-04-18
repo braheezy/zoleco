@@ -14,7 +14,7 @@ pub const Emu = struct {
     audio: *Audio,
     zoleco: *Zoleco,
 
-    pub fn init(allocator: std.mem.Allocator) !*Emu {
+    pub fn init(io: std.Io, allocator: std.mem.Allocator) !*Emu {
         const screen_size = resolution_width_with_overscan * resolution_height_with_overscan;
 
         const emu = try allocator.create(Emu);
@@ -22,7 +22,7 @@ pub const Emu = struct {
         // Enable high quality audio mode for better timing accuracy
         emu.audio = try Audio.init(allocator, 3579545, 44100, audio_buffer_size, 1);
         emu.audio.chip.set_quality(true);
-        emu.zoleco = try Zoleco.init(allocator, emu.audio);
+        emu.zoleco = try Zoleco.init(io, allocator, emu.audio);
         @memset(emu.framebuffer, 0);
 
         return emu;
@@ -35,8 +35,8 @@ pub const Emu = struct {
         allocator.destroy(self);
     }
 
-    pub fn loadRom(self: *Emu, allocator: std.mem.Allocator, rom_file: []const u8) !void {
-        try self.zoleco.cartridge.loadFromFile(allocator, rom_file);
+    pub fn loadRom(self: *Emu, io: std.Io, allocator: std.mem.Allocator, rom_file: []const u8) !void {
+        try self.zoleco.cartridge.loadFromFile(io, allocator, rom_file);
         self.zoleco.memory.rom = self.zoleco.cartridge.rom;
     }
 

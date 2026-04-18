@@ -22,9 +22,10 @@ pub const Zoleco = struct {
     pixel_format: PixelFormat = .rgb888,
     frame_count: u32 = 0,
 
-    pub fn init(allocator: std.mem.Allocator, audio: *Audio) !*Zoleco {
+    pub fn init(std_io: std.Io, allocator: std.mem.Allocator, audio: *Audio) !*Zoleco {
         // First initialize memory
         const memory = try Memory.init(
+            std_io,
             allocator,
             @embedFile("roms/colecovision.bios"),
             false,

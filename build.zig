@@ -2,6 +2,7 @@ const std = @import("std");
 const sdl = @import("sdl");
 
 pub fn build(b: *std.Build) !void {
+    const io = b.graph.io;
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{ .preferred_optimize_mode = .Debug });
 
@@ -23,7 +24,7 @@ pub fn build(b: *std.Build) !void {
         .name = "zoleco",
         .root_module = exe_mod,
     });
-    sdk.link(exe, .static, sdl.Library.SDL2);
+    sdk.link(io, exe, .static, sdl.Library.SDL2);
 
     b.installArtifact(exe);
 
@@ -63,7 +64,7 @@ pub fn build(b: *std.Build) !void {
         sn76489_mod,
         sdk.getWrapperModule(),
     );
-    sdk.link(vgm_player_exe, .static, sdl.Library.SDL2);
+    sdk.link(io, vgm_player_exe, .static, sdl.Library.SDL2);
 
     const tms9918_viewer_exe = buildTms9918Viewer(
         b,
@@ -71,7 +72,7 @@ pub fn build(b: *std.Build) !void {
         optimize,
         sdk.getWrapperModule(),
     );
-    sdk.link(tms9918_viewer_exe, .static, sdl.Library.SDL2);
+    sdk.link(io, tms9918_viewer_exe, .static, sdl.Library.SDL2);
 }
 
 fn defineRun(b: *std.Build, exe: *std.Build.Step.Compile) void {

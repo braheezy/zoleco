@@ -26,16 +26,13 @@ pub fn deinit(self: *Cartridge, allocator: std.mem.Allocator) void {
     allocator.free(self.rom);
 }
 
-pub fn loadFromFile(self: *Cartridge, allocator: std.mem.Allocator, file_path: []const u8) !void {
+pub fn loadFromFile(self: *Cartridge, io: std.Io, allocator: std.mem.Allocator, file_path: []const u8) !void {
     std.log.info("Loading cartridge from {s}", .{file_path});
 
     self.filepath = file_path;
     self.filename = std.fs.path.basename(file_path);
 
-    const file = try std.fs.cwd().openFile(file_path, .{});
-    defer file.close();
-
-    const file_buffer = try file.readToEndAlloc(allocator, 1024 * 1024);
+    const file_buffer = try std.Io.Dir.cwd().readFileAlloc(io, file_path, allocator, .limited(1024 * 1024));
     defer allocator.free(file_buffer);
 
     try self.loadFromBuffer(allocator, file_buffer);

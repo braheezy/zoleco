@@ -56,19 +56,14 @@ const Result = struct {
 };
 
 var has_failure = false;
-pub fn main() !void {
-    // Memory allocation setup
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    const allocator = gpa.allocator();
-    defer if (gpa.deinit() == .leak) {
-        std.process.exit(1);
-    };
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.gpa;
+    const io = init.io;
 
     // args
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
-    const cwd = std.fs.cwd();
+    const cwd = std.Io.Dir.cwd();
 
     for (args[1..]) |arg| {
         const single_test_file = if (std.mem.indexOf(u8, arg, " ") == null)
@@ -77,17 +72,17 @@ pub fn main() !void {
             try std.fmt.allocPrint(allocator, "{s}.json", .{arg});
         defer allocator.free(single_test_file);
         std.debug.print("running single file: {s}\n", .{single_test_file});
-        try processFile(single_test_file, allocator);
+        try processFile(io, single_test_file, allocator);
         std.process.exit(0);
     } else {
         // Otherwise, iterate over all files in "tests" directory, relative to this file
-        var tests_dir = try cwd.openDir("tests", .{ .iterate = true });
-        defer tests_dir.close();
+        var tests_dir = try cwd.openDir(io, "tests", .{ .iterate = true });
+        defer tests_dir.close(io);
 
         var it = tests_dir.iterate();
-        while (try it.next()) |entry| {
+        while (try it.next(io)) |entry| {
             const file_name = entry.name;
-            try processFile(file_name, allocator);
+            try processFile(io, file_name, allocator);
         }
     }
 
@@ -98,13 +93,10 @@ pub fn main() !void {
     }
 }
 
-fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
-    const cwd = std.fs.cwd();
+fn processFile(io: std.Io, name: []const u8, allocator: std.mem.Allocator) !void {
+    const cwd = std.Io.Dir.cwd();
     const full_path = try std.fmt.allocPrint(allocator, "tests/{s}", .{name});
     defer allocator.free(full_path);
-
-    var file = try cwd.openFile(full_path, .{});
-    defer file.close();
 
     // Split the filename (without .json) into parts
     const base_name = name[0 .. name.len - 5]; // Remove .json
@@ -138,7 +130,7 @@ fn processFile(name: []const u8, allocator: std.mem.Allocator) !void {
         },
     }
 
-    const json_content = try file.readToEndAlloc(allocator, std.math.maxInt(usize));
+    const json_content = try cwd.readFileAlloc(io, full_path, allocator, .unlimited);
     defer allocator.free(json_content);
 
     var parsed = try std.json.parseFromSlice([]TestCase, allocator, json_content, .{ .ignore_unknown_fields = true });

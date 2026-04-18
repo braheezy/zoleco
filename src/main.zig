@@ -14,20 +14,15 @@ const usage =
     \\
 ;
 
-var stdout_buffer: [1024]u8 = undefined;
-var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
-const stdout = &stdout_writer.interface;
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.gpa;
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer if (gpa.deinit() == .leak) {
-        std.process.exit(1);
-    };
-    const allocator = gpa.allocator();
+    var stdout_buffer: [1024]u8 = undefined;
+    var stdout_writer = std.Io.File.stdout().writer(init.io, &stdout_buffer);
+    const stdout = &stdout_writer.interface;
 
     // Get command line arguments
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     var rom_file: ?[]const u8 = null;
     // Handle help flag
@@ -44,7 +39,7 @@ pub fn main() !void {
         rom_file = "src/roms/hello.rom";
     }
 
-    var app = try App.init(allocator, rom_file.?);
+    var app = try App.init(init.io, allocator, rom_file.?);
     defer app.deinit(allocator);
 
     try app.loop();
