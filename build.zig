@@ -51,10 +51,8 @@ pub fn build(b: *std.Build) !void {
     b.installArtifact(cpu_test);
 
     // Set the working directory to the z80_tester directory, so tests is relative
-    run_test.cwd = .{ .cwd_relative = b.pathFromRoot("examples/z80_tester") };
-    if (b.args) |args| {
-        run_test.addArgs(args);
-    }
+    run_test.cwd = b.path("examples/z80_tester");
+    run_test.addPassthruArgs();
     test_step.dependOn(&run_test.step);
 
     const vgm_player_exe = buildVgmPlayer(
@@ -78,9 +76,7 @@ pub fn build(b: *std.Build) !void {
 fn defineRun(b: *std.Build, exe: *std.Build.Step.Compile) void {
     const run_cmd = b.addRunArtifact(exe);
     run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
+    run_cmd.addPassthruArgs();
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 }
@@ -109,9 +105,7 @@ fn buildVgmPlayer(
 
     const run_cmd = b.addRunArtifact(vgm_player_exe);
     run_cmd.step.dependOn(b.getInstallStep());
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
+    run_cmd.addPassthruArgs();
     const run_step = b.step("vgm", "Run the vgm example");
     run_step.dependOn(&run_cmd.step);
 

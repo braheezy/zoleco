@@ -3,7 +3,7 @@ const std = @import("std");
 pub const TestIO = struct {
     io: Z80.IO = undefined,
 
-    memory: [0x10000]u8 = [_]u8{0xFF} ** 0x10000,
+    memory: [0x10000]u8 = @splat(0xFF),
     value: u8 = 0,
 
     pub fn init(allocator: std.mem.Allocator) !*TestIO {
@@ -48,7 +48,7 @@ pub fn writeIOFn(port: u16, value: u8) !void {
 }
 
 pub const MemoryTestDevice = struct {
-    memory: [0x10000]u8 = [_]u8{0xFF} ** 0x10000,
+    memory: [0x10000]u8 = @splat(0xFF),
 
     pub fn read(self: *MemoryTestDevice, address: u16) u8 {
         return self.memory[address];

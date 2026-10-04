@@ -170,7 +170,7 @@ interrupt_pending: bool = false,
 halted: bool = false,
 start_address: u16 = 0,
 io: *IO,
-scratch: [2]u8 = [_]u8{0} ** 2,
+scratch: [2]u8 = @splat(0),
 displacement: i8 = 0,
 // Q is a special flag to track flag state. used in 2 opcodes
 // https://github.com/redcode/Z80/blob/f7ec2be293880059374bc9546370979fc97f69c5/sources/Z80.c#L501

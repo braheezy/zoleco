@@ -123,7 +123,7 @@ fn setVramFromSlice(self: *TMS9918, address: u16, data: []u8) void {
 
 fn getScreen(self: *TMS9918, allocator: std.mem.Allocator) ![]u8 {
     // scanline buffer
-    var scanline = [_]u8{0} ** TMS9918.pixels_x;
+    var scanline: [TMS9918.pixels_x]u8 = @splat(0);
 
     // framebuffer
     var framebuffer = try allocator.alloc(u8, TMS9918.pixels_x * TMS9918.pixels_y * 3);

@@ -501,7 +501,7 @@ pub fn readStatus(self: *TMS9918) u8 {
 }
 
 pub fn updateFrame(self: *TMS9918) !void {
-    var scanline = [_]u8{0} ** pixels_x;
+    var scanline: [pixels_x]u8 = @splat(0);
     var c: usize = 0;
 
     for (0..pixels_y) |y| {
@@ -540,7 +540,7 @@ pub fn tick(self: *TMS9918, cycles: u32) bool {
 
         // Handle display and render for visible lines
         if (self.render_line < pixels_y) {
-            var scanline = [_]u8{0} ** pixels_x;
+            var scanline: [pixels_x]u8 = @splat(0);
             self.scanLine(@intCast(self.render_line), &scanline);
         }
 

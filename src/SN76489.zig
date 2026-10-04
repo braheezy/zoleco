@@ -27,11 +27,11 @@ sample_rate: u32 = 0,
 base_incr: u32 = 0,
 high_quality: bool = false,
 
-count: [3]u32 = [_]u32{0} ** 3,
-volume: [3]u32 = [_]u32{0} ** 3,
-freq: [3]u32 = [_]u32{0} ** 3,
-edge: [3]u32 = [_]u32{0} ** 3,
-mute: [3]u32 = [_]u32{0} ** 3,
+count: [3]u32 = @splat(0),
+volume: [3]u32 = @splat(0),
+freq: [3]u32 = @splat(0),
+edge: [3]u32 = @splat(0),
+mute: [3]u32 = @splat(0),
 
 noise_seed: u32 = 0,
 noise_count: u32 = 0,
@@ -56,7 +56,7 @@ adr: u32 = 0,
 
 stereo: u32 = 0,
 
-ch_out: [4]i16 = [_]i16{0} ** 4,
+ch_out: [4]i16 = @splat(0),
 
 pub fn init(c: u32, sample_rate: ?u32) !SN76489 {
     // var sng = try al.create(SN76489);
